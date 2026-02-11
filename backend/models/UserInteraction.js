@@ -1,5 +1,15 @@
 const mongoose = require('mongoose');
 
+/**
+ * UserInteraction Model
+ * ---------------------
+ * Tracks a user's attempts and last answer for a single interaction.
+ * Keyed by (userId, lessonId, interactionId).
+ *
+ * This supports progressive hints/help by allowing the server to know
+ * how many attempts have occurred so far.
+ */
+
 const UserInteractionSchema = new mongoose.Schema(
   {
     userId: {

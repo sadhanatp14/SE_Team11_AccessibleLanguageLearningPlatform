@@ -1,6 +1,26 @@
 const Lesson = require('../models/Lesson');
 const UserInteraction = require('../models/UserInteraction');
 
+/**
+ * Interaction Controller
+ * ----------------------
+ * Handles per-interaction submissions and contextual help.
+ * Data model notes:
+ * - Lesson interactions live inside the Lesson document (`lesson.interactions[]`).
+ * - Per-user attempts/answers are stored in `UserInteraction` keyed by
+ *   (userId, lessonId, interactionId).
+ *
+ * Design goals:
+ * - Normalize answers across types (boolean/number/string)
+ * - Cap attempt counts to avoid unbounded growth
+ * - Provide hints/explanations progressively based on attempts
+ */
+
+/**
+ * Normalizes an answer into a lowercase string for safe comparison.
+ * @param {any} value
+ * @returns {string}
+ */
 const normalizeAnswer = (value) => {
   if (typeof value === 'boolean') return value ? 'true' : 'false';
   if (typeof value === 'number') return value.toString();
@@ -15,12 +35,21 @@ const encouragementMessages = [
   'You are making progress. Keep it up!',
 ];
 
+/**
+ * Picks a randomized encouragement message for incorrect submissions / help.
+ * @returns {string}
+ */
 const pickEncouragement = () => {
   return encouragementMessages[
     Math.floor(Math.random() * encouragementMessages.length)
   ];
 };
 
+/**
+ * Reads the attempt threshold after which hints can be returned.
+ * Uses `HINT_TRIGGER_ATTEMPTS` env var with a safe default.
+ * @returns {number}
+ */
 const getHintTriggerAttempts = () => {
   const value = Number(process.env.HINT_TRIGGER_ATTEMPTS || 2);
   return Number.isNaN(value) ? 2 : Math.max(1, value);
@@ -29,6 +58,11 @@ const getHintTriggerAttempts = () => {
 // @route   POST /api/interactions/submit
 // @desc    Submit a lesson interaction response
 // @access  Private
+/**
+ * Submit a response to an interaction.
+ * Expected body: { lessonId, interactionId, selectedAnswer }
+ * Response: { isCorrect, feedback, hint?, explanation?, encouragement? }
+ */
 exports.submitInteraction = async (req, res) => {
   const { lessonId, interactionId, selectedAnswer } = req.body;
 
@@ -53,6 +87,7 @@ exports.submitInteraction = async (req, res) => {
       });
     }
 
+    // Compare after normalization so type differences (e.g. true vs "true") don't break grading.
     const isCorrect =
       normalizeAnswer(selectedAnswer) ===
       normalizeAnswer(interaction.correctAnswer);
@@ -66,6 +101,7 @@ exports.submitInteraction = async (req, res) => {
       interactionId,
     });
 
+    // Attempts are tracked per (user, lesson, interaction).
     const nextAttempts = (existing?.attempts || 0) + 1;
     const maxAttempts = interaction.maxAttempts || 3;
     const cappedAttempts = Math.min(nextAttempts, maxAttempts);
@@ -111,6 +147,13 @@ exports.submitInteraction = async (req, res) => {
 // @route   POST /api/interactions/help
 // @desc    Get contextual help (hint or explanation)
 // @access  Private
+/**
+ * Request contextual help for an interaction.
+ * Expected body: { lessonId, interactionId }
+ * Behavior:
+ * - Prefer hint after N attempts
+ * - Otherwise return explanation when available
+ */
 exports.requestHelp = async (req, res) => {
   const { lessonId, interactionId } = req.body;
 

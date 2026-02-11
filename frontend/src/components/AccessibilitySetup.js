@@ -4,6 +4,18 @@ import { useAuth } from '../context/AuthContext';
 import { usePreferences } from '../context/PreferencesContext';
 import './AccessibilitySetup.css';
 
+/**
+ * AccessibilitySetup
+ * ------------------
+ * Condition-aware onboarding wizard that collects accessibility preferences
+ * (visual settings for everyone + ADHD/Autism add-on steps) and persists them
+ * via `PreferencesContext.updatePreferences()`.
+ *
+ * Notes:
+ * - UI state lives locally in `settings` while the user navigates steps.
+ * - On submit we build a minimal payload (only fields relevant to the condition)
+ *   so we don't accidentally overwrite unrelated preference fields server-side.
+ */
 const AccessibilitySetup = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -43,22 +55,33 @@ const AccessibilitySetup = () => {
     simplifiedLayout: user?.learningCondition === 'autism',
   });
 
+  /**
+   * Generic state updater for button/checkbox controls.
+   * Keeping it centralized makes it easy to add new settings.
+   */
   const handleChange = (name, value) => {
     setSettings({ ...settings, [name]: value });
   };
 
+  /** Advance within the wizard step list (1-indexed). */
   const nextStep = () => {
     if (step < steps.length) {
       setStep(step + 1);
     }
   };
 
+  /** Go back within the wizard step list (1-indexed). */
   const prevStep = () => {
     if (step > 1) {
       setStep(step - 1);
     }
   };
 
+  /**
+   * Persist preferences and then route into the main learning dashboard.
+   * The payload is condition-scoped to avoid overwriting fields that the
+   * current user never configured in this wizard.
+   */
   const handleSubmit = async () => {
     // EPIC 1.3.2: Persist wizard selections to backend preferences
     const payload = {
@@ -92,6 +115,10 @@ const AccessibilitySetup = () => {
     }
   };
 
+  /**
+   * Skip keeps onboarding optional; users can revisit settings later.
+   * (We intentionally do not persist anything here.)
+   */
   const skipSetup = () => {
     // EPIC 1.3.4: Setup wizard can be skipped
     navigate('/dashboard');

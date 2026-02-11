@@ -1,5 +1,16 @@
 const mongoose = require('mongoose');
 
+/**
+ * Lesson Model
+ * -----------
+ * Stores a complete lesson as a single document.
+ * Used by dyslexia-style flows where a lesson contains `textContent`, `visualAids`,
+ * and embedded `interactions`.
+ *
+ * Search:
+ * - A text index exists over (title, textContent) for fallback searching.
+ */
+
 const LessonVisualSchema = new mongoose.Schema(
   {
     iconUrl: {

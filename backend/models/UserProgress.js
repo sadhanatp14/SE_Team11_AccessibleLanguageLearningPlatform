@@ -1,5 +1,17 @@
 const mongoose = require('mongoose');
 
+/**
+ * UserProgress Model
+ * ------------------
+ * Progress snapshot for DB-backed lessons.
+ * Unique per (userId, lessonId).
+ * Stores:
+ * - currentSectionId
+ * - completed section ids
+ * - interactionStates (shape controlled by frontend)
+ * - completion flags and timestamps
+ */
+
 const UserProgressSchema = new mongoose.Schema(
   {
     userId: {

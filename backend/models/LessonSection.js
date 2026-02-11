@@ -1,5 +1,13 @@
 const mongoose = require('mongoose');
 
+/**
+ * LessonSection Model
+ * -------------------
+ * Normalized, step-by-step lesson content.
+ * A Lesson has many sections (ordered by `order`). Each section can contain
+ * its own visuals/visualAids and interactions.
+ */
+
 const LessonSectionVisualSchema = new mongoose.Schema(
   {
     iconUrl: { type: String, trim: true },

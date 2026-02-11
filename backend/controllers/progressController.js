@@ -3,11 +3,33 @@ const LessonSection = require('../models/LessonSection');
 const UserProgress = require('../models/UserProgress');
 const User = require('../models/User');
 
+/**
+ * Progress Controller
+ * -------------------
+ * Stores and retrieves lesson progress for DB-backed lessons.
+ *
+ * Key behaviors:
+ * - If no progress exists for a (user, lesson), create a default record on first GET.
+ * - `updateProgress` is careful to treat replay/history as read-only.
+ * - `getSummary` aggregates completion across UserProgress (DB) and User.completedLessons
+ *   (which may contain non-DB keys like `autism-lesson-1`).
+ */
+
+/**
+ * Returns the first section id for a lesson (by `order`).
+ * @param {string} lessonId
+ * @returns {Promise<string>}
+ */
 const getFirstSectionId = async (lessonId) => {
   const first = await LessonSection.findOne({ lessonId }).sort({ order: 1 }).lean();
   return first ? first._id.toString() : '';
 };
 
+/**
+ * Counts the total number of sections in a lesson.
+ * @param {string} lessonId
+ * @returns {Promise<number>}
+ */
 const countSections = async (lessonId) => {
   return LessonSection.countDocuments({ lessonId });
 };
@@ -15,6 +37,10 @@ const countSections = async (lessonId) => {
 // @route   GET /api/progress/:lessonId
 // @desc    Get progress for a lesson
 // @access  Private
+/**
+ * Fetches (or initializes) a user's progress record for a lesson.
+ * Route params: { lessonId }
+ */
 exports.getProgress = async (req, res) => {
   const { lessonId } = req.params;
 
@@ -69,6 +95,15 @@ exports.getProgress = async (req, res) => {
 // @route   POST /api/progress/update
 // @desc    Update lesson progress (only when moving forward)
 // @access  Private
+/**
+ * Updates a user's progress snapshot.
+ * Expected body:
+ * - lessonId (required)
+ * - currentSectionId (optional)
+ * - completedSections (optional array)
+ * - interactionStates (optional object)
+ * - isReplay (optional boolean; when true, do not mutate)
+ */
 exports.updateProgress = async (req, res) => {
   const { lessonId, currentSectionId, completedSections, interactionStates, isReplay } = req.body;
 
@@ -99,6 +134,7 @@ exports.updateProgress = async (req, res) => {
       });
     }
 
+    // De-dupe completed section IDs to keep the stored array small + stable.
     const nextCompleted = Array.isArray(completedSections)
       ? Array.from(new Set(completedSections))
       : existing?.completedSections || [];
@@ -119,7 +155,7 @@ exports.updateProgress = async (req, res) => {
       payload.interactionStates = interactionStates;
     }
 
-    // Determine if lesson is completed
+    // Determine completion based on "sections completed" vs "sections total".
     const totalSections = await countSections(lessonId);
     if (Array.isArray(nextCompleted) && totalSections > 0 && nextCompleted.length >= totalSections) {
       // EPIC 6.1.1: Store completion state as a simple true/false flag.
@@ -137,7 +173,8 @@ exports.updateProgress = async (req, res) => {
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
 
-    // If lesson became completed, ensure the User.completedLessons array is in sync (store lesson id string)
+    // If lesson became completed, ensure the User.completedLessons array is in sync.
+    // We store lessonId as a string key to match other completion key formats used elsewhere.
     if (progress && progress.completed) {
       // EPIC 6.4.1: Save progress automatically after lesson completion.
       try {
@@ -164,6 +201,13 @@ exports.updateProgress = async (req, res) => {
 // Helper: compute user's progress summary (includes UserProgress completed and User.completedLessons)
 const Lesson = require('../models/Lesson');
 
+/**
+ * Aggregates lesson completion for a user.
+ * Output is shaped for the Progress UI: total, completedCount, remaining, completedLessons[].
+ *
+ * @param {string} userId
+ * @returns {Promise<{success: boolean, totalLessons: number, completedCount: number, remaining: number, completedLessons: Array<{lessonId: string, title: string, completedAt: (Date|null)}>} >}
+ */
 const computeSummary = async (userId) => {
   // EPIC 6.6.1-6.6.4: Keep performance insight simple (completed/remaining) and avoid complex analytics.
   // EPIC 6.7.3: Prefer simple queries (counts + small lists) to keep responses fast.
@@ -230,7 +274,7 @@ const computeSummary = async (userId) => {
     });
   }
 
-  // Ensure we produce a sensible total: include non-DB sample keys so display isn't '2 of 0'
+  // Ensure we produce a sensible total: include non-DB keys so display isn't misleading (e.g. "2 of 0").
   const totalLessonsAdjusted = Math.max(totalLessons, allDbIds.size + nonDbKeys.length);
   const completedCount = completedLessons.length;
   const remaining = Math.max(0, totalLessonsAdjusted - completedCount);
@@ -246,6 +290,9 @@ const computeSummary = async (userId) => {
 // @route   GET /api/progress/summary
 // @desc    Get summary of user progress across lessons
 // @access  Private
+/**
+ * Returns the computed summary for the current authenticated user.
+ */
 exports.getSummary = async (req, res) => {
   try {
     // EPIC 6.1.2, 6.6.1-6.6.2: Provide total/completed/remaining for a simple progress display.

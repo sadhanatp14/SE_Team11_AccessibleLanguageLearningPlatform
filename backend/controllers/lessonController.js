@@ -2,6 +2,15 @@ const Lesson = require('../models/Lesson');
 const { searchLessonIdsByEmbedding } = require('../services/vectorSearch');
 
 /**
+ * Lesson Controller
+ * -----------------
+ * Read-only lesson APIs used by the learning UI.
+ * Includes:
+ * - ID-based lesson fetch with computed `highlights`/`visualAids`
+ * - Search endpoint with vector-search first and text-search fallback
+ */
+
+/**
  * @typedef {Object} LessonVisual
  * @property {string} iconUrl
  * @property {string} description
@@ -45,6 +54,8 @@ const searchLessons = async (req, res) => {
 
   try {
     let lessons = [];
+
+    // Prefer semantic/vector search when configured; it returns embeddingIds ordered by relevance.
     const embeddingMatches = await searchLessonIdsByEmbedding(query);
 
     if (Array.isArray(embeddingMatches) && embeddingMatches.length > 0) {
@@ -100,6 +111,7 @@ const getLessonById = async (req, res) => {
     const textContent = lessonObj.textContent || '';
     const textLower = textContent.toLowerCase();
 
+    // Normalize highlights by ensuring a safe `position` exists within text bounds.
     const highlights = (lessonObj.highlights || [])
       .map((item) => {
         if (!item.phrase) return null;
@@ -115,6 +127,7 @@ const getLessonById = async (req, res) => {
       .filter(Boolean)
       .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
 
+    // Only return visual aids that actually match phrases in the content.
     const visualAids = (lessonObj.visualAids || [])
       .filter((item) => {
         if (!item.relatedPhrase) return false;

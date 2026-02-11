@@ -6,6 +6,15 @@ import DyslexiaView from './learning/DyslexiaView';
 import ADHDView from './learning/ADHDView';
 import AutismView from './learning/AutismView';
 
+/**
+ * Dashboard
+ * ---------
+ * Single entry point for the learning experience.
+ * Responsibilities:
+ * - Choose the correct learning center view (Dyslexia/ADHD/Autism)
+ * - Apply accessibility preferences as CSS classes *scoped* to the container
+ * - Optionally honor deep-links (e.g. "open ADHD lesson 2") coming from other pages
+ */
 const Dashboard = () => {
   const { user } = useAuth();
   const { preferences } = usePreferences();
@@ -14,6 +23,8 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   const deepLink = useMemo(() => {
+    // Deep-link state is passed via react-router `navigate('/dashboard', { state })`.
+    // We normalize to safe primitives so components can rely on the shape.
     const state = location?.state || {};
     const openCondition = typeof state.openCondition === 'string' ? state.openCondition : '';
     const openLessonIdRaw = state.openLessonId;
@@ -27,6 +38,8 @@ const Dashboard = () => {
 
   // Consume and clear dashboard deep-link state so it doesn't re-trigger.
   useEffect(() => {
+    // Avoid leaving one-time state in history; otherwise it could re-open a lesson
+    // if the user navigates away/back.
     if (!deepLink.hasDeepLink) return;
     navigate('/dashboard', { replace: true, state: {} });
   }, [deepLink.hasDeepLink, navigate]);
@@ -92,12 +105,14 @@ const Dashboard = () => {
       case 'adhd':
         return (
           <ADHDView
+            // Only provide the deep-link when the condition matches; otherwise ignore.
             initialLessonId={deepLink.openCondition === 'adhd' ? deepLink.openLessonId : null}
           />
         );
       case 'autism':
         return (
           <AutismView
+            // Only provide the deep-link when the condition matches; otherwise ignore.
             initialLessonId={deepLink.openCondition === 'autism' ? deepLink.openLessonId : null}
           />
         );
