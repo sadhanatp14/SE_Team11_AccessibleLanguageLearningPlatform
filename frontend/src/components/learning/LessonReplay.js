@@ -20,6 +20,10 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
   const [error, setError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
   const [successMessage, setSuccessMessage] = useState('');
+  // Track which sections have had all their interactions completed by the user
+  const [completedInteractionSections, setCompletedInteractionSections] = useState(new Set());
+  // Warning message shown when user tries to proceed without completing the section
+  const [incompleteWarning, setIncompleteWarning] = useState('');
 
   useEffect(() => {
     let isMounted = true;
@@ -104,6 +108,15 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
     }));
   }, [sections]);
 
+  // Calculate the total number of interactions across all sections in this lesson.
+  // This is used to determine the correct completion threshold instead of a hardcoded value.
+  const totalInteractions = useMemo(() => {
+    return sections.reduce((sum, section) => {
+      const count = Array.isArray(section.interactions) ? section.interactions.length : 0;
+      return sum + count;
+    }, 0);
+  }, [sections]);
+
   const condition = user?.learningCondition || '';
   const dyslexia = useDyslexiaContext({ condition, lessonId, defaultSyllableMode: true });
   const displaySectionList = useMemo(() => {
@@ -124,6 +137,38 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
   const completedSections = progress?.completedSections || [];
   const isReplay = Boolean(replaySectionId);
   const lastCompletedSectionId = completedSections[completedSections.length - 1] || '';
+
+  // Appreciation messages shown when a section's interactions are completed
+  const sectionAppreciationMessages = [
+    '🎉 Great job! Section complete! Moving to the next one…',
+    '⭐ Well done! You nailed it! On to the next section…',
+    '🌟 Awesome work! Section finished! Let\'s keep going…',
+    '👏 Fantastic! You completed this section! Next one coming up…',
+    '💪 Amazing effort! Section done! Let\'s continue…',
+  ];
+
+  const pickAppreciation = () => sectionAppreciationMessages[Math.floor(Math.random() * sectionAppreciationMessages.length)];
+
+  // Track section that was just completed so auto-advance effect can fire
+  const [pendingAutoAdvanceSectionId, setPendingAutoAdvanceSectionId] = useState(null);
+
+  const handleSectionComplete = React.useCallback((sectionId, isComplete) => {
+    if (!sectionId) return;
+    setCompletedInteractionSections((prev) => {
+      const next = new Set(prev);
+      if (isComplete) {
+        next.add(sectionId);
+      } else {
+        next.delete(sectionId);
+      }
+      return next;
+    });
+
+    // When a section is completed (not replaying), mark it for auto-advance
+    if (isComplete) {
+      setPendingAutoAdvanceSectionId(sectionId);
+    }
+  }, []);
 
   const handleInteractionChange = (sectionId, interactionIndex) => {
     setCurrentInteractionSectionId(sectionId);
@@ -161,10 +206,24 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
 
   const handleNavigate = async (direction) => {
     if (!displayedSectionId) return;
+    // Clear any previous warning when navigating
+    setIncompleteWarning('');
     const currentIndex = getSectionIndex(displayedSectionId);
     if (currentIndex < 0) return;
     const nextIndex = currentIndex + direction;
     const nextSection = sectionList[nextIndex];
+
+    // Block forward navigation if the current section's interactions are not completed
+    if (direction > 0 && !isReplay) {
+      const currentSection = sectionMap.get(displayedSectionId);
+      const hasInteractions = currentSection && Array.isArray(currentSection.interactions) && currentSection.interactions.length > 0;
+      if (hasInteractions && !completedInteractionSections.has(displayedSectionId)) {
+        setIncompleteWarning('Please complete all questions in this section before moving to the next one.');
+        // Auto-clear the warning after 5 seconds
+        setTimeout(() => setIncompleteWarning(''), 5000);
+        return;
+      }
+    }
 
     // If trying to navigate past the last section -> treat as lesson completion
     if (!nextSection && direction > 0) {
@@ -311,6 +370,30 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
     }
   };
 
+  // Auto-advance effect: when a section's interactions are all completed,
+  // show an appreciation message and automatically navigate to the next section.
+  // If it's the last section, this triggers lesson completion → redirect to progress page.
+  useEffect(() => {
+    if (!pendingAutoAdvanceSectionId) return;
+    // Only auto-advance if we're on the section that was just completed and not in replay mode
+    if (pendingAutoAdvanceSectionId !== displayedSectionId || replaySectionId) {
+      setPendingAutoAdvanceSectionId(null);
+      return;
+    }
+
+    // Show appreciation message
+    setSuccessMessage(pickAppreciation());
+
+    // Auto-navigate to next section after a short delay so user sees the appreciation
+    const timer = setTimeout(() => {
+      setPendingAutoAdvanceSectionId(null);
+      handleNavigate(1);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingAutoAdvanceSectionId, displayedSectionId, replaySectionId]);
+
 
   const prevSection = displayedSectionId ? displaySectionList[getSectionIndex(displayedSectionId) - 1] : null;
   const nextSection = displayedSectionId ? displaySectionList[getSectionIndex(displayedSectionId) + 1] : null;
@@ -323,15 +406,17 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
   );
   const canReplay = Boolean(lastCompletedSectionId) || isReplay;
 
-  const guidanceText = successMessage
-    ? successMessage
-    : error
-      ? error
-      : notice
-        ? notice
-        : isReplay
-          ? 'Replaying a completed section. Your progress remains saved.'
-          : 'Select a completed section to replay at any time.';
+  const guidanceText = incompleteWarning
+    ? incompleteWarning
+    : successMessage
+      ? successMessage
+      : error
+        ? error
+        : notice
+          ? notice
+          : isReplay
+            ? 'Replaying a completed section. Your progress remains saved.'
+            : 'Select a completed section to replay at any time.';
 
   const resolvedTitle = lessonTitle || 'Lesson';
   const resolvedSubtitle = lessonSubtitle || 'Move through one section at a time for steady progress.';
@@ -346,7 +431,7 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
       guidance={(
         <div className="lesson-guidance">
           <p className="lesson-guidance__label">Guidance</p>
-          <p className={`lesson-guidance__text${error ? ' is-error' : ''}`}>{guidanceText}</p>
+          <p className={`lesson-guidance__text${error ? ' is-error' : ''}${incompleteWarning ? ' is-warning' : ''}${successMessage ? ' is-success' : ''}`}>{guidanceText}</p>
           {notice && onRetry && !isSample && (
             <div style={{ marginTop: 8 }}>
               <button type="button" onClick={onRetry}>Retry</button>
@@ -424,7 +509,9 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
                   isReplay={isReplay} 
                   useLocalSubmission={isSample}
                   lessonId={lessonId}
+                  totalInteractions={totalInteractions}
                   onInteractionChange={handleInteractionChange}
+                  onSectionComplete={handleSectionComplete}
                 />
               </div>
             ) : (

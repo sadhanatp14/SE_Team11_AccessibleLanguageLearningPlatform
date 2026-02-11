@@ -1,30 +1,76 @@
+/**
+ * DyslexiaView.js
+ *
+ * Main learning dashboard for users with dyslexia support needs.
+ * This component serves as the primary interface for dyslexic learners,
+ * providing syllable-mode text, lesson navigation, progress tracking,
+ * and evidence-based reading guides.
+ *
+ * Key features:
+ *  - Syllable mode toggle: splits words into syllables for easier decoding
+ *  - Lesson cards with individual progress bars and status badges
+ *  - Reading guide section with phonological awareness tips
+ *  - Integrates with AuthContext for user data and logout
+ *  - Persists lesson progress via dyslexiaProgressService (localStorage)
+ *
+ * Related EPICs:
+ *  - EPIC 1.4: Dyslexia-friendly reading support
+ *  - EPIC 1.4.2: Reading assistance toggle (syllable-friendly text)
+ */
 
-// DyslexiaView: Main learning interface for users with dyslexia support needs.
-// Provides syllable mode, lesson navigation, and progress tracking.
-// Integrates with user preferences and local progress storage.
+// React core and hooks
 import React, { useEffect, useState } from 'react';
+// Navigation hook for programmatic routing
 import { useNavigate } from 'react-router-dom';
+// Authentication context – provides current user object and logout function
 import { useAuth } from '../../context/AuthContext';
+// Service for reading/writing per-user lesson progress from localStorage
 import { getAllLessonProgress, normalizeUserId } from '../../services/dyslexiaProgressService';
+// Reusable profile/settings modal component
 import ProfileSettings from '../ProfileSettings';
+// Icon components from lucide-react used in the UI
 import { BookOpen, Hash, Info, MessageCircle, Settings, ToggleLeft, ToggleRight, Volume2 } from 'lucide-react';
+// Custom hook that persists the syllable-mode preference in localStorage
 import { useDyslexiaSyllableMode } from '../../utils/dyslexiaSyllableMode';
+// Component-specific styles
 import './DyslexiaView.css';
 
+/**
+ * DyslexiaView – Functional component for the dyslexia-specific dashboard.
+ * Renders the navbar, reading guide, lesson grid, and learning tips.
+ */
 const DyslexiaView = () => {
-  // Auth context
+  // Destructure the authenticated user and the logout handler from AuthContext
   const { user, logout } = useAuth();
-  // UI state for settings panel
+
+  // Controls whether the ProfileSettings modal is visible
   const [showSettings, setShowSettings] = useState(false);
-  // Track lesson progress for current user
+
+  // Stores a mapping of lessonApiId → { status, correctCount } loaded from localStorage
   const [lessonProgress, setLessonProgress] = useState({});
-  // Syllable mode toggle for dyslexia-friendly text
+
+  // Syllable mode: when true, all UI text is rendered with syllable-split variants.
+  // The custom hook persists the preference to localStorage so it survives page reloads.
   const [syllableMode, setSyllableMode] = useDyslexiaSyllableMode(true);
+
+  // React Router hook for programmatic navigation
   const navigate = useNavigate();
 
   // EPIC 1.4: Dyslexia-friendly reading support (syllable mode + spacing/font via preferences)
 
-  // List of available lessons (with syllable-friendly titles/descriptions)
+  /**
+   * Static list of available lessons.
+   * Each lesson object contains:
+   *  - id: unique numeric identifier for rendering keys
+   *  - title / titleSyllables: normal and syllable-split display names
+   *  - level: difficulty label shown as a badge
+   *  - apiId: identifier used for backend API calls and local progress keys
+   *  - Icon: lucide-react icon component rendered on the lesson card
+   *  - color: accent colour used for the gradient on the icon circle
+   *  - description / descriptionSyllables: short blurb about the lesson
+   *  - totalSections: number of sections in the lesson (used for progress calculation)
+   *  - totalInteractions: total number of interactions across all sections
+   */
   const lessons = [
     {
       id: 1,
@@ -36,6 +82,8 @@ const DyslexiaView = () => {
       color: '#ffd700',
       description: 'Learn "Hello", "Hi", and friendly phrases',
       descriptionSyllables: 'Learn "Hello" (Hel-lo), "Hi", and friend-ly phrases',
+      totalSections: 2,
+      totalInteractions: 8,
     },
     {
       id: 2,
@@ -47,6 +95,8 @@ const DyslexiaView = () => {
       color: '#90caf9',
       description: 'Everyday objects, people, and actions',
       descriptionSyllables: 'E-ve-ry-day words like ap-ple, chair, book',
+      totalSections: 3,
+      totalInteractions: 11,
     },
     {
       id: 3,
@@ -58,21 +108,36 @@ const DyslexiaView = () => {
       color: '#a5d6a7',
       description: 'Count, match, and order numbers',
       descriptionSyllables: 'Count, match, and or-der num-bers',
+      totalSections: 3,
+      totalInteractions: 11,
     },
   ];
 
-  // Toggle syllable mode for all UI text
+  /**
+   * Toggle syllable mode on/off.
+   * EPIC 1.4.2: Reading assistance toggle – when enabled, all labels,
+   * descriptions, and guide text render with syllable-split variants
+   * to help dyslexic readers decode unfamiliar words.
+   */
   const toggleSyllableMode = () => {
-    // EPIC 1.4.2: Reading assistance toggle (syllable-friendly text)
     setSyllableMode((prev) => !prev);
   };
 
-  // Start a lesson (navigate to lesson page)
+  /**
+   * Navigate to the individual lesson page for the selected lesson.
+   * Uses the lesson's apiId as the URL parameter so the LessonPage
+   * component can load the correct content from the backend or local samples.
+   */
   const handleStartLesson = (lesson) => {
     navigate(`/lessons/${lesson.apiId}`);
   };
 
-  // Load lesson progress for current user on mount or user change
+  /**
+   * Load lesson progress from localStorage whenever the user changes.
+   * normalizeUserId extracts a stable key (e.g. ObjectId or email)
+   * from the user object so progress is scoped per-user.
+   * If no valid key exists (logged-out state), reset progress to empty.
+   */
   useEffect(() => {
     const key = normalizeUserId(user);
     if (!key) {
@@ -83,10 +148,17 @@ const DyslexiaView = () => {
     setLessonProgress(progress || {});
   }, [user]);
 
-  // Helper to switch between normal and syllable-friendly text
+  /**
+   * Memoised helper that returns syllable-friendly text when syllableMode is on,
+   * or the standard text otherwise. Used to build the `copy` object below.
+   */
   const uiText = React.useCallback((normalText, syllableText) => (syllableMode ? syllableText : normalText), [syllableMode]);
 
-  // UI copy for dyslexia-friendly onboarding
+  /**
+   * UI copy dictionary – every user-facing string has a normal and a
+   * syllable-split variant. The `uiText` helper selects the right one
+   * based on the current syllableMode state.
+   */
   const copy = {
     greeting: uiText('Hello', 'Hel-lo'),
     welcomeTitle: uiText('Welcome to Your Learning Space', 'Wel-come to Your Learn-ing Space'),
@@ -179,11 +251,12 @@ const DyslexiaView = () => {
         </div>
       </nav>
 
+      {/* Conditionally render the ProfileSettings modal when the user clicks the gear icon */}
       {showSettings && (
         <ProfileSettings onClose={() => setShowSettings(false)} />
       )}
 
-      {/* Main Content */}
+      {/* Main Content – welcome section, reading guide, lessons grid, and tips */}
       <main className="main-content">
         <div className="welcome-section">
           <h2>{copy.welcomeTitle}</h2>
@@ -228,13 +301,18 @@ const DyslexiaView = () => {
           </div>
         </section>
 
-        {/* Lessons Grid */}
+        {/* Lessons Grid – renders a card for each lesson with icon, description, progress bar, and start button */}
         <div className="lessons-section">
           <h3>{copy.lessonsTitle}</h3>
           <div className="lessons-grid">
             {lessons.map((lesson) => {
+              // Look up stored progress for this lesson; default to 'Not Started' / 0 correct
               const progress = lessonProgress?.[lesson.apiId] || { status: 'Not Started', correctCount: 0 };
-              const percent = Math.min(100, Math.round(((progress.correctCount || 0) / 5) * 100));
+              // Use the stored totalInteractions from progress if available, otherwise fall back to the lesson definition
+              const total = progress.totalInteractions || lesson.totalInteractions || 1;
+              // Calculate completion percentage based on the actual number of interactions in the lesson
+              const percent = Math.min(100, Math.round(((progress.correctCount || 0) / total) * 100));
+              // Convert status text to a CSS-safe class name (e.g. "Not Started" → "not-started")
               const statusClass = (progress.status || 'Not Started').replace(/\s+/g, '-').toLowerCase();
               return (
                 <div key={lesson.id} className="lesson-card">
@@ -285,4 +363,5 @@ const DyslexiaView = () => {
   );
 };
 
+// Export DyslexiaView as the default export for use in the router
 export default DyslexiaView;

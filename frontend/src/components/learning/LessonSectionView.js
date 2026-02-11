@@ -75,7 +75,7 @@ const getIllustration = (text) => {
   return defaultIllustration;
 };
 
-const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, onInteractionChange }) => {
+const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, onInteractionChange, onSectionComplete, totalInteractions: totalInteractionsProp }) => {
   const { user } = useAuth();
   const condition = user?.learningCondition || '';
   const dyslexia = useDyslexiaContext({ condition, lessonId, defaultSyllableMode: true });
@@ -121,6 +121,14 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
   }, [section?.interactions]);
 
   const currentInteraction = interactions[activeInteractionIndex];
+
+  // Notify parent when all interactions in this section are completed
+  const sectionCompleted = interactions.length > 0 && activeInteractionIndex >= interactions.length;
+  useEffect(() => {
+    if (onSectionComplete) {
+      onSectionComplete(section?._id || section?.id, sectionCompleted);
+    }
+  }, [sectionCompleted, onSectionComplete, section?._id, section?.id]);
 
   const displayedInteraction = useMemo(() => {
     if (!currentInteraction) return null;
@@ -352,12 +360,15 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
     if (isCorrect) {
       correctIds.add(interactionId);
     }
-    const correctCount = Math.min(5, correctIds.size);
-    const status = correctCount >= 5 ? 'Completed' : nextStatus;
+    // Use the actual total interactions for this lesson instead of hardcoded 5
+    const requiredCount = totalInteractionsProp || existing.totalInteractions || 5;
+    const correctCount = Math.min(requiredCount, correctIds.size);
+    const status = correctCount >= requiredCount ? 'Completed' : nextStatus;
     saveLessonProgress(userKey, lessonKey, {
       status,
       correctCount,
       correctIds: Array.from(correctIds),
+      totalInteractions: requiredCount,
     });
 
     // EPIC 3.5.4: Repeated listening does not reduce marks; scoring is based on answers only.

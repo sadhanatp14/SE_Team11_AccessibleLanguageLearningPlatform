@@ -107,6 +107,31 @@
   color: var(--theme-feedback-incorrect, var(--error-color));
 }
 
+.lesson-guidance__text.is-warning {
+  color: #e67e22;
+  font-weight: 600;
+  animation: warningPulse 0.4s ease-in-out;
+}
+
+.lesson-guidance__text.is-success {
+  color: #27ae60;
+  font-weight: 600;
+  font-size: 1.05em;
+  animation: successPop 0.5s ease-out;
+}
+
+@keyframes successPop {
+  0% { transform: scale(0.95); opacity: 0.5; }
+  60% { transform: scale(1.04); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes warningPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
 .lesson-layout__footer {
   padding: 4px 0 8px;
 }

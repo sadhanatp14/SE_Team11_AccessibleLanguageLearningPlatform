@@ -2,19 +2,21 @@
 // Service for progress-related API calls (fetching, updating, and summarizing user progress)
 import api from '../utils/api';
 
-  // Fetch saved progress for a specific lesson for the current user
-  // Used to restore lesson state (EPIC 6.4.2)
+// Fetch saved progress for a specific lesson for the current user
+// Used to restore lesson state (EPIC 6.4.2)
+export const getProgress = async (lessonId) => {
   const response = await api.get(`/progress/${lessonId}`);
   return response.data.progress;
 };
 
+// Auto-save progress as the learner moves forward and completes steps (EPIC 6.4.1)
+export const updateProgress = async ({
   lessonId,
   currentSectionId,
   completedSections,
   interactionStates,
   isReplay,
 }) => {
-  // Auto-save progress as the learner moves forward and completes steps (EPIC 6.4.1)
   const response = await api.post('/progress/update', {
     lessonId,
     currentSectionId,
