@@ -1,14 +1,44 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="#FFF9C4"/>
-  <circle cx="100" cy="60" r="30" fill="#FFC107"/>
-  <line x1="100" y1="20" x2="100" y2="10" stroke="#FFC107" stroke-width="4" stroke-linecap="round"/>
-  <line x1="130" y1="30" x2="140" y2="20" stroke="#FFC107" stroke-width="4" stroke-linecap="round"/>
-  <line x1="145" y1="60" x2="160" y2="60" stroke="#FFC107" stroke-width="4" stroke-linecap="round"/>
-  <line x1="70" y1="30" x2="60" y2="20" stroke="#FFC107" stroke-width="4" stroke-linecap="round"/>
-  <line x1="55" y1="60" x2="40" y2="60" stroke="#FFC107" stroke-width="4" stroke-linecap="round"/>
-  <line x1="130" y1="90" x2="140" y2="100" stroke="#FFC107" stroke-width="4" stroke-linecap="round"/>
-  <line x1="70" y1="90" x2="60" y2="100" stroke="#FFC107" stroke-width="4" stroke-linecap="round"/>
-  <rect x="20" y="100" width="160" height="40" rx="5" fill="#66BB6A"/>
-  <circle cx="100" cy="120" r="15" fill="#FFF9C4"/>
-  <path d="M 95 115 L 100 120 L 110 110" stroke="#66BB6A" stroke-width="2" fill="none"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFDE7"/>
+      <stop offset="100%" style="stop-color:#FFF9C4"/>
+    </linearGradient>
+    <linearGradient id="sky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#81D4FA"/>
+      <stop offset="100%" style="stop-color:#FFFDE7"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="20" fill="url(#bg)"/>
+  <!-- Sky area -->
+  <rect x="20" y="20" width="360" height="110" rx="15" fill="url(#sky)" opacity="0.35"/>
+  <!-- Sun with face -->
+  <circle cx="320" cy="62" r="36" fill="#FDD835"/>
+  <line x1="320" y1="16" x2="320" y2="6" stroke="#FDD835" stroke-width="3" stroke-linecap="round"/>
+  <line x1="356" y1="62" x2="366" y2="62" stroke="#FDD835" stroke-width="3" stroke-linecap="round"/>
+  <line x1="346" y1="36" x2="354" y2="28" stroke="#FDD835" stroke-width="3" stroke-linecap="round"/>
+  <line x1="346" y1="88" x2="354" y2="96" stroke="#FDD835" stroke-width="3" stroke-linecap="round"/>
+  <line x1="294" y1="36" x2="286" y2="28" stroke="#FDD835" stroke-width="3" stroke-linecap="round"/>
+  <line x1="284" y1="62" x2="274" y2="62" stroke="#FDD835" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="312" cy="57" r="3" fill="#F57F17"/>
+  <circle cx="328" cy="57" r="3" fill="#F57F17"/>
+  <path d="M 310 70 Q 320 78 330 70" stroke="#F57F17" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- Person waking up / stretching -->
+  <circle cx="145" cy="112" r="38" fill="#FFCC80"/>
+  <ellipse cx="132" cy="106" rx="4.5" ry="5.5" fill="#4E342E"/>
+  <ellipse cx="158" cy="106" rx="4.5" ry="5.5" fill="#4E342E"/>
+  <path d="M 132 125 Q 145 136 158 125" stroke="#4E342E" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M 107 102 Q 112 68 145 62 Q 178 68 183 102" fill="#5D4037"/>
+  <rect x="127" y="150" width="36" height="48" rx="8" fill="#FFA726"/>
+  <!-- Arms stretched out (morning stretch) -->
+  <path d="M 125 163 L 82 140" stroke="#FFCC80" stroke-width="8" stroke-linecap="round"/>
+  <path d="M 165 163 L 208 140" stroke="#FFCC80" stroke-width="8" stroke-linecap="round"/>
+  <!-- Speech bubble -->
+  <rect x="35" y="30" width="170" height="52" rx="14" fill="white" stroke="#F9A825" stroke-width="2"/>
+  <polygon points="140,82 145,94 155,82" fill="white" stroke="#F9A825" stroke-width="2"/>
+  <polygon points="141,82 146,92 154,82" fill="white"/>
+  <text x="120" y="52" text-anchor="middle" font-size="14" font-weight="bold" fill="#E65100">காலை வணக்கம்!</text>
+  <text x="120" y="72" text-anchor="middle" font-size="12" fill="#F57C00">(Good Morning!)</text>
+  <!-- Label -->
+  <text x="200" y="260" text-anchor="middle" font-size="20" font-weight="bold" fill="#E65100">காலை வணக்கம் — Good Morning</text>
 </svg>

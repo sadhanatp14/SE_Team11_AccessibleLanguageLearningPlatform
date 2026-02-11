@@ -1,9 +1,42 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="#FFF3E0"/>
-  <circle cx="100" cy="80" r="35" fill="#FFA726"/>
-  <circle cx="90" cy="75" r="5" fill="#333"/>
-  <circle cx="110" cy="75" r="5" fill="#333"/>
-  <path d="M 85 100 Q 100 92 115 100" stroke="#333" stroke-width="3" fill="none"/>
-  <path d="M 85 75 L 75 70" stroke="#333" stroke-width="2"/>
-  <path d="M 115 75 L 125 70" stroke="#333" stroke-width="2"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FCE4EC"/>
+      <stop offset="100%" style="stop-color:#F8BBD0"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="20" fill="url(#bg)"/>
+  <!-- Sad person apologizing -->
+  <circle cx="200" cy="100" r="42" fill="#FFCC80"/>
+  <ellipse cx="185" cy="92" rx="5" ry="6" fill="#4E342E"/>
+  <ellipse cx="215" cy="92" rx="5" ry="6" fill="#4E342E"/>
+  <!-- Sad eyebrows -->
+  <path d="M 175 82 Q 182 77 192 82" stroke="#4E342E" stroke-width="2" fill="none"/>
+  <path d="M 208 82 Q 218 77 225 82" stroke="#4E342E" stroke-width="2" fill="none"/>
+  <!-- Sad mouth -->
+  <path d="M 186 118 Q 200 108 214 118" stroke="#4E342E" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <!-- Tear -->
+  <ellipse cx="222" cy="106" rx="3" ry="5" fill="#64B5F6" opacity="0.7"/>
+  <!-- Hair -->
+  <path d="M 158 90 Q 162 52 200 46 Q 238 52 242 90" fill="#5D4037"/>
+  <!-- Body -->
+  <rect x="180" y="142" width="40" height="55" rx="8" fill="#90A4AE"/>
+  <!-- Hands together apologizing -->
+  <path d="M 175 170 L 193 156" stroke="#FFCC80" stroke-width="8" stroke-linecap="round"/>
+  <path d="M 225 170 L 207 156" stroke="#FFCC80" stroke-width="8" stroke-linecap="round"/>
+  <rect x="188" y="148" width="24" height="18" rx="6" fill="#FFCC80"/>
+  <!-- Broken vase on ground -->
+  <path d="M 70 190 L 85 150 L 110 150 L 125 190" stroke="#8D6E63" stroke-width="2" fill="#BCAAA4"/>
+  <line x1="90" y1="155" x2="75" y2="180" stroke="#8D6E63" stroke-width="2"/>
+  <path d="M 68 192 L 60 210 L 130 210 L 127 192" fill="#BCAAA4" stroke="#8D6E63" stroke-width="1.5"/>
+  <!-- Crack line -->
+  <path d="M 95 160 L 100 175 L 92 190" stroke="#795548" stroke-width="1.5" fill="none"/>
+  <!-- Speech bubble -->
+  <rect x="240" y="35" width="140" height="55" rx="14" fill="white" stroke="#E91E63" stroke-width="2"/>
+  <polygon points="248,90 240,100 256,90" fill="white" stroke="#E91E63" stroke-width="2"/>
+  <polygon points="249,89 243,98 255,89" fill="white"/>
+  <text x="310" y="58" text-anchor="middle" font-size="14" font-weight="bold" fill="#C2185B">மன்னிக்கவும்</text>
+  <text x="310" y="78" text-anchor="middle" font-size="12" fill="#D81B60">(Sorry)</text>
+  <!-- Label -->
+  <text x="200" y="260" text-anchor="middle" font-size="22" font-weight="bold" fill="#C2185B">மன்னிக்கவும் — Sorry</text>
 </svg>

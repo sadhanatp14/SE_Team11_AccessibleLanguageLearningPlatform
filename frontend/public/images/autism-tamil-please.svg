@@ -1,6 +1,43 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="#FCE4EC"/>
-  <path d="M 100 50 Q 80 70 85 95 L 100 110 L 115 95 Q 120 70 100 50 Z" fill="#EC407A"/>
-  <circle cx="95" cy="80" r="3" fill="#fff"/>
-  <circle cx="105" cy="80" r="3" fill="#fff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F3E5F5"/>
+      <stop offset="100%" style="stop-color:#E1BEE7"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="20" fill="url(#bg)"/>
+  <!-- Person with polite pleading gesture -->
+  <circle cx="195" cy="98" r="40" fill="#FFCC80"/>
+  <!-- Big gentle eyes -->
+  <ellipse cx="181" cy="91" rx="6" ry="7" fill="#4E342E"/>
+  <circle cx="179" cy="89" r="2.5" fill="white"/>
+  <ellipse cx="209" cy="91" rx="6" ry="7" fill="#4E342E"/>
+  <circle cx="207" cy="89" r="2.5" fill="white"/>
+  <!-- Gentle smile -->
+  <path d="M 184 112 Q 195 120 206 112" stroke="#4E342E" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M 155 88 Q 159 52 195 46 Q 231 52 235 88" fill="#5D4037"/>
+  <rect x="175" y="138" width="40" height="52" rx="8" fill="#AB47BC"/>
+  <!-- Folded hands (please) -->
+  <path d="M 170 168 L 189 153" stroke="#FFCC80" stroke-width="8" stroke-linecap="round"/>
+  <path d="M 220 168 L 201 153" stroke="#FFCC80" stroke-width="8" stroke-linecap="round"/>
+  <rect x="184" y="146" width="22" height="18" rx="6" fill="#FFCC80"/>
+  <!-- Cookie / treat being requested -->
+  <circle cx="320" cy="130" r="32" fill="#FFAB91"/>
+  <circle cx="310" cy="122" r="4" fill="#8D6E63"/>
+  <circle cx="325" cy="128" r="4" fill="#8D6E63"/>
+  <circle cx="316" cy="140" r="4" fill="#8D6E63"/>
+  <circle cx="330" cy="118" r="3" fill="#8D6E63"/>
+  <!-- Sparkles around hands -->
+  <polygon points="155,140 157,146 163,146 158,150 160,156 155,152 150,156 152,150 147,146 153,146" fill="#CE93D8" opacity="0.5"/>
+  <polygon points="235,135 237,140 242,140 238,143 239,148 235,145 231,148 232,143 228,140 233,140" fill="#CE93D8" opacity="0.4"/>
+  <!-- Dashed arrow pointing to cookie -->
+  <path d="M 235 155 Q 265 140 290 135" stroke="#AB47BC" stroke-width="2" fill="none" stroke-dasharray="6,4" opacity="0.4"/>
+  <!-- Speech bubble -->
+  <rect x="48" y="22" width="160" height="52" rx="14" fill="white" stroke="#8E24AA" stroke-width="2"/>
+  <polygon points="148,74 155,86 165,74" fill="white" stroke="#8E24AA" stroke-width="2"/>
+  <polygon points="149,74 156,84 164,74" fill="white"/>
+  <text x="128" y="44" text-anchor="middle" font-size="15" font-weight="bold" fill="#6A1B9A">தயவு செய்து</text>
+  <text x="128" y="64" text-anchor="middle" font-size="12" fill="#8E24AA">(Please)</text>
+  <!-- Label -->
+  <text x="200" y="260" text-anchor="middle" font-size="22" font-weight="bold" fill="#6A1B9A">தயவு செய்து — Please</text>
 </svg>

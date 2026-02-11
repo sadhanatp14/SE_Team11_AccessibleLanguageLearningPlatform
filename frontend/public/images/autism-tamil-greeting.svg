@@ -1,11 +1,39 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="#FFF3E0"/>
-  <circle cx="100" cy="80" r="35" fill="#FFB74D"/>
-  <circle cx="90" cy="75" r="5" fill="#333"/>
-  <circle cx="110" cy="75" r="5" fill="#333"/>
-  <path d="M 85 95 Q 100 105 115 95" stroke="#333" stroke-width="3" fill="none"/>
-  <path d="M 70 60 Q 60 40 80 50" stroke="#333" stroke-width="2" fill="none"/>
-  <path d="M 60 100 Q 55 110 50 100" fill="#FFB74D"/>
-  <path d="M 140 100 Q 145 110 150 100" fill="#FFB74D"/>
-  <ellipse cx="100" cy="120" rx="15" ry="25" fill="#FFB74D"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFF8E1"/>
+      <stop offset="100%" style="stop-color:#FFECB3"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="20" fill="url(#bg)"/>
+  <!-- Person with Namaste gesture -->
+  <circle cx="200" cy="95" r="42" fill="#FFCC80"/>
+  <!-- Eyes -->
+  <ellipse cx="186" cy="88" rx="5" ry="6" fill="#4E342E"/>
+  <ellipse cx="214" cy="88" rx="5" ry="6" fill="#4E342E"/>
+  <!-- Warm smile -->
+  <path d="M 185 108 Q 200 120 215 108" stroke="#4E342E" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <!-- Hair -->
+  <path d="M 158 85 Q 162 48 200 42 Q 238 48 242 85" fill="#5D4037"/>
+  <!-- Body -->
+  <rect x="180" y="137" width="40" height="60" rx="8" fill="#FF8A65"/>
+  <!-- Folded hands (Namaste) -->
+  <rect x="186" y="148" width="28" height="22" rx="6" fill="#FFCC80"/>
+  <path d="M 172 172 L 190 155" stroke="#FFCC80" stroke-width="9" stroke-linecap="round"/>
+  <path d="M 228 172 L 210 155" stroke="#FFCC80" stroke-width="9" stroke-linecap="round"/>
+  <!-- Rosy cheeks -->
+  <circle cx="174" cy="103" r="7" fill="#FFAB91" opacity="0.45"/>
+  <circle cx="226" cy="103" r="7" fill="#FFAB91" opacity="0.45"/>
+  <!-- Speech bubble -->
+  <rect x="248" y="38" width="135" height="58" rx="16" fill="white" stroke="#FFB300" stroke-width="2"/>
+  <polygon points="248,65 232,78 248,75" fill="white" stroke="#FFB300" stroke-width="2"/>
+  <polygon points="249,66 235,77 249,74" fill="white"/>
+  <text x="315" y="63" text-anchor="middle" font-size="16" font-weight="bold" fill="#E65100">வணக்கம்!</text>
+  <text x="315" y="84" text-anchor="middle" font-size="13" fill="#F57C00">(Hello!)</text>
+  <!-- Decorative sparkles -->
+  <circle cx="55" cy="55" r="5" fill="#FFD54F" opacity="0.6"/>
+  <circle cx="350" cy="140" r="4" fill="#FFD54F" opacity="0.5"/>
+  <circle cx="70" cy="170" r="3" fill="#FFD54F" opacity="0.4"/>
+  <!-- Label -->
+  <text x="200" y="260" text-anchor="middle" font-size="22" font-weight="bold" fill="#E65100">வணக்கம் — Hello</text>
 </svg>

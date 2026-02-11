@@ -1,11 +1,40 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="#FCE4EC"/>
-  <circle cx="100" cy="100" r="70" fill="#E91E63"/>
-  <text x="100" y="125" font-size="70" font-weight="bold" text-anchor="middle" fill="#fff">5</text>
-  <circle cx="130" cy="32" r="5" fill="#2196F3"/>
-  <circle cx="145" cy="32" r="5" fill="#2196F3"/>
-  <circle cx="160" cy="32" r="5" fill="#2196F3"/>
-  <circle cx="137" cy="45" r="5" fill="#2196F3"/>
-  <circle cx="152" cy="45" r="5" fill="#2196F3"/>
-  <text x="100" y="180" font-size="24" font-weight="bold" text-anchor="middle" fill="#880E4F">पाँच</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F3E5F5"/>
+      <stop offset="100%" style="stop-color:#E1BEE7"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="20" fill="url(#bg)"/>
+  <!-- Number 5 display -->
+  <circle cx="110" cy="115" r="60" fill="#7B1FA2" opacity="0.12"/>
+  <text x="110" y="135" text-anchor="middle" font-size="70" font-weight="bold" fill="#7B1FA2">५</text>
+  <text x="110" y="165" text-anchor="middle" font-size="18" fill="#9C27B0">(Paanch)</text>
+  <!-- Open hand showing all 5 fingers -->
+  <rect x="245" y="118" width="75" height="78" rx="16" fill="#FFCC80"/>
+  <!-- Thumb OUT -->
+  <ellipse cx="240" cy="130" rx="18" ry="11" fill="#FFCC80" transform="rotate(-30,240,130)"/>
+  <!-- 5 fingers UP -->
+  <rect x="252" y="45" width="14" height="77" rx="7" fill="#FFCC80"/>
+  <rect x="270" y="38" width="14" height="84" rx="7" fill="#FFCC80"/>
+  <rect x="288" y="40" width="14" height="82" rx="7" fill="#FFCC80"/>
+  <rect x="306" y="48" width="14" height="74" rx="7" fill="#FFCC80"/>
+  <!-- Nails -->
+  <rect x="255" y="45" width="8" height="6" rx="4" fill="#FFAB91"/>
+  <rect x="273" y="38" width="8" height="6" rx="4" fill="#FFAB91"/>
+  <rect x="291" y="40" width="8" height="6" rx="4" fill="#FFAB91"/>
+  <rect x="309" y="48" width="8" height="6" rx="4" fill="#FFAB91"/>
+  <!-- Thumb nail -->
+  <ellipse cx="228" cy="120" rx="5" ry="4" fill="#FFAB91" transform="rotate(-30,228,120)"/>
+  <!-- "High five!" text -->
+  <text x="340" y="42" font-size="14" font-weight="bold" fill="#9C27B0" opacity="0.5">5!</text>
+  <!-- Five dots arranged -->
+  <circle cx="345" cy="60" r="6" fill="#9C27B0" opacity="0.2"/>
+  <circle cx="360" cy="60" r="6" fill="#9C27B0" opacity="0.2"/>
+  <circle cx="352" cy="75" r="6" fill="#9C27B0" opacity="0.2"/>
+  <circle cx="345" cy="90" r="6" fill="#9C27B0" opacity="0.2"/>
+  <circle cx="360" cy="90" r="6" fill="#9C27B0" opacity="0.2"/>
+  <!-- Label -->
+  <rect x="80" y="225" width="240" height="40" rx="12" fill="#7B1FA2" opacity="0.1"/>
+  <text x="200" y="252" text-anchor="middle" font-size="24" font-weight="bold" fill="#7B1FA2">पाँच — Five 🖐️</text>
 </svg>

@@ -1,3 +1,7 @@
+
+// ADHDView: Main learning interface for users with ADHD support needs.
+// Provides lesson navigation, session timing, feedback, and progress auto-saving.
+// Integrates with user preferences and backend progress APIs.
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -7,6 +11,7 @@ import './ADHDView.css';
 import ReactConfetti from 'react-confetti';
 import { getSummary } from '../../services/progressService';
 import api from '../../utils/api';
+// Icon imports for UI elements
 import {
   Bot,
   BookOpen,
@@ -30,36 +35,40 @@ import {
 } from 'lucide-react';
 
 const ADHDView = ({ initialLessonId = null }) => {
+  // Auth and preferences context
   const { user, logout } = useAuth();
   const { preferences, updatePreferences } = usePreferences();
   const navigate = useNavigate();
-  const [timeRemaining, setTimeRemaining] = useState(null);
-  const [isSessionActive, setIsSessionActive] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [cooldownRemaining, setCooldownRemaining] = useState(0);
 
-  // Lesson Logic State
-  const [activeLesson, setActiveLesson] = useState(null);
-  const [steps, setSteps] = useState([]); // Dynamic steps array
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [showHint, setShowHint] = useState(false);
-  const [attempts, setAttempts] = useState(0);
-  const [feedback, setFeedback] = useState(null);
-  const [score, setScore] = useState(0);
-  const [currentLessonScore, setCurrentLessonScore] = useState(0);
-  const [lessonPhase, setLessonPhase] = useState('idle');
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [playbackRate, setPlaybackRate] = useState(1);
+  // Session and timer state
+  const [timeRemaining, setTimeRemaining] = useState(null); // Time left in session
+  const [isSessionActive, setIsSessionActive] = useState(false); // Is a lesson session active?
+  const [showSettings, setShowSettings] = useState(false); // Show/hide settings panel
+  const [cooldownRemaining, setCooldownRemaining] = useState(0); // Cooldown timer after session
 
-  // EPIC 1.5.4 (partial): Audio speed is adjustable per-session via playbackRate.
-  // TODO (if required by your backlog): bind preferences.learningPace -> default playbackRate.
-  const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
-  const [countdownValue, setCountdownValue] = useState(5);
-  const [dummyUpdate, setDummyUpdate] = useState(0); // For forcing re-renders on audio state changes
+  // Lesson logic state
+  const [activeLesson, setActiveLesson] = useState(null); // Current lesson object
+  const [steps, setSteps] = useState([]); // Steps/questions in the lesson
+  const [currentStepIndex, setCurrentStepIndex] = useState(0); // Current step index
+  const [showHint, setShowHint] = useState(false); // Show/hide hint for current step
+  const [attempts, setAttempts] = useState(0); // Number of attempts for current step
+  const [feedback, setFeedback] = useState(null); // Feedback message for user
+  const [score, setScore] = useState(0); // Total score for session
+  const [currentLessonScore, setCurrentLessonScore] = useState(0); // Score for current lesson
+  const [lessonPhase, setLessonPhase] = useState('idle'); // Phase: idle, active, completed, etc.
+  const [isTransitioning, setIsTransitioning] = useState(false); // UI transition state
+  const [isLoading, setIsLoading] = useState(false); // Loading state for async actions
+  const [playbackRate, setPlaybackRate] = useState(1); // Audio playback speed
 
+  // Window and UI state
+  const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight }); // For confetti, etc.
+  const [countdownValue, setCountdownValue] = useState(5); // Countdown before session starts
+  const [dummyUpdate, setDummyUpdate] = useState(0); // Used to force re-renders on audio state changes
+
+  // Track completed lessons in this session (prevents duplicate saves)
   const savedCompletionRef = React.useRef(new Set());
 
+  // Save lesson completion to backend and broadcast progress update
   const saveLessonCompletion = async (lessonId) => {
     try {
       const lessonKey = `adhd-lesson-${lessonId}`;
@@ -1076,7 +1085,7 @@ const ADHDView = ({ initialLessonId = null }) => {
 
                       <div className="controls">
                         <button onClick={handleReplayStep} className="btn-control" title="Replay">
-                          <RotateCcw size={16} aria-hidden="true" />
+                          <RotateCcw size={18} aria-hidden="true" />
                           <span>Replay</span>
                         </button>
 
@@ -1086,13 +1095,13 @@ const ADHDView = ({ initialLessonId = null }) => {
                           title="Previous"
                           disabled={currentStepIndex === 0 || isTransitioning}
                         >
-                          <ChevronLeft size={16} aria-hidden="true" />
+                          <ChevronLeft size={18} aria-hidden="true" />
                           <span>Prev</span>
                         </button>
 
                         {currentStep.hint && attempts > 0 && (
                           <button onClick={() => setShowHint(true)} className="btn-control">
-                            <Lightbulb size={16} aria-hidden="true" />
+                            <Lightbulb size={18} aria-hidden="true" />
                             <span>Hint</span>
                           </button>
                         )}

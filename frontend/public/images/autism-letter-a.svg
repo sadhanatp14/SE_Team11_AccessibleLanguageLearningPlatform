@@ -1,6 +1,27 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="#E3F2FD"/>
-  <circle cx="100" cy="100" r="70" fill="#2196F3"/>
-  <text x="100" y="130" font-size="80" font-weight="bold" text-anchor="middle" fill="#fff">A</text>
-  <image href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='30' r='25' fill='%23EF5350'/%3E%3Cellipse cx='50' cy='70' r='20' ry='25' fill='%23EF5350'/%3E%3Crect x='45' y='28' width='10' height='15' fill='%238D6E63'/%3E%3C/svg%3E" x="140" y="20" width="50" height="50"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#E3F2FD"/>
+      <stop offset="100%" style="stop-color:#BBDEFB"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="20" fill="url(#bg)"/>
+  <!-- Big Letter A -->
+  <circle cx="120" cy="120" r="65" fill="#1565C0" opacity="0.12"/>
+  <text x="120" y="148" text-anchor="middle" font-size="100" font-weight="bold" fill="#1565C0">A</text>
+  <!-- Apple illustration -->
+  <ellipse cx="295" cy="140" rx="52" ry="55" fill="#EF5350"/>
+  <!-- Apple highlight -->
+  <ellipse cx="275" cy="120" rx="15" ry="25" fill="#EF9A9A" opacity="0.4"/>
+  <!-- Stem -->
+  <rect x="290" y="80" width="6" height="20" rx="3" fill="#6D4C41"/>
+  <!-- Leaf -->
+  <ellipse cx="308" cy="85" rx="15" ry="7" fill="#66BB6A" transform="rotate(-25,308,85)"/>
+  <line x1="295" y1="90" x2="312" y2="82" stroke="#4CAF50" stroke-width="1.5"/>
+  <!-- Arrow from A to Apple -->
+  <path d="M 180 120 L 235 120" stroke="#1565C0" stroke-width="2.5" fill="none" stroke-dasharray="6,4" opacity="0.5"/>
+  <polygon points="235,115 245,120 235,125" fill="#1565C0" opacity="0.5"/>
+  <!-- Label -->
+  <rect x="100" y="225" width="200" height="40" rx="12" fill="#1565C0" opacity="0.1"/>
+  <text x="200" y="252" text-anchor="middle" font-size="24" font-weight="bold" fill="#1565C0">A for Apple 🍎</text>
 </svg>

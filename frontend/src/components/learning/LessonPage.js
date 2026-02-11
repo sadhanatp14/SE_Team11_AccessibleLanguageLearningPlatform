@@ -1,3 +1,7 @@
+
+// LessonPage: Loads and displays a single lesson, handling loading state, errors, and sample fallback.
+// Integrates with backend and local lesson samples for reliability.
+// Shows lesson content using LessonReplay and applies user preferences.
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getLessonById } from '../../services/lessonService';
@@ -8,29 +12,37 @@ import lessonSamples from './lessonSamples';
 import './LessonPage.css';
 import { getDyslexiaLessonTitle, useDyslexiaContext } from '../../utils/dyslexiaSyllableMode';
 
+
+// Helper to estimate reading time for a lesson based on word count
 const estimateReadingTime = (text) => {
   if (!text) return 1;
   const words = text.trim().split(/\s+/).length;
   return Math.max(1, Math.ceil(words / 160));
 };
 
+
 const LessonPage = () => {
+  // Get lessonId from URL params
   const { lessonId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { preferences, applyPreferences } = usePreferences();
-  const [lesson, setLesson] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-  // Trigger to retry loading the lesson
+  // Lesson state
+  const [lesson, setLesson] = useState(null); // Loaded lesson object
+  const [isLoading, setIsLoading] = useState(true); // Loading state
+  const [error, setError] = useState(''); // Error message
+  // Used to trigger reloads
   const [retryKey, setRetryKey] = useState(0);
 
+  // Determine if lessonId is a local/sample lesson (not a MongoDB ObjectId)
   const isLocalLessonId = useMemo(() => {
     return lessonId ? !/^[a-fA-F0-9]{24}$/.test(lessonId) : false;
   }, [lessonId]);
 
+  // Is this a sample lesson?
   const isSample = Boolean(isLocalLessonId && lessonSamples[lessonId]);
 
+  // Load lesson data from backend or local samples
   // Allow retryKey to re-trigger loading; listed in deps intentionally.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -41,6 +53,7 @@ const LessonPage = () => {
       setIsLoading(true);
       setError('');
       try {
+        // If local/sample lesson, use local data
         if (isLocalLessonId && lessonSamples[lessonId]) {
           if (isMounted) {
             setLesson(lessonSamples[lessonId]);
@@ -49,6 +62,7 @@ const LessonPage = () => {
           return;
         }
 
+        // Otherwise, load lesson from backend
         // EPIC 6.5.1: Load lesson content from backend correctly.
         const data = await getLessonById(lessonId);
         if (isMounted) {
@@ -56,6 +70,7 @@ const LessonPage = () => {
         }
       } catch (loadError) {
         if (isMounted) {
+          // If backend fails, fallback to sample if available
           if (lessonSamples[lessonId]) {
             setLesson(lessonSamples[lessonId]);
             setError('Live lesson data is unavailable. Showing a sample lesson instead.');

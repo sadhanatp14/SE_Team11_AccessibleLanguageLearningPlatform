@@ -1,8 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="#FFF3E0"/>
-  <circle cx="100" cy="100" r="70" fill="#FF9800"/>
-  <text x="100" y="130" font-size="80" font-weight="bold" text-anchor="middle" fill="#fff">B</text>
-  <circle cx="155" cy="45" r="25" fill="#2196F3"/>
-  <circle cx="155" cy="45" r="20" fill="#fff"/>
-  <circle cx="155" cy="45" r="15" fill="#EF5350"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFF3E0"/>
+      <stop offset="100%" style="stop-color:#FFE0B2"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="20" fill="url(#bg)"/>
+  <!-- Big Letter B -->
+  <circle cx="120" cy="120" r="65" fill="#E65100" opacity="0.12"/>
+  <text x="120" y="148" text-anchor="middle" font-size="100" font-weight="bold" fill="#E65100">B</text>
+  <!-- Ball illustration -->
+  <circle cx="295" cy="130" r="50" fill="#FF7043"/>
+  <!-- Ball stripe patterns -->
+  <path d="M 250 110 Q 295 90 340 110" stroke="white" stroke-width="3" fill="none" opacity="0.6"/>
+  <path d="M 250 150 Q 295 170 340 150" stroke="white" stroke-width="3" fill="none" opacity="0.6"/>
+  <line x1="295" y1="80" x2="295" y2="180" stroke="white" stroke-width="3" opacity="0.4"/>
+  <!-- Ball highlight -->
+  <circle cx="275" cy="110" r="12" fill="white" opacity="0.25"/>
+  <!-- Ball shadow -->
+  <ellipse cx="295" cy="188" rx="35" ry="6" fill="#000" opacity="0.08"/>
+  <!-- Bounce lines -->
+  <path d="M 310 185 L 315 195" stroke="#E65100" stroke-width="2" opacity="0.3"/>
+  <path d="M 320 183 L 328 195" stroke="#E65100" stroke-width="2" opacity="0.3"/>
+  <!-- Label -->
+  <rect x="100" y="225" width="200" height="40" rx="12" fill="#E65100" opacity="0.1"/>
+  <text x="200" y="252" text-anchor="middle" font-size="24" font-weight="bold" fill="#E65100">B for Ball ⚽</text>
 </svg>

@@ -1,14 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="#E1F5FE"/>
-  <circle cx="100" cy="100" r="70" fill="#03A9F4"/>
-  <text x="100" y="125" font-size="70" font-weight="bold" text-anchor="middle" fill="#fff">8</text>
-  <circle cx="118" cy="26" r="4" fill="#FF5722"/>
-  <circle cx="130" cy="26" r="4" fill="#FF5722"/>
-  <circle cx="142" cy="26" r="4" fill="#FF5722"/>
-  <circle cx="154" cy="26" r="4" fill="#FF5722"/>
-  <circle cx="124" cy="36" r="4" fill="#FF5722"/>
-  <circle cx="136" cy="36" r="4" fill="#FF5722"/>
-  <circle cx="148" cy="36" r="4" fill="#FF5722"/>
-  <circle cx="160" cy="36" r="4" fill="#FF5722"/>
-  <text x="100" y="180" font-size="24" font-weight="bold" text-anchor="middle" fill="#01579B">आठ</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFF8E1"/>
+      <stop offset="100%" style="stop-color:#FFECB3"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="20" fill="url(#bg)"/>
+  <!-- Number 8 display -->
+  <circle cx="110" cy="115" r="60" fill="#FF8F00" opacity="0.12"/>
+  <text x="110" y="135" text-anchor="middle" font-size="70" font-weight="bold" fill="#FF8F00">८</text>
+  <text x="110" y="165" text-anchor="middle" font-size="18" fill="#FFA000">(Aath)</text>
+  <!-- Two hands: left (5) + right (3 fingers) -->
+  <!-- Left hand -->
+  <rect x="190" y="125" width="52" height="58" rx="11" fill="#FFCC80"/>
+  <ellipse cx="188" cy="140" rx="12" ry="8" fill="#FFCC80" transform="rotate(-25,188,140)"/>
+  <rect x="196" y="68" width="10" height="60" rx="5" fill="#FFCC80"/>
+  <rect x="209" y="64" width="10" height="64" rx="5" fill="#FFCC80"/>
+  <rect x="222" y="66" width="10" height="62" rx="5" fill="#FFCC80"/>
+  <rect x="235" y="70" width="10" height="58" rx="5" fill="#FFCC80"/>
+  <!-- Right hand -->
+  <rect x="270" y="118" width="55" height="62" rx="12" fill="#FFCC80"/>
+  <ellipse cx="268" cy="150" rx="10" ry="11" fill="#FFCC80"/>
+  <!-- 3 fingers up -->
+  <rect x="278" y="52" width="12" height="70" rx="6" fill="#FFCC80"/>
+  <rect x="294" y="48" width="12" height="74" rx="6" fill="#FFCC80"/>
+  <rect x="310" y="52" width="12" height="70" rx="6" fill="#FFCC80"/>
+  <!-- Pinky curled -->
+  <ellipse cx="326" cy="118" rx="7" ry="9" fill="#FFB74D"/>
+  <!-- "5 + 3 = 8" -->
+  <rect x="195" y="192" width="140" height="26" rx="8" fill="white" opacity="0.6"/>
+  <text x="265" y="211" text-anchor="middle" font-size="16" font-weight="bold" fill="#FF8F00">5 + 3 = 8</text>
+  <!-- Label -->
+  <rect x="80" y="225" width="240" height="40" rx="12" fill="#FF8F00" opacity="0.1"/>
+  <text x="200" y="252" text-anchor="middle" font-size="24" font-weight="bold" fill="#FF8F00">आठ — Eight</text>
 </svg>

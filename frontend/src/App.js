@@ -1,16 +1,18 @@
+
+// Main application entry point for the frontend
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
-import { PreferencesProvider } from './context/PreferencesContext';
-import Login from './components/Login';
-import Register from './components/Register';
-import AccessibilitySetup from './components/AccessibilitySetup';
-import Dashboard from './components/Dashboard';
-import ProtectedRoute from './components/ProtectedRoute';
-import LessonPage from './components/learning/LessonPage';
-import ProgressPage from './components/ProgressPage';
+import { AuthProvider } from './context/AuthContext'; // Provides authentication context
+import { PreferencesProvider } from './context/PreferencesContext'; // Provides user preferences context
+import Login from './components/Login'; // Login page
+import Register from './components/Register'; // Registration page
+import AccessibilitySetup from './components/AccessibilitySetup'; // Accessibility setup wizard
+import Dashboard from './components/Dashboard'; // Main dashboard after login
+import ProtectedRoute from './components/ProtectedRoute'; // Wrapper for protected routes
+import LessonPage from './components/learning/LessonPage'; // Individual lesson view
+import ProgressPage from './components/ProgressPage'; // Progress tracking page
 
-// Diagnostic Component
+// Diagnostic Component: Shows system warnings for missing browser features (TTS, voice recognition)
 const SystemCheck = () => {
   const [visible, setVisible] = React.useState(true);
   const [warnings, setWarnings] = React.useState([]);
@@ -19,7 +21,7 @@ const SystemCheck = () => {
     const updateWarnings = () => {
       const currentWarnings = [];
 
-      // Feature support checks
+      // Check for browser support of TTS and voice recognition
       if (!('speechSynthesis' in window)) {
         currentWarnings.push("Text-to-Speech not supported.");
       }
@@ -27,7 +29,7 @@ const SystemCheck = () => {
         currentWarnings.push("Voice recognition not supported.");
       }
 
-      // Voice availability check
+      // Check if any TTS voices are available
       if (window.speechSynthesis) {
         const voices = window.speechSynthesis.getVoices();
         if (voices.length === 0) {
@@ -86,19 +88,24 @@ const SystemCheck = () => {
   );
 };
 
+
+// Main App component: Sets up routing and context providers
 function App() {
   return (
     <Router>
+      {/* Provide authentication context to all children */}
       <AuthProvider>
+        {/* Provide user preferences context to all children */}
         <PreferencesProvider>
-          <SystemCheck /> {/* Render the SystemCheck component here */}
+          {/* Show system warnings if browser features are missing */}
+          <SystemCheck />
           <Routes>
-            {/* Public Routes */}
+            {/* Public Routes (no authentication required) */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
 
-            {/* Protected Routes */}
-            {/* EPIC 1.3: Preference setup wizard is gated behind authentication */}
+            {/* Protected Routes (require authentication) */}
+            {/* Accessibility setup wizard (EPIC 1.3) */}
             <Route
               path="/accessibility-setup"
               element={
@@ -107,7 +114,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            {/* EPIC 1.4-1.6: Condition-specific learning dashboards */}
+            {/* Main dashboard (EPIC 1.4-1.6) */}
             <Route
               path="/dashboard"
               element={
@@ -116,7 +123,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            {/* EPIC 1.7: Progress review requires logged-in user */}
+            {/* Progress review page (EPIC 1.7) */}
             <Route
               path="/progress"
               element={
@@ -125,7 +132,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            {/* EPIC 1.4: Dyslexia lesson routes (route-based lessons) */}
+            {/* Individual lesson page (EPIC 1.4) */}
             <Route
               path="/lessons/:lessonId"
               element={
@@ -135,7 +142,7 @@ function App() {
               }
             />
 
-            {/* Default Route */}
+            {/* Default Route: Redirect to login if no match */}
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>

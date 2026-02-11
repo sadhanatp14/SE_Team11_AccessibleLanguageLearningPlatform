@@ -1,3 +1,7 @@
+
+// DyslexiaView: Main learning interface for users with dyslexia support needs.
+// Provides syllable mode, lesson navigation, and progress tracking.
+// Integrates with user preferences and local progress storage.
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -8,14 +12,19 @@ import { useDyslexiaSyllableMode } from '../../utils/dyslexiaSyllableMode';
 import './DyslexiaView.css';
 
 const DyslexiaView = () => {
+  // Auth context
   const { user, logout } = useAuth();
+  // UI state for settings panel
   const [showSettings, setShowSettings] = useState(false);
+  // Track lesson progress for current user
   const [lessonProgress, setLessonProgress] = useState({});
+  // Syllable mode toggle for dyslexia-friendly text
   const [syllableMode, setSyllableMode] = useDyslexiaSyllableMode(true);
   const navigate = useNavigate();
 
-  // EPIC 1.4: Dyslexia-friendly reading support lives here (syllable mode + spacing/font via preferences)
+  // EPIC 1.4: Dyslexia-friendly reading support (syllable mode + spacing/font via preferences)
 
+  // List of available lessons (with syllable-friendly titles/descriptions)
   const lessons = [
     {
       id: 1,
@@ -52,15 +61,18 @@ const DyslexiaView = () => {
     },
   ];
 
+  // Toggle syllable mode for all UI text
   const toggleSyllableMode = () => {
     // EPIC 1.4.2: Reading assistance toggle (syllable-friendly text)
     setSyllableMode((prev) => !prev);
   };
 
+  // Start a lesson (navigate to lesson page)
   const handleStartLesson = (lesson) => {
     navigate(`/lessons/${lesson.apiId}`);
   };
 
+  // Load lesson progress for current user on mount or user change
   useEffect(() => {
     const key = normalizeUserId(user);
     if (!key) {
@@ -71,8 +83,10 @@ const DyslexiaView = () => {
     setLessonProgress(progress || {});
   }, [user]);
 
+  // Helper to switch between normal and syllable-friendly text
   const uiText = React.useCallback((normalText, syllableText) => (syllableMode ? syllableText : normalText), [syllableMode]);
 
+  // UI copy for dyslexia-friendly onboarding
   const copy = {
     greeting: uiText('Hello', 'Hel-lo'),
     welcomeTitle: uiText('Welcome to Your Learning Space', 'Wel-come to Your Learn-ing Space'),

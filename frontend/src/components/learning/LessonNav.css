@@ -7,14 +7,32 @@
 
 .lesson-nav__button {
   min-width: 120px;
-  padding: 10px 16px;
+  padding: 12px 20px;
   border-radius: 12px;
   border: 1px solid var(--theme-border, var(--border-color));
   background: var(--theme-bg, var(--bg-secondary));
   color: var(--theme-text, var(--text-primary));
   font-weight: 600;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
+
+.lesson-nav__button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-color: var(--theme-accent, var(--accent-color));
+  color: var(--theme-accent, var(--accent-color));
+}
+
+.lesson-nav__button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
 
 .lesson-nav__button--back {
   justify-self: start;
@@ -26,6 +44,16 @@
 
 .lesson-nav__button--next {
   justify-self: end;
+  background: var(--theme-primary, #3b82f6);
+  color: white;
+  border-color: transparent;
+}
+
+.lesson-nav__button--next:hover:not(:disabled) {
+  background: var(--theme-primary-hover, #2563eb);
+  color: white;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  transform: translateY(-2px);
 }
 
 .lesson-nav__button.is-active {

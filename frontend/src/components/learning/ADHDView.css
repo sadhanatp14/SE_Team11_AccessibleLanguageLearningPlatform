@@ -504,6 +504,39 @@
   box-shadow: 0 15px 30px rgba(16, 185, 129, 0.4);
 }
 
+.btn-control {
+  padding: 14px 24px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.btn-control:hover:not(:disabled) {
+  border-color: #3b82f6;
+  color: #1d4ed8;
+  background: #eff6ff;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 10px rgba(59, 130, 246, 0.1);
+}
+
+.btn-control:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  transform: none;
+  box-shadow: none;
+}
+
 /* Audio Button */
 .btn-audio {
   display: flex;

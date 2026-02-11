@@ -1,11 +1,43 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="#FFF9C4"/>
-  <circle cx="100" cy="100" r="70" fill="#FFC107"/>
-  <text x="100" y="130" font-size="80" font-weight="bold" text-anchor="middle" fill="#fff">G</text>
-  <ellipse cx="150" cy="50" rx="15" ry="20" fill="#fff"/>
-  <circle cx="155" cy="40" r="12" fill="#fff"/>
-  <rect x="145" y="48" width="4" height="10" fill="#8D6E63"/>
-  <rect x="155" y="48" width="4" height="10" fill="#8D6E63"/>
-  <circle cx="148" cy="38" r="2" fill="#000"/>
-  <circle cx="156" cy="38" r="2" fill="#000"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F1F8E9"/>
+      <stop offset="100%" style="stop-color:#DCEDC8"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="20" fill="url(#bg)"/>
+  <!-- Big Letter G -->
+  <circle cx="120" cy="120" r="65" fill="#33691E" opacity="0.12"/>
+  <text x="120" y="148" text-anchor="middle" font-size="100" font-weight="bold" fill="#33691E">G</text>
+  <!-- Goat illustration -->
+  <!-- Body -->
+  <ellipse cx="295" cy="145" rx="45" ry="32" fill="#EFEBE9"/>
+  <!-- Head -->
+  <circle cx="262" cy="100" r="26" fill="#EFEBE9"/>
+  <!-- Horns -->
+  <path d="M 250 82 Q 240 58 255 55" stroke="#795548" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M 270 82 Q 280 58 265 55" stroke="#795548" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <!-- Ears -->
+  <ellipse cx="240" cy="92" rx="12" ry="6" fill="#D7CCC8" transform="rotate(-20,240,92)"/>
+  <ellipse cx="284" cy="92" rx="12" ry="6" fill="#D7CCC8" transform="rotate(20,284,92)"/>
+  <!-- Eyes -->
+  <ellipse cx="253" cy="97" rx="4" ry="5" fill="#3E2723"/>
+  <ellipse cx="271" cy="97" rx="4" ry="5" fill="#3E2723"/>
+  <!-- Nose -->
+  <ellipse cx="262" cy="112" rx="5" ry="3.5" fill="#8D6E63"/>
+  <!-- Beard -->
+  <path d="M 258 118 Q 262 135 260 142" stroke="#BCAAA4" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <!-- Legs -->
+  <rect x="265" y="168" width="10" height="25" rx="4" fill="#D7CCC8"/>
+  <rect x="285" y="168" width="10" height="25" rx="4" fill="#D7CCC8"/>
+  <rect x="305" y="168" width="10" height="25" rx="4" fill="#D7CCC8"/>
+  <rect x="320" y="168" width="10" height="25" rx="4" fill="#D7CCC8"/>
+  <!-- Tail -->
+  <path d="M 340 138 Q 352 128 350 140" stroke="#BCAAA4" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <!-- Grass -->
+  <path d="M 240 195 L 245 182 L 250 195" stroke="#66BB6A" stroke-width="2" fill="none" opacity="0.5"/>
+  <path d="M 330 195 L 335 180 L 340 195" stroke="#66BB6A" stroke-width="2" fill="none" opacity="0.5"/>
+  <!-- Label -->
+  <rect x="100" y="225" width="200" height="40" rx="12" fill="#33691E" opacity="0.1"/>
+  <text x="200" y="252" text-anchor="middle" font-size="24" font-weight="bold" fill="#33691E">G for Goat 🐐</text>
 </svg>

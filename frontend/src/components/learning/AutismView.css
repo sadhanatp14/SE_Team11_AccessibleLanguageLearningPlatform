@@ -371,32 +371,81 @@
   align-items: center;
   justify-content: center;
   background: #f8fafc;
+  gap: 16px;
+}
+
+.step-visual {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  max-width: 350px;
+  margin-bottom: 32px;
 }
 
 .step-visual img {
-  max-width: 100%;
+  width: 100%;
   height: auto;
   border-radius: 16px;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
   transition: transform 0.3s ease;
+  /* EPIC 2.5.4: Accent border connecting image to highlighted keyword */
+  border: 3px solid var(--accent-color-soft);
+  display: block;
 }
 
 .step-visual:hover img {
   transform: scale(1.02);
 }
 
-/* Content Side */
+/* EPIC 2.5.4: Keyword badge overlaid on image — matches highlighted text in content */
+.visual-keyword-badge {
+  position: absolute;
+  bottom: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent-color);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 6px 18px;
+  border-radius: 20px;
+  letter-spacing: 0.3px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+  max-width: 85%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* EPIC 2.5.2: Image caption linking visual to lesson content */
+.visual-caption {
+  display: none;
+}
+
+.caption-icon {
+  font-size: 16px;
+}
+
+/* Content Side — EPIC 2.5.3: Clean, uncluttered, single-concept focus */
 .content-column {
   padding: 40px;
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  gap: 20px;
 }
 
 .step-text {
-  margin-bottom: 30px;
+  margin-bottom: 10px;
   text-align: center;
+  /* EPIC 2.5.3: Visual focus area for the key content */
+  padding: 20px;
+  background: #fafbfc;
+  border-radius: 16px;
+  border: 1px dashed var(--accent-color-soft);
 }
 
 .content-main {
@@ -405,6 +454,7 @@
   color: #1e293b;
   margin-bottom: 12px;
   letter-spacing: -0.5px;
+  line-height: 1.5;
 }
 
 .highlight {
@@ -415,15 +465,46 @@
   transition: all 0.2s ease;
 }
 
+/* EPIC 2.5.1: Static keyword highlight — persistent emphasis with underline + subtle pulse */
+.highlight.keyword-highlight {
+  color: var(--accent-color-hover);
+  background: var(--accent-color-soft);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border-bottom: 2.5px solid var(--accent-color);
+  font-weight: 700;
+  display: inline-block;
+  animation: keywordPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes keywordPulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+
+  50% {
+    box-shadow: 0 0 0 4px var(--accent-color-soft);
+  }
+}
+
 .highlight.active-word {
   background: var(--accent-color);
   color: #ffffff;
+  display: inline-block;
+  transform: scale(1.03);
+  transition: all 0.2s ease;
 }
 
+/* EPIC 2.5.3: Cleaner translation with separator */
 .content-translation {
-  font-size: 18px;
-  color: #64748b;
+  font-size: 16px;
+  color: #94a3b8;
   font-style: italic;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
 }
 
 /* Interaction & Controls */
@@ -644,19 +725,27 @@
 }
 
 .btn-previous {
-  background: transparent;
+  background: white;
   color: #64748b;
-  border: 2px solid transparent;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .btn-previous:hover:not(:disabled) {
-  background: #f1f5f9;
+  background: #f8fafc;
   color: #334155;
+  border-color: #cbd5e1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
 .btn-previous:disabled {
-  opacity: 0.3;
+  opacity: 0.5;
   cursor: not-allowed;
+  background: #f1f5f9;
+  border-color: #f1f5f9;
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-next {
@@ -688,18 +777,31 @@
   .step-content-card {
     padding: 15px 20px;
   }
-  
+
   .content-main {
     font-size: 20px;
   }
-  
+
   .step-visual img:not(.visual-image-hidden) {
     max-width: 200px;
   }
-  
+
   .btn-option {
     padding: 10px 16px;
     font-size: 14px;
+  }
+
+  .visual-keyword-badge {
+    font-size: 12px;
+    padding: 3px 12px;
+  }
+
+  .visual-caption {
+    font-size: 12px;
+  }
+
+  .step-text {
+    padding: 12px;
   }
 }
 
@@ -820,18 +922,17 @@
   .completion-content {
     padding: 40px 30px;
   }
-  
+
   .completion-title {
     font-size: 36px;
   }
-  
+
   .completion-message {
     font-size: 20px;
   }
-  
+
   .btn-completion {
     font-size: 16px;
     padding: 15px 25px;
   }
 }
-

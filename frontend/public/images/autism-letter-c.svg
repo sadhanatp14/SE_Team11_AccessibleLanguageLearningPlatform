@@ -1,10 +1,44 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="#F3E5F5"/>
-  <circle cx="100" cy="100" r="70" fill="#9C27B0"/>
-  <text x="100" y="130" font-size="80" font-weight="bold" text-anchor="middle" fill="#fff">C</text>
-  <ellipse cx="150" cy="50" rx="15" ry="20" fill="#FFB74D"/>
-  <circle cx="155" cy="40" r="12" fill="#FFB74D"/>
-  <circle cx="140" cy="35" r="8" fill="#FFB74D"/>
-  <path d="M 140 50 Q 130 55 135 65 Q 145 70 150 75 L 155 70 Q 150 65 145 60 Z" fill="#FFB74D"/>
-  <circle cx="148" cy="43" r="2" fill="#333"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F3E5F5"/>
+      <stop offset="100%" style="stop-color:#E1BEE7"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="20" fill="url(#bg)"/>
+  <!-- Big Letter C -->
+  <circle cx="120" cy="120" r="65" fill="#7B1FA2" opacity="0.12"/>
+  <text x="120" y="148" text-anchor="middle" font-size="100" font-weight="bold" fill="#7B1FA2">C</text>
+  <!-- Cat illustration -->
+  <!-- Cat body -->
+  <ellipse cx="295" cy="155" rx="40" ry="35" fill="#FF8A65"/>
+  <!-- Cat head -->
+  <circle cx="295" cy="105" r="30" fill="#FF8A65"/>
+  <!-- Ears -->
+  <polygon points="272,80 265,55 285,75" fill="#FF8A65"/>
+  <polygon points="318,80 325,55 305,75" fill="#FF8A65"/>
+  <polygon points="274,78 269,60 283,74" fill="#FFAB91"/>
+  <polygon points="316,78 321,60 307,74" fill="#FFAB91"/>
+  <!-- Cat eyes -->
+  <ellipse cx="283" cy="100" rx="5" ry="6" fill="#4E342E"/>
+  <ellipse cx="307" cy="100" rx="5" ry="6" fill="#4E342E"/>
+  <circle cx="282" cy="98" r="2" fill="white"/>
+  <circle cx="306" cy="98" r="2" fill="white"/>
+  <!-- Nose -->
+  <polygon points="295,110 290,115 300,115" fill="#E91E63"/>
+  <!-- Whiskers -->
+  <line x1="260" y1="110" x2="280" y2="112" stroke="#5D4037" stroke-width="1.5"/>
+  <line x1="258" y1="118" x2="280" y2="116" stroke="#5D4037" stroke-width="1.5"/>
+  <line x1="310" y1="112" x2="330" y2="110" stroke="#5D4037" stroke-width="1.5"/>
+  <line x1="310" y1="116" x2="332" y2="118" stroke="#5D4037" stroke-width="1.5"/>
+  <!-- Mouth -->
+  <path d="M 290 115 Q 295 122 300 115" stroke="#5D4037" stroke-width="1.5" fill="none"/>
+  <!-- Tail -->
+  <path d="M 335 150 Q 355 130 345 110" stroke="#FF8A65" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <!-- Paws -->
+  <ellipse cx="275" cy="188" rx="10" ry="6" fill="#FF8A65"/>
+  <ellipse cx="315" cy="188" rx="10" ry="6" fill="#FF8A65"/>
+  <!-- Label -->
+  <rect x="100" y="225" width="200" height="40" rx="12" fill="#7B1FA2" opacity="0.1"/>
+  <text x="200" y="252" text-anchor="middle" font-size="24" font-weight="bold" fill="#7B1FA2">C for Cat 🐱</text>
 </svg>

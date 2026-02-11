@@ -1,6 +1,8 @@
 import React from 'react';
 import './LessonNav.css';
 
+import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
+
 const LessonNav = ({
   onBack,
   onNext,
@@ -20,8 +22,10 @@ const LessonNav = ({
         className="lesson-nav__button lesson-nav__button--back fx-pressable fx-focus"
         onClick={onBack}
         disabled={!canGoBack}
+        aria-label="Previous step"
       >
-        Back
+        <ChevronLeft size={18} />
+        <span>Prev</span>
       </button>
       <button
         type="button"
@@ -29,16 +33,20 @@ const LessonNav = ({
         onClick={onReplay}
         aria-pressed={isReplay}
         disabled={!canReplay && !isReplay}
+        aria-label="Replay current section"
       >
-        Replay
+        <RotateCcw size={18} />
+        <span>Replay</span>
       </button>
       <button
         type="button"
         className="lesson-nav__button lesson-nav__button--next fx-pressable fx-focus"
         onClick={onNext}
         disabled={!canGoNext}
+        aria-label={resolvedNextLabel}
       >
-        {resolvedNextLabel}
+        <span>{resolvedNextLabel}</span>
+        <ChevronRight size={18} />
       </button>
     </div>
   );

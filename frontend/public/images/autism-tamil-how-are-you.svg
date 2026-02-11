@@ -1,10 +1,37 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="#F3E5F5"/>
-  <circle cx="100" cy="80" r="35" fill="#AB47BC"/>
-  <circle cx="90" cy="75" r="5" fill="#fff"/>
-  <circle cx="110" cy="75" r="5" fill="#fff"/>
-  <path d="M 85 95 Q 100 100 115 95" stroke="#fff" stroke-width="3" fill="none"/>
-  <path d="M 95 65 Q 100 60 105 65" stroke="#fff" stroke-width="2" fill="none"/>
-  <circle cx="100" cy="140" r="20" fill="none" stroke="#AB47BC" stroke-width="3"/>
-  <text x="100" y="148" font-size="24" font-weight="bold" text-anchor="middle" fill="#AB47BC">?</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#E3F2FD"/>
+      <stop offset="100%" style="stop-color:#BBDEFB"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="20" fill="url(#bg)"/>
+  <!-- Person A asking -->
+  <circle cx="120" cy="108" r="36" fill="#FFCC80"/>
+  <ellipse cx="108" cy="101" rx="4" ry="5" fill="#4E342E"/>
+  <ellipse cx="132" cy="101" rx="4" ry="5" fill="#4E342E"/>
+  <path d="M 110 120 Q 120 128 130 120" stroke="#4E342E" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M 84 98 Q 88 66 120 60 Q 152 66 156 98" fill="#5D4037"/>
+  <rect x="102" y="144" width="36" height="50" rx="8" fill="#42A5F5"/>
+  <!-- Waving hand -->
+  <path d="M 148 158 L 175 132" stroke="#FFCC80" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="178" cy="127" r="9" fill="#FFCC80"/>
+  <!-- Person B -->
+  <circle cx="290" cy="108" r="36" fill="#D7CCC8"/>
+  <ellipse cx="278" cy="101" rx="4" ry="5" fill="#4E342E"/>
+  <ellipse cx="302" cy="101" rx="4" ry="5" fill="#4E342E"/>
+  <path d="M 280 120 Q 290 128 300 120" stroke="#4E342E" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M 254 98 Q 258 66 290 60 Q 322 66 326 98" fill="#3E2723"/>
+  <rect x="272" y="144" width="36" height="50" rx="8" fill="#EF5350"/>
+  <!-- Question marks -->
+  <text x="195" y="100" font-size="32" font-weight="bold" fill="#1976D2" opacity="0.3">?</text>
+  <text x="215" y="80" font-size="22" font-weight="bold" fill="#1976D2" opacity="0.2">?</text>
+  <!-- Speech bubble -->
+  <rect x="35" y="25" width="165" height="55" rx="14" fill="white" stroke="#1976D2" stroke-width="2"/>
+  <polygon points="120,80 125,92 135,80" fill="white" stroke="#1976D2" stroke-width="2"/>
+  <polygon points="121,80 126,90 134,80" fill="white"/>
+  <text x="117" y="48" text-anchor="middle" font-size="12" font-weight="bold" fill="#1565C0">எப்படி இருக்கிறீர்கள்?</text>
+  <text x="117" y="68" text-anchor="middle" font-size="12" fill="#1976D2">(How are you?)</text>
+  <!-- Label -->
+  <text x="200" y="258" text-anchor="middle" font-size="17" font-weight="bold" fill="#1565C0">எப்படி இருக்கிறீர்கள்? — How are you?</text>
 </svg>

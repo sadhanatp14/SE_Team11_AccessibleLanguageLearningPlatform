@@ -1,7 +1,42 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="#E0F2F1"/>
-  <circle cx="100" cy="100" r="70" fill="#009688"/>
-  <text x="100" y="130" font-size="80" font-weight="bold" text-anchor="middle" fill="#fff">I</text>
-  <path d="M 140 35 L 145 45 L 155 40 L 160 50 L 165 45 L 170 55 L 160 60 L 155 70 L 145 65" fill="#B3E5FC"/>
-  <path d="M 142 38 L 147 42 L 153 38 L 158 42 L 163 38 L 167 42" stroke="#4FC3F7" stroke-width="2" fill="none"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#E0F7FA"/>
+      <stop offset="100%" style="stop-color:#B2EBF2"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="20" fill="url(#bg)"/>
+  <!-- Big Letter I -->
+  <circle cx="120" cy="120" r="65" fill="#006064" opacity="0.12"/>
+  <text x="120" y="148" text-anchor="middle" font-size="100" font-weight="bold" fill="#006064">I</text>
+  <!-- Ice cream cone illustration -->
+  <!-- Cone -->
+  <polygon points="270,150 320,150 295,200" fill="#FFB74D"/>
+  <!-- Cone pattern -->
+  <line x1="278" y1="155" x2="289" y2="195" stroke="#FFA726" stroke-width="1.5" opacity="0.5"/>
+  <line x1="290" y1="152" x2="293" y2="195" stroke="#FFA726" stroke-width="1.5" opacity="0.5"/>
+  <line x1="305" y1="152" x2="297" y2="195" stroke="#FFA726" stroke-width="1.5" opacity="0.5"/>
+  <line x1="312" y1="155" x2="300" y2="193" stroke="#FFA726" stroke-width="1.5" opacity="0.5"/>
+  <!-- Cross pattern -->
+  <line x1="275" y1="165" x2="315" y2="165" stroke="#FFA726" stroke-width="1" opacity="0.4"/>
+  <line x1="278" y1="178" x2="312" y2="178" stroke="#FFA726" stroke-width="1" opacity="0.4"/>
+  <!-- Ice cream scoop 1 (bottom - vanilla) -->
+  <circle cx="295" cy="130" r="28" fill="#FFF9C4"/>
+  <!-- Ice cream scoop 2 (top - strawberry) -->
+  <circle cx="295" cy="100" r="25" fill="#F48FB1"/>
+  <!-- Ice cream scoop 3 (top top - chocolate) -->
+  <circle cx="295" cy="75" r="22" fill="#8D6E63"/>
+  <!-- Sprinkles -->
+  <rect x="288" y="68" width="6" height="3" rx="1" fill="#E91E63" transform="rotate(30,291,69)"/>
+  <rect x="300" y="72" width="6" height="3" rx="1" fill="#FDD835" transform="rotate(-20,303,73)"/>
+  <rect x="280" y="95" width="6" height="3" rx="1" fill="#66BB6A" transform="rotate(45,283,96)"/>
+  <rect x="310" y="98" width="6" height="3" rx="1" fill="#42A5F5" transform="rotate(-35,313,99)"/>
+  <!-- Cherry on top -->
+  <circle cx="295" cy="52" r="6" fill="#D32F2F"/>
+  <path d="M 295 46 Q 300 38 305 42" stroke="#388E3C" stroke-width="1.5" fill="none"/>
+  <!-- Drip -->
+  <path d="M 280 145 Q 278 152 280 158" stroke="#F48FB1" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <!-- Label -->
+  <rect x="85" y="225" width="230" height="40" rx="12" fill="#006064" opacity="0.1"/>
+  <text x="200" y="252" text-anchor="middle" font-size="24" font-weight="bold" fill="#006064">I for Ice Cream 🍦</text>
 </svg>

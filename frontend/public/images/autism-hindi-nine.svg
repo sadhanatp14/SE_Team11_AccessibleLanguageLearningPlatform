@@ -1,15 +1,35 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="#F3E5F5"/>
-  <circle cx="100" cy="100" r="70" fill="#673AB7"/>
-  <text x="100" y="125" font-size="70" font-weight="bold" text-anchor="middle" fill="#fff">9</text>
-  <circle cx="115" cy="24" r="3.5" fill="#00BCD4"/>
-  <circle cx="126" cy="24" r="3.5" fill="#00BCD4"/>
-  <circle cx="137" cy="24" r="3.5" fill="#00BCD4"/>
-  <circle cx="148" cy="24" r="3.5" fill="#00BCD4"/>
-  <circle cx="159" cy="24" r="3.5" fill="#00BCD4"/>
-  <circle cx="120" cy="33" r="3.5" fill="#00BCD4"/>
-  <circle cx="131" cy="33" r="3.5" fill="#00BCD4"/>
-  <circle cx="142" cy="33" r="3.5" fill="#00BCD4"/>
-  <circle cx="153" cy="33" r="3.5" fill="#00BCD4"/>
-  <text x="100" y="180" font-size="24" font-weight="bold" text-anchor="middle" fill="#311B92">नौ</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#EDE7F6"/>
+      <stop offset="100%" style="stop-color:#D1C4E9"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="20" fill="url(#bg)"/>
+  <!-- Number 9 display -->
+  <circle cx="110" cy="115" r="60" fill="#4527A0" opacity="0.12"/>
+  <text x="110" y="135" text-anchor="middle" font-size="70" font-weight="bold" fill="#4527A0">९</text>
+  <text x="110" y="165" text-anchor="middle" font-size="18" fill="#5E35B1">(Nau)</text>
+  <!-- Two hands: left (5) + right (4 fingers) -->
+  <!-- Left hand -->
+  <rect x="190" y="125" width="52" height="58" rx="11" fill="#FFCC80"/>
+  <ellipse cx="188" cy="140" rx="12" ry="8" fill="#FFCC80" transform="rotate(-25,188,140)"/>
+  <rect x="196" y="68" width="10" height="60" rx="5" fill="#FFCC80"/>
+  <rect x="209" y="64" width="10" height="64" rx="5" fill="#FFCC80"/>
+  <rect x="222" y="66" width="10" height="62" rx="5" fill="#FFCC80"/>
+  <rect x="235" y="70" width="10" height="58" rx="5" fill="#FFCC80"/>
+  <!-- Right hand - 4 fingers up, thumb tucked -->
+  <rect x="270" y="118" width="60" height="62" rx="12" fill="#FFCC80"/>
+  <ellipse cx="268" cy="150" rx="10" ry="11" fill="#FFB74D"/>
+  <!-- 4 fingers up -->
+  <rect x="276" y="52" width="12" height="70" rx="6" fill="#FFCC80"/>
+  <rect x="292" y="48" width="12" height="74" rx="6" fill="#FFCC80"/>
+  <rect x="308" y="50" width="12" height="72" rx="6" fill="#FFCC80"/>
+  <rect x="322" y="55" width="12" height="67" rx="6" fill="#FFCC80"/>
+  <!-- "5 + 4 = 9" -->
+  <rect x="195" y="192" width="140" height="26" rx="8" fill="white" opacity="0.6"/>
+  <text x="265" y="211" text-anchor="middle" font-size="16" font-weight="bold" fill="#4527A0">5 + 4 = 9</text>
+  <!-- Label -->
+  <rect x="80" y="225" width="240" height="40" rx="12" fill="#4527A0" opacity="0.1"/>
+  <text x="200" y="252" text-anchor="middle" font-size="24" font-weight="bold" fill="#4527A0">नौ — Nine</text>
 </svg>

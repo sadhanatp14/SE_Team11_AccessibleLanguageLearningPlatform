@@ -1,5 +1,35 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="#E8F5E9"/>
-  <circle cx="100" cy="100" r="60" fill="#66BB6A"/>
-  <path d="M 70 100 L 90 120 L 130 70" stroke="#fff" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#E8F5E9"/>
+      <stop offset="100%" style="stop-color:#A5D6A7"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="20" fill="url(#bg)"/>
+  <!-- Person nodding yes -->
+  <circle cx="200" cy="108" r="42" fill="#FFCC80"/>
+  <ellipse cx="186" cy="100" rx="5" ry="5.5" fill="#4E342E"/>
+  <ellipse cx="214" cy="100" rx="5" ry="5.5" fill="#4E342E"/>
+  <path d="M 186 122 Q 200 132 214 122" stroke="#4E342E" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M 158 98 Q 162 62 200 56 Q 238 62 242 98" fill="#4E342E"/>
+  <rect x="180" y="150" width="40" height="50" rx="8" fill="#4CAF50"/>
+  <!-- Thumbs up -->
+  <path d="M 225 172 L 258 148" stroke="#FFCC80" stroke-width="8" stroke-linecap="round"/>
+  <ellipse cx="261" cy="140" rx="7" ry="12" fill="#FFCC80"/>
+  <!-- Nod motion arrows -->
+  <path d="M 155 80 L 155 68" stroke="#4CAF50" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.5"/>
+  <polygon points="150,68 155,58 160,68" fill="#4CAF50" opacity="0.5"/>
+  <path d="M 245 80 L 245 68" stroke="#4CAF50" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.5"/>
+  <polygon points="240,68 245,58 250,68" fill="#4CAF50" opacity="0.5"/>
+  <!-- Big checkmark -->
+  <circle cx="330" cy="105" r="42" fill="#43A047" opacity="0.12"/>
+  <path d="M 305 105 L 325 125 L 358 82" stroke="#43A047" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Speech bubble -->
+  <rect x="55" y="22" width="110" height="50" rx="14" fill="white" stroke="#388E3C" stroke-width="2"/>
+  <polygon points="145,72 155,84 165,72" fill="white" stroke="#388E3C" stroke-width="2"/>
+  <polygon points="146,72 156,82 164,72" fill="white"/>
+  <text x="110" y="44" text-anchor="middle" font-size="20" font-weight="bold" fill="#2E7D32">ஆம்!</text>
+  <text x="110" y="63" text-anchor="middle" font-size="13" fill="#388E3C">(Yes!)</text>
+  <!-- Label -->
+  <text x="200" y="262" text-anchor="middle" font-size="22" font-weight="bold" fill="#2E7D32">ஆம் — Yes</text>
 </svg>

@@ -1,8 +1,35 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="#FBE9E7"/>
-  <circle cx="100" cy="100" r="70" fill="#FF5722"/>
-  <text x="100" y="130" font-size="80" font-weight="bold" text-anchor="middle" fill="#fff">J</text>
-  <ellipse cx="155" cy="50" rx="15" ry="20" fill="#8D6E63"/>
-  <rect x="150" y="35" width="10" height="8" fill="#6D4C41"/>
-  <path d="M 145 50 Q 140 55 145 60 L 165 60 Q 170 55 165 50 Z" fill="#BCAAA4"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFF8E1"/>
+      <stop offset="100%" style="stop-color:#FFECB3"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="20" fill="url(#bg)"/>
+  <!-- Big Letter J -->
+  <circle cx="120" cy="120" r="65" fill="#F57F17" opacity="0.12"/>
+  <text x="120" y="148" text-anchor="middle" font-size="100" font-weight="bold" fill="#F57F17">J</text>
+  <!-- Jug illustration -->
+  <!-- Jug body -->
+  <path d="M 260 90 Q 255 95 252 120 Q 250 160 255 180 Q 260 192 295 195 Q 330 192 335 180 Q 340 160 338 120 Q 335 95 330 90" fill="#4FC3F7"/>
+  <!-- Jug opening -->
+  <ellipse cx="295" cy="88" rx="38" ry="10" fill="#29B6F6"/>
+  <ellipse cx="295" cy="88" rx="32" ry="7" fill="#81D4FA"/>
+  <!-- Handle -->
+  <path d="M 335 105 Q 365 110 365 145 Q 365 175 338 175" stroke="#29B6F6" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <!-- Jug highlight -->
+  <path d="M 265 100 Q 263 130 265 165" stroke="white" stroke-width="4" fill="none" opacity="0.3" stroke-linecap="round"/>
+  <!-- Spout -->
+  <path d="M 258 88 Q 245 82 240 75" stroke="#29B6F6" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <!-- Water drops -->
+  <path d="M 238 75 Q 235 80 238 85" fill="#4FC3F7" opacity="0.6"/>
+  <path d="M 232 82 Q 229 87 232 92" fill="#4FC3F7" opacity="0.4"/>
+  <!-- Decorative pattern on jug -->
+  <path d="M 265 140 Q 280 132 295 140 Q 310 148 325 140" stroke="white" stroke-width="2" fill="none" opacity="0.4"/>
+  <path d="M 265 155 Q 280 147 295 155 Q 310 163 325 155" stroke="white" stroke-width="2" fill="none" opacity="0.4"/>
+  <!-- Shadow -->
+  <ellipse cx="295" cy="200" rx="45" ry="5" fill="#000" opacity="0.06"/>
+  <!-- Label -->
+  <rect x="100" y="225" width="200" height="40" rx="12" fill="#F57F17" opacity="0.1"/>
+  <text x="200" y="252" text-anchor="middle" font-size="24" font-weight="bold" fill="#F57F17">J for Jug 🫗</text>
 </svg>

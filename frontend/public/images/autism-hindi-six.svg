@@ -1,12 +1,34 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="#E8F5E9"/>
-  <circle cx="100" cy="100" r="70" fill="#4CAF50"/>
-  <text x="100" y="125" font-size="70" font-weight="bold" text-anchor="middle" fill="#fff">6</text>
-  <circle cx="125" cy="30" r="5" fill="#9C27B0"/>
-  <circle cx="140" cy="30" r="5" fill="#9C27B0"/>
-  <circle cx="155" cy="30" r="5" fill="#9C27B0"/>
-  <circle cx="132" cy="42" r="5" fill="#9C27B0"/>
-  <circle cx="147" cy="42" r="5" fill="#9C27B0"/>
-  <circle cx="162" cy="42" r="5" fill="#9C27B0"/>
-  <text x="100" y="180" font-size="24" font-weight="bold" text-anchor="middle" fill="#1B5E20">छह</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#E0F2F1"/>
+      <stop offset="100%" style="stop-color:#B2DFDB"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="20" fill="url(#bg)"/>
+  <!-- Number 6 display -->
+  <circle cx="110" cy="115" r="60" fill="#00695C" opacity="0.12"/>
+  <text x="110" y="135" text-anchor="middle" font-size="70" font-weight="bold" fill="#00695C">६</text>
+  <text x="110" y="165" text-anchor="middle" font-size="18" fill="#00897B">(Chhah)</text>
+  <!-- Two hands: left hand (5) + right hand (1 finger) -->
+  <!-- Left hand - open (5 fingers) -->
+  <rect x="195" y="125" width="55" height="62" rx="12" fill="#FFCC80"/>
+  <ellipse cx="192" cy="140" rx="13" ry="9" fill="#FFCC80" transform="rotate(-25,192,140)"/>
+  <rect x="200" y="65" width="11" height="63" rx="5.5" fill="#FFCC80"/>
+  <rect x="214" y="60" width="11" height="68" rx="5.5" fill="#FFCC80"/>
+  <rect x="228" y="62" width="11" height="66" rx="5.5" fill="#FFCC80"/>
+  <rect x="242" y="68" width="11" height="60" rx="5.5" fill="#FFCC80"/>
+  <!-- Right hand - 1 finger up -->
+  <rect x="280" y="115" width="55" height="65" rx="12" fill="#FFCC80"/>
+  <ellipse cx="278" cy="152" rx="10" ry="11" fill="#FFCC80"/>
+  <rect x="300" y="55" width="13" height="64" rx="6.5" fill="#FFCC80"/>
+  <ellipse cx="292" cy="115" rx="8" ry="10" fill="#FFB74D"/>
+  <ellipse cx="318" cy="113" rx="8" ry="10" fill="#FFB74D"/>
+  <ellipse cx="330" cy="118" rx="7" ry="9" fill="#FFB74D"/>
+  <!-- "5 + 1 = 6" visual -->
+  <rect x="195" y="195" width="140" height="26" rx="8" fill="white" opacity="0.6"/>
+  <text x="265" y="214" text-anchor="middle" font-size="16" font-weight="bold" fill="#00695C">5 + 1 = 6</text>
+  <!-- Label -->
+  <rect x="80" y="225" width="240" height="40" rx="12" fill="#00695C" opacity="0.1"/>
+  <text x="200" y="252" text-anchor="middle" font-size="24" font-weight="bold" fill="#00695C">छह — Six</text>
 </svg>

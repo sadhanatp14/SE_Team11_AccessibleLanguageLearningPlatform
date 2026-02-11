@@ -1,0 +1,25 @@
+interactive rebase in progress; onto d5dc9cb
+Last command done (1 command done):
+   pick 345ef74 # UI buttons
+No commands remaining.
+You are currently rebasing branch 'main' on 'd5dc9cb'.
+  (fix conflicts and then run "git rebase --continue")
+  (use "git rebase --skip" to skip this patch)
+  (use "git rebase --abort" to check out the original branch)
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	modified:   backend/package-lock.json
+	modified:   frontend/package-lock.json
+	modified:   frontend/src/components/learning/ADHDView.css
+	modified:   frontend/src/components/learning/ADHDView.js
+	modified:   frontend/src/components/learning/AutismView.js
+	modified:   frontend/src/components/learning/LessonNav.css
+	modified:   frontend/src/components/learning/LessonNav.js
+
+Unmerged paths:
+  (use "git restore --staged <file>..." to unstage)
+  (use "git add <file>..." to mark resolution)
+	both modified:   frontend/src/components/learning/AutismView.css
+
+Untracked files not listed (use -u option to show untracked files)

@@ -1,16 +1,43 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="#FFEBEE"/>
-  <circle cx="100" cy="100" r="70" fill="#F44336"/>
-  <text x="100" y="125" font-size="60" font-weight="bold" text-anchor="middle" fill="#fff">10</text>
-  <circle cx="112" cy="22" r="3" fill="#4CAF50"/>
-  <circle cx="122" cy="22" r="3" fill="#4CAF50"/>
-  <circle cx="132" cy="22" r="3" fill="#4CAF50"/>
-  <circle cx="142" cy="22" r="3" fill="#4CAF50"/>
-  <circle cx="152" cy="22" r="3" fill="#4CAF50"/>
-  <circle cx="117" cy="30" r="3" fill="#4CAF50"/>
-  <circle cx="127" cy="30" r="3" fill="#4CAF50"/>
-  <circle cx="137" cy="30" r="3" fill="#4CAF50"/>
-  <circle cx="147" cy="30" r="3" fill="#4CAF50"/>
-  <circle cx="157" cy="30" r="3" fill="#4CAF50"/>
-  <text x="100" y="180" font-size="24" font-weight="bold" text-anchor="middle" fill="#B71C1C">दस</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFEBEE"/>
+      <stop offset="100%" style="stop-color:#FFCDD2"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="20" fill="url(#bg)"/>
+  <!-- Number 10 display -->
+  <circle cx="110" cy="115" r="60" fill="#C62828" opacity="0.12"/>
+  <text x="110" y="135" text-anchor="middle" font-size="65" font-weight="bold" fill="#C62828">१०</text>
+  <text x="110" y="165" text-anchor="middle" font-size="18" fill="#E53935">(Das)</text>
+  <!-- Two open hands showing all 10 fingers -->
+  <!-- Left hand -->
+  <rect x="190" y="122" width="52" height="58" rx="11" fill="#FFCC80"/>
+  <ellipse cx="188" cy="138" rx="14" ry="9" fill="#FFCC80" transform="rotate(-25,188,138)"/>
+  <rect x="196" y="65" width="10" height="60" rx="5" fill="#FFCC80"/>
+  <rect x="209" y="60" width="10" height="65" rx="5" fill="#FFCC80"/>
+  <rect x="222" y="62" width="10" height="63" rx="5" fill="#FFCC80"/>
+  <rect x="235" y="67" width="10" height="58" rx="5" fill="#FFCC80"/>
+  <!-- Right hand -->
+  <rect x="270" y="122" width="52" height="58" rx="11" fill="#FFCC80"/>
+  <ellipse cx="324" cy="138" rx="14" ry="9" fill="#FFCC80" transform="rotate(25,324,138)"/>
+  <rect x="276" y="67" width="10" height="58" rx="5" fill="#FFCC80"/>
+  <rect x="289" y="62" width="10" height="63" rx="5" fill="#FFCC80"/>
+  <rect x="302" y="60" width="10" height="65" rx="5" fill="#FFCC80"/>
+  <rect x="315" y="65" width="10" height="60" rx="5" fill="#FFCC80"/>
+  <!-- "5 + 5 = 10" -->
+  <rect x="195" y="190" width="140" height="26" rx="8" fill="white" opacity="0.6"/>
+  <text x="265" y="209" text-anchor="middle" font-size="16" font-weight="bold" fill="#C62828">5 + 5 = 10</text>
+  <!-- Celebration confetti -->
+  <circle cx="180" cy="45" r="4" fill="#FDD835" opacity="0.6"/>
+  <circle cx="330" cy="40" r="4" fill="#4CAF50" opacity="0.6"/>
+  <circle cx="200" cy="35" r="3" fill="#E91E63" opacity="0.5"/>
+  <circle cx="350" cy="55" r="3" fill="#2196F3" opacity="0.5"/>
+  <rect x="215" y="38" width="8" height="4" rx="2" fill="#FF9800" opacity="0.5" transform="rotate(30,219,40)"/>
+  <rect x="310" y="32" width="8" height="4" rx="2" fill="#9C27B0" opacity="0.5" transform="rotate(-20,314,34)"/>
+  <!-- Star burst -->
+  <polygon points="265,30 268,38 276,38 270,43 272,51 265,46 258,51 260,43 254,38 262,38" fill="#FDD835" opacity="0.4"/>
+  <!-- Label -->
+  <rect x="80" y="225" width="240" height="40" rx="12" fill="#C62828" opacity="0.1"/>
+  <text x="200" y="252" text-anchor="middle" font-size="24" font-weight="bold" fill="#C62828">दस — Ten 🎉</text>
 </svg>

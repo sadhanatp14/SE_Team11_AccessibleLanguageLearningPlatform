@@ -1,6 +1,40 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="#FFEBEE"/>
-  <circle cx="100" cy="100" r="60" fill="#EF5350"/>
-  <line x1="75" y1="75" x2="125" y2="125" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
-  <line x1="125" y1="75" x2="75" y2="125" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFEBEE"/>
+      <stop offset="100%" style="stop-color:#FFCDD2"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="20" fill="url(#bg)"/>
+  <!-- Person with stop hand gesture -->
+  <circle cx="200" cy="105" r="40" fill="#FFCC80"/>
+  <ellipse cx="186" cy="97" rx="5" ry="5.5" fill="#4E342E"/>
+  <ellipse cx="214" cy="97" rx="5" ry="5.5" fill="#4E342E"/>
+  <!-- Firm/neutral mouth -->
+  <line x1="190" y1="118" x2="210" y2="118" stroke="#4E342E" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Hair -->
+  <path d="M 160 95 Q 164 58 200 52 Q 236 58 240 95" fill="#4E342E"/>
+  <!-- Body -->
+  <rect x="180" y="145" width="40" height="55" rx="8" fill="#78909C"/>
+  <!-- Hand up (stop / no gesture) -->
+  <path d="M 232 160 L 268 125" stroke="#FFCC80" stroke-width="9" stroke-linecap="round"/>
+  <!-- Open palm -->
+  <rect x="260" y="98" width="32" height="36" rx="8" fill="#FFCC80"/>
+  <rect x="262" y="84" width="6" height="19" rx="3" fill="#FFCC80"/>
+  <rect x="270" y="80" width="6" height="23" rx="3" fill="#FFCC80"/>
+  <rect x="278" y="82" width="6" height="21" rx="3" fill="#FFCC80"/>
+  <rect x="286" y="87" width="6" height="17" rx="3" fill="#FFCC80"/>
+  <!-- Big X mark -->
+  <g opacity="0.4">
+    <line x1="55" y1="65" x2="115" y2="125" stroke="#EF5350" stroke-width="8" stroke-linecap="round"/>
+    <line x1="115" y1="65" x2="55" y2="125" stroke="#EF5350" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  <!-- Speech bubble -->
+  <rect x="240" y="30" width="115" height="48" rx="13" fill="white" stroke="#D32F2F" stroke-width="2"/>
+  <polygon points="260,78 254,88 268,78" fill="white" stroke="#D32F2F" stroke-width="2"/>
+  <polygon points="261,77 256,86 267,77" fill="white"/>
+  <text x="297" y="50" text-anchor="middle" font-size="17" font-weight="bold" fill="#C62828">இல்லை</text>
+  <text x="297" y="68" text-anchor="middle" font-size="12" fill="#D32F2F">(No)</text>
+  <!-- Label -->
+  <text x="200" y="260" text-anchor="middle" font-size="22" font-weight="bold" fill="#C62828">இல்லை — No</text>
 </svg>

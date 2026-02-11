@@ -1,9 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="#E0F2F1"/>
-  <circle cx="100" cy="100" r="70" fill="#009688"/>
-  <text x="100" y="125" font-size="70" font-weight="bold" text-anchor="middle" fill="#fff">3</text>
-  <circle cx="140" cy="38" r="7" fill="#4CAF50"/>
-  <circle cx="155" cy="38" r="7" fill="#4CAF50"/>
-  <circle cx="170" cy="38" r="7" fill="#4CAF50"/>
-  <text x="100" y="180" font-size="24" font-weight="bold" text-anchor="middle" fill="#004D40">तीन</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFF3E0"/>
+      <stop offset="100%" style="stop-color:#FFE0B2"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="20" fill="url(#bg)"/>
+  <!-- Number 3 display -->
+  <circle cx="110" cy="115" r="60" fill="#E65100" opacity="0.12"/>
+  <text x="110" y="135" text-anchor="middle" font-size="70" font-weight="bold" fill="#E65100">३</text>
+  <text x="110" y="165" text-anchor="middle" font-size="18" fill="#F57C00">(Teen)</text>
+  <!-- Hand showing 3 fingers -->
+  <rect x="250" y="115" width="70" height="78" rx="16" fill="#FFCC80"/>
+  <ellipse cx="248" cy="162" rx="12" ry="14" fill="#FFCC80"/>
+  <!-- 3 fingers UP -->
+  <rect x="258" y="45" width="15" height="74" rx="7.5" fill="#FFCC80"/>
+  <rect x="278" y="40" width="15" height="79" rx="7.5" fill="#FFCC80"/>
+  <rect x="298" y="45" width="15" height="74" rx="7.5" fill="#FFCC80"/>
+  <!-- Pinky curled -->
+  <ellipse cx="318" cy="115" rx="9" ry="11" fill="#FFB74D"/>
+  <!-- Nails -->
+  <rect x="261" y="45" width="9" height="6" rx="4.5" fill="#FFAB91"/>
+  <rect x="281" y="40" width="9" height="6" rx="4.5" fill="#FFAB91"/>
+  <rect x="301" y="45" width="9" height="6" rx="4.5" fill="#FFAB91"/>
+  <!-- Three stars -->
+  <polygon points="338,50 341,58 349,58 343,63 345,71 338,66 331,71 333,63 327,58 335,58" fill="#FFA726" opacity="0.5"/>
+  <polygon points="358,42 360,48 366,48 361,52 363,58 358,54 353,58 355,52 350,48 356,48" fill="#FFA726" opacity="0.4"/>
+  <polygon points="370,58 372,64 378,64 373,67 375,73 370,70 365,73 367,67 362,64 368,64" fill="#FFA726" opacity="0.3"/>
+  <!-- Label -->
+  <rect x="80" y="225" width="240" height="40" rx="12" fill="#E65100" opacity="0.1"/>
+  <text x="200" y="252" text-anchor="middle" font-size="24" font-weight="bold" fill="#E65100">तीन — Three</text>
 </svg>
