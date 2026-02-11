@@ -9,7 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { decorateDyslexiaText, useDyslexiaContext } from '../../utils/dyslexiaSyllableMode';
 import './LessonReplay.css';
 
-const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice, onRetry, onExit }) => {
+const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice, onRetry, onExit, onComplete }) => {
   const { user } = useAuth();
   const [sections, setSections] = useState([]);
   const [progress, setProgress] = useState(null);
@@ -208,7 +208,12 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
                 } catch (e) {}
               }, 500);
             } catch (e) {}
-            setTimeout(() => setSuccessMessage(''), 4000);
+            // Redirect to progress page after showing success message (if onComplete provided)
+            if (onComplete) {
+              setTimeout(() => onComplete(), 2000);
+            } else {
+              setTimeout(() => setSuccessMessage(''), 4000);
+            }
           }
         } catch (e) {
           // EPIC 6.7.1: Friendly client error when backend save fails.
@@ -248,7 +253,12 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
           }, 500);
         }
 
-        setTimeout(() => setSuccessMessage(''), 4000);
+        // Redirect to progress page after showing success message (if onComplete provided)
+        if (onComplete) {
+          setTimeout(() => onComplete(), 2000);
+        } else {
+          setTimeout(() => setSuccessMessage(''), 4000);
+        }
       }
 
       return;

@@ -111,6 +111,13 @@ const LessonPage = () => {
     ? 'Preparing your lesson steps…'
     : `About ${readingTime} min • ${interactionCount} interactions`;
 
+  // Redirect dyslexia users to progress page after completing a lesson
+  const handleLessonComplete = () => {
+    if (condition.toLowerCase() === 'dyslexia') {
+      navigate('/progress');
+    }
+  };
+
   return (
     <div
       className="lesson-page"
@@ -126,6 +133,7 @@ const LessonPage = () => {
         notice={error}
         onRetry={retryLoadLesson}
         onExit={handleBack}
+        onComplete={handleLessonComplete}
       />
     </div>
   );
