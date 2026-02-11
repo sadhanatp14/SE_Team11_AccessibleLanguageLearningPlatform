@@ -2,8 +2,7 @@
 // Service for interaction-related API calls (submitting answers, requesting help)
 import api from '../utils/api';
 
-// Submit an answer for a specific interaction in a lesson
-export const submitInteraction = async ({ lessonId, interactionId, selectedAnswer }) => {
+  // Submit an answer for a specific interaction in a lesson
   const response = await api.post('/interactions/submit', {
     lessonId,
     interactionId,
@@ -12,8 +11,7 @@ export const submitInteraction = async ({ lessonId, interactionId, selectedAnswe
   return response.data;
 };
 
-// Request help for a specific interaction in a lesson
-export const requestInteractionHelp = async ({ lessonId, interactionId }) => {
+  // Request help for a specific interaction in a lesson
   const response = await api.post('/interactions/help', {
     lessonId,
     interactionId,
