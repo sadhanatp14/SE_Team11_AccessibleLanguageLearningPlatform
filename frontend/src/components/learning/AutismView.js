@@ -16,6 +16,7 @@ import {
   Hash,
   Info,
   Lightbulb,
+  Pause,
   RotateCcw,
   Settings,
   Star,
@@ -30,6 +31,7 @@ const AutismView = ({ initialLessonId = null }) => {
   const navigate = useNavigate();
   // UI state for settings panel
   const [showSettings, setShowSettings] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
 
   // EPIC 1.6: Autism support is delivered via predictable UI and reduced motion/distraction-free styling.
 
@@ -686,13 +688,19 @@ const AutismView = ({ initialLessonId = null }) => {
       audioRef.current.play().catch((error) => {
         console.log('Audio file not available, using text-to-speech fallback');
         // Fallback to browser's text-to-speech if audio file not found
-        speakText(currentStep.content);
+        speakText(currentStep.content, { trackWords: true });
       });
+
+      // Keep active-word highlighting roughly in sync even when using file audio
+      if (currentStep?.content) {
+        startSilentBoundaryTracking(currentStep.content, playbackSpeed);
+      }
+
       setFeedback('Playing audio...');
       setTimeout(() => setFeedback(''), 2000);
     } else if (currentStep?.content) {
       // If no audio ref, use text-to-speech directly
-      speakText(currentStep.content);
+      speakText(currentStep.content, { trackWords: true });
       setFeedback('Playing audio...');
       setTimeout(() => setFeedback(''), 2000);
     }
@@ -700,6 +708,104 @@ const AutismView = ({ initialLessonId = null }) => {
 
   const [activeWord, setActiveWord] = useState('');
   const [playbackSpeed, setPlaybackSpeed] = useState(0.8);
+
+  const getInstructionsTextForStep = useCallback((step) => {
+    if (!step) return 'Follow the on-screen instructions. Use Play Audio to listen, and use Next to continue.';
+    const hasOptions = Boolean(step?.interaction?.options?.length);
+    const hasTyping = Boolean(step?.interaction?.type === 'typing');
+    const base = 'Take your time. Focus on one step at a time.';
+
+    if (hasOptions) {
+      return `${base} Read the sentence. Press Play Audio to hear it. Then choose one option. If you need help, press Hint. Answer correctly to go to the next step.`;
+    }
+
+    if (hasTyping) {
+      return `${base} Read the prompt. Press Play Audio to hear it. Type your answer and submit. If you need help, press Hint. You can replay audio anytime.`;
+    }
+
+    return `${base} Read the sentence and translation. Press Play Audio to hear it. Use Hint if needed. Continue when you are ready.`;
+  }, []);
+
+  const stopAllAudio = useCallback(() => {
+    window.speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    if (ttsAudioRef.current) {
+      ttsAudioRef.current.pause();
+      ttsAudioRef.current = null;
+    }
+    setActiveWord('');
+    setFeedback('');
+  }, []);
+
+  useEffect(() => {
+    if (!showInstructions) return;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        stopAllAudio();
+        setShowInstructions(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showInstructions, stopAllAudio]);
+
+  const stripWordPunctuation = useCallback((value) => {
+    return String(value ?? '').replace(/[.,!?;:()"'{}\u005B\u005D\u201C\u201D\u2018\u2019\u2013\u2014]/g, '');
+  }, []);
+
+  const renderInstructionsWithActiveWord = useCallback(
+    (text) => {
+      if (!text) return null;
+      return String(text)
+        .split(' ')
+        .map((token, idx) => {
+          const clean = stripWordPunctuation(token);
+          const isActive = activeWord && clean && clean.toLowerCase() === activeWord.toLowerCase();
+          return (
+            <span
+              key={`${idx}-${token}`}
+              className={isActive ? 'autism-instructions-word is-active' : 'autism-instructions-word'}
+            >
+              {token}{' '}
+            </span>
+          );
+        });
+    },
+    [activeWord, stripWordPunctuation]
+  );
+
+  const startSilentBoundaryTracking = useCallback((text, rate) => {
+    if (!('speechSynthesis' in window)) return;
+    try {
+      // Cancel any previous boundary tracking utterance
+      window.speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = rate;
+      utterance.volume = 0;
+
+      utterance.onboundary = (event) => {
+        if (event.name === 'word') {
+          const charIndex = event.charIndex;
+          const textBefore = text.slice(charIndex);
+          const firstSpace = textBefore.search(/\s/);
+          const word = firstSpace === -1 ? textBefore : textBefore.slice(0, firstSpace);
+          const cleanWord = word.replace(/[.,!?;:()"]/g, '');
+          setActiveWord(cleanWord);
+        }
+      };
+
+      utterance.onend = () => {
+        setActiveWord('');
+      };
+
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      // Best-effort only.
+    }
+  }, []);
 
   // Keep playback speed in sync for both file audio and backend TTS audio.
   useEffect(() => {
@@ -714,7 +820,8 @@ const AutismView = ({ initialLessonId = null }) => {
   // Text-to-speech fallback function
   // Audio Handling with Backend Support
 
-  const speakText = async (text) => {
+  const speakText = async (text, options = {}) => {
+    const { trackWords = true } = options;
     // Cancel any existing
     window.speechSynthesis.cancel();
     if (audioRef.current) {
@@ -724,6 +831,7 @@ const AutismView = ({ initialLessonId = null }) => {
       ttsAudioRef.current.pause();
       ttsAudioRef.current = null;
     }
+    if (trackWords) setActiveWord('');
 
     try {
       // Try Backend TTS
@@ -747,8 +855,17 @@ const AutismView = ({ initialLessonId = null }) => {
         if (ttsAudioRef.current === audio) {
           ttsAudioRef.current = null;
         }
+        if (trackWords) setActiveWord('');
         URL.revokeObjectURL(url);
       };
+
+      audio.onpause = () => {
+        if (trackWords) setActiveWord('');
+      };
+
+      if (trackWords) {
+        startSilentBoundaryTracking(text, playbackSpeed);
+      }
 
       audio.play();
 
@@ -758,20 +875,22 @@ const AutismView = ({ initialLessonId = null }) => {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = playbackSpeed;
 
-        utterance.onboundary = (event) => {
-          if (event.name === 'word') {
-            const charIndex = event.charIndex;
-            const textBefore = text.slice(charIndex);
-            const firstSpace = textBefore.search(/\s/);
-            const word = firstSpace === -1 ? textBefore : textBefore.slice(0, firstSpace);
-            const cleanWord = word.replace(/[.,!?;:()"]/g, '');
-            setActiveWord(cleanWord);
-          }
-        };
+        if (trackWords) {
+          utterance.onboundary = (event) => {
+            if (event.name === 'word') {
+              const charIndex = event.charIndex;
+              const textBefore = text.slice(charIndex);
+              const firstSpace = textBefore.search(/\s/);
+              const word = firstSpace === -1 ? textBefore : textBefore.slice(0, firstSpace);
+              const cleanWord = word.replace(/[.,!?;:()"]+/g, '');
+              setActiveWord(cleanWord);
+            }
+          };
+        }
 
         utterance.onstart = () => setFeedback('Playing audio...');
         utterance.onend = () => {
-          setActiveWord('');
+          if (trackWords) setActiveWord('');
           setFeedback('');
         };
 
@@ -1189,10 +1308,21 @@ const AutismView = ({ initialLessonId = null }) => {
 
                 {/* EPIC 2.1.2: Audio controls */}
                 <div className="step-audio-section">
-                  <button onClick={handlePlayAudio} className="btn-audio">
-                    <Volume2 size={18} aria-hidden="true" />
-                    <span>Play Audio</span>
-                  </button>
+                  <div className="autism-audio-actions">
+                    <button onClick={handlePlayAudio} className="btn-audio">
+                      <Volume2 size={18} aria-hidden="true" />
+                      <span>Play Audio</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowInstructions(true)}
+                      className="btn-instructions"
+                      title="Instructions"
+                    >
+                      <Info size={18} aria-hidden="true" />
+                      <span>Instructions</span>
+                    </button>
+                  </div>
                   <audio
                     ref={audioRef}
                     src={currentStep.audio}
@@ -1312,6 +1442,66 @@ const AutismView = ({ initialLessonId = null }) => {
             </div>
           </div>
         </main>
+
+        {showInstructions && (
+          <div
+            className="autism-instructions-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Instructions"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                stopAllAudio();
+                setShowInstructions(false);
+              }
+            }}
+          >
+            <div className="autism-instructions-modal">
+              <div className="autism-instructions-header">
+                <h3>Instructions</h3>
+                <button
+                  type="button"
+                  className="autism-instructions-close"
+                  onClick={() => {
+                    stopAllAudio();
+                    setShowInstructions(false);
+                  }}
+                  aria-label="Close instructions"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="autism-instructions-text">{renderInstructionsWithActiveWord(getInstructionsTextForStep(currentStep))}</p>
+              <div className="autism-instructions-actions">
+                <button
+                  type="button"
+                  className="btn-settings"
+                  onClick={() => speakText(getInstructionsTextForStep(currentStep), { trackWords: true })}
+                >
+                  <Volume2 size={18} aria-hidden="true" />
+                  <span>Play</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn-settings"
+                  onClick={() => speakText(getInstructionsTextForStep(currentStep), { trackWords: true })}
+                >
+                  <RotateCcw size={18} aria-hidden="true" />
+                  <span>Replay</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn-settings"
+                  onClick={stopAllAudio}
+                >
+                  <Pause size={18} aria-hidden="true" />
+                  <span>Stop</span>
+                </button>
+              </div>
+              <p className="autism-instructions-hint">Tip: Press Esc to close.</p>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

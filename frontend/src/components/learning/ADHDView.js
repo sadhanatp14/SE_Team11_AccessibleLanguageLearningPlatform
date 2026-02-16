@@ -2,7 +2,7 @@
 // ADHDView: Main learning interface for users with ADHD support needs.
 // Provides lesson navigation, session timing, feedback, and progress auto-saving.
 // Integrates with user preferences and backend progress APIs.
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { usePreferences } from '../../context/PreferencesContext';
@@ -20,6 +20,7 @@ import {
   Hand,
   Hash,
   Headphones,
+  Info,
   Lightbulb,
   Pause,
   Pencil,
@@ -122,9 +123,99 @@ const ADHDView = ({ initialLessonId = null }) => {
   // Audio handling
   const [currentAudio, setCurrentAudio] = useState(null);
 
+  const boundaryUtteranceRef = React.useRef(null);
+  const [activeWord, setActiveWord] = useState('');
+
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const playAudio = async (text, rate = 1) => {
+  const [showInstructions, setShowInstructions] = useState(false);
+
+  const stopAllAudio = useCallback(() => {
+    window.speechSynthesis.cancel();
+    boundaryUtteranceRef.current = null;
+    setActiveWord('');
+    if (currentAudio) {
+      currentAudio.pause();
+    }
+    setIsPlaying(false);
+  }, [currentAudio]);
+
+  const getInstructionsTextForStep = (step) => {
+    if (!step) return 'Follow the on-screen instructions. Use Listen to hear the text, and use Next to continue.';
+    if (step.type === 'learn') {
+      return 'This is a learning step. Read the word and the explanation. Press Listen to hear it. Press Next when you are ready to continue.';
+    }
+    if (step.type === 'quiz') {
+      return 'This is a quiz step. Read the question and choose one option. Press Listen to hear the question again. If a hint is available, you can open it. Answer correctly to move on.';
+    }
+    if (step.type === 'story') {
+      return 'This is a story step. Press Play Story to listen. Use the speed slider to slow down or speed up. You can Pause and Resume. Press Replay to listen again, then press Next to continue.';
+    }
+    return 'Follow the on-screen instructions. Use Listen to hear the text, and use Next to continue.';
+  };
+
+  useEffect(() => {
+    if (!showInstructions) return;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        stopAllAudio();
+        setShowInstructions(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showInstructions, stopAllAudio]);
+
+  const startSilentBoundaryTracking = (text, rate) => {
+    if (!('speechSynthesis' in window)) return;
+
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = rate;
+      utterance.volume = 0;
+      utterance.onboundary = (event) => {
+        if (event.name === 'word') {
+          const charIndex = event.charIndex;
+          const textBefore = text.slice(charIndex);
+          const firstSpace = textBefore.search(/\s/);
+          const word = firstSpace === -1 ? textBefore : textBefore.slice(0, firstSpace);
+          const cleanWord = word.replace(/[.,!?;:()"']/g, '');
+          setActiveWord(cleanWord);
+        }
+      };
+      utterance.onend = () => {
+        setActiveWord('');
+        if (boundaryUtteranceRef.current === utterance) {
+          boundaryUtteranceRef.current = null;
+        }
+      };
+      boundaryUtteranceRef.current = utterance;
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      // Best-effort only.
+    }
+  };
+
+  const renderTextWithActiveWord = (text) => {
+    if (!text) return null;
+    const words = String(text).split(' ');
+    return words.map((word, idx) => {
+      const cleanWord = word.replace(/[.,!?;:()"']/g, '');
+      const isActive = activeWord && cleanWord && cleanWord.toLowerCase() === activeWord.toLowerCase();
+      return (
+        <span
+          key={`${idx}-${word}`}
+          className={isActive ? 'adhd-word adhd-active-word' : 'adhd-word'}
+        >
+          {word}{' '}
+        </span>
+      );
+    });
+  };
+
+  const playAudio = async (text, rate = 1, options = {}) => {
+    const { trackWords = true } = options;
     // EPIC 3.1.2: Read lesson text aloud using clear audio (backend TTS with browser fallback).
     // EPIC 3.5.3: Keep audio consistent in quality by using the same TTS path.
     // EPIC 3.5.4: Listening/replay does not affect score.
@@ -134,6 +225,7 @@ const ADHDView = ({ initialLessonId = null }) => {
     }
     window.speechSynthesis.cancel();
     setIsPlaying(false);
+    if (trackWords) setActiveWord('');
 
     try {
       const response = await fetch('/api/tts/speak', {
@@ -154,21 +246,44 @@ const ADHDView = ({ initialLessonId = null }) => {
       setCurrentAudio(audio);
       setIsPlaying(true);
 
+      if (trackWords) {
+        startSilentBoundaryTracking(text, rate);
+      }
+
       audio.onended = () => {
         URL.revokeObjectURL(url);
         setCurrentAudio(null);
         setIsPlaying(false);
+        if (trackWords) setActiveWord('');
       };
 
-      audio.onpause = () => setIsPlaying(false);
+      audio.onpause = () => {
+        setIsPlaying(false);
+        if (trackWords) setActiveWord('');
+      };
       audio.onplay = () => setIsPlaying(true);
 
     } catch (error) {
       console.error("Server TTS failed, falling back to browser:", error);
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = rate;
+      if (trackWords) {
+        utterance.onboundary = (event) => {
+          if (event.name === 'word') {
+            const charIndex = event.charIndex;
+            const textBefore = text.slice(charIndex);
+            const firstSpace = textBefore.search(/\s/);
+            const word = firstSpace === -1 ? textBefore : textBefore.slice(0, firstSpace);
+            const cleanWord = word.replace(/[.,!?;:()"']/g, '');
+            setActiveWord(cleanWord);
+          }
+        };
+      }
       utterance.onstart = () => setIsPlaying(true);
-      utterance.onend = () => setIsPlaying(false);
+      utterance.onend = () => {
+        setIsPlaying(false);
+        if (trackWords) setActiveWord('');
+      };
       window.speechSynthesis.speak(utterance);
     }
   };
@@ -585,6 +700,7 @@ const ADHDView = ({ initialLessonId = null }) => {
 
   const handlePreviousStep = () => {
     window.speechSynthesis.cancel();
+    setActiveWord('');
     if (currentStepIndex > 0) {
       setCurrentStepIndex(prev => prev - 1);
       setFeedback(null);
@@ -937,6 +1053,15 @@ const ADHDView = ({ initialLessonId = null }) => {
               <div className="lesson-header">
                 <button onClick={exitLesson} className="btn-back">← Back</button>
                 <h3>{activeLesson.title} - Step {currentStepIndex + 1}/{steps.length}</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowInstructions(true)}
+                  className="btn-instructions"
+                  title="Instructions"
+                >
+                  <Info size={18} aria-hidden="true" />
+                  <span>Instructions</span>
+                </button>
               </div>
 
               <div className="step-content">
@@ -956,9 +1081,11 @@ const ADHDView = ({ initialLessonId = null }) => {
                       {currentStep.type === 'learn' && (
                         <div className="learn-mode">
                           <h2 className={currentStep.highlight ? 'highlight-text' : ''}>
-                            {currentStep.content}
+                            {renderTextWithActiveWord(currentStep.content)}
                           </h2>
-                          <p style={{ fontSize: '1.5rem', color: 'var(--text-primary)', fontWeight: '500', marginTop: '1rem' }}>{currentStep.explanation}</p>
+                          <p style={{ fontSize: '1.5rem', color: 'var(--text-primary)', fontWeight: '500', marginTop: '1rem' }}>
+                            {renderTextWithActiveWord(currentStep.explanation)}
+                          </p>
                           <button type="button" onClick={handleListenCurrentStep} className="btn-audio" title="Listen">
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
                               <Volume2 size={18} aria-hidden="true" />
@@ -1046,14 +1173,14 @@ const ADHDView = ({ initialLessonId = null }) => {
                               border: isPlaying ? '2px solid #fbc02d' : '1px solid transparent'
                             }}
                           >
-                            {currentStep.content}
+                            {renderTextWithActiveWord(currentStep.content)}
                           </p>
                         </div>
                       )}
 
                       {currentStep.type === 'quiz' && (
                         <div className="quiz-mode">
-                          <h2>{currentStep.question}</h2>
+                          <h2>{renderTextWithActiveWord(currentStep.question)}</h2>
                           <button type="button" onClick={handleListenCurrentStep} className="btn-audio" title="Listen to question">
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
                               <Volume2 size={18} aria-hidden="true" />
@@ -1139,6 +1266,66 @@ const ADHDView = ({ initialLessonId = null }) => {
           )}
         </div>
       </main>
+
+      {showInstructions && (
+        <div
+          className="adhd-instructions-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Instructions"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              stopAllAudio();
+              setShowInstructions(false);
+            }
+          }}
+        >
+          <div className="adhd-instructions-modal">
+            <div className="adhd-instructions-header">
+              <h3>Instructions</h3>
+              <button
+                type="button"
+                className="adhd-instructions-close"
+                onClick={() => {
+                  stopAllAudio();
+                  setShowInstructions(false);
+                }}
+                aria-label="Close instructions"
+              >
+                ×
+              </button>
+            </div>
+            <p className="adhd-instructions-text">{renderTextWithActiveWord(getInstructionsTextForStep(currentStep))}</p>
+            <div className="adhd-instructions-actions">
+              <button
+                type="button"
+                className="btn-control"
+                onClick={() => playAudio(getInstructionsTextForStep(currentStep), playbackRate, { trackWords: true })}
+              >
+                <Volume2 size={18} aria-hidden="true" />
+                <span>Play</span>
+              </button>
+              <button
+                type="button"
+                className="btn-control"
+                onClick={() => playAudio(getInstructionsTextForStep(currentStep), playbackRate, { trackWords: true })}
+              >
+                <RotateCcw size={18} aria-hidden="true" />
+                <span>Replay</span>
+              </button>
+              <button
+                type="button"
+                className="btn-control"
+                onClick={stopAllAudio}
+              >
+                <Pause size={18} aria-hidden="true" />
+                <span>Stop</span>
+              </button>
+            </div>
+            <p className="adhd-instructions-hint">Tip: Press Esc to close.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

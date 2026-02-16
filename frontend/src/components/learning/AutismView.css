@@ -625,6 +625,21 @@
   border-radius: 16px;
 }
 
+.autism-audio-actions {
+  width: 100%;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.autism-audio-actions .btn-audio,
+.autism-audio-actions .btn-instructions {
+  flex: 1;
+  min-width: 180px;
+  justify-content: center;
+}
+
 .btn-audio {
   display: flex;
   align-items: center;
@@ -644,6 +659,111 @@
   border-color: #94a3b8;
   color: #0f172a;
   transform: none;
+}
+
+/* Instructions (Autism): simple, predictable exam-style modal */
+.btn-instructions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 50px;
+  color: #334155;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-instructions:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.autism-instructions-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1000;
+}
+
+.autism-instructions-modal {
+  width: min(720px, 100%);
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+  padding: 18px 18px 16px;
+}
+
+.autism-instructions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.autism-instructions-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #0f172a;
+}
+
+.autism-instructions-close {
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  color: #64748b;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.autism-instructions-close:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.autism-instructions-text {
+  margin: 0;
+  color: #334155;
+  line-height: 1.6;
+  font-size: 16px;
+}
+
+.autism-instructions-word {
+  display: inline-block;
+  padding: 0 2px;
+  border-radius: 6px;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.autism-instructions-word.is-active {
+  background: var(--accent-color-soft);
+  color: #0f172a;
+  transform: scale(1.02);
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.10);
+}
+
+.autism-instructions-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.autism-instructions-hint {
+  margin: 12px 0 0;
+  color: #64748b;
+  font-size: 13px;
 }
 
 .audio-controls-speed {
