@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import LessonLayout from './LessonLayout';
 import LessonNav from './LessonNav';
 import LessonSectionView from './LessonSectionView';
+import PronunciationPractice from './PronunciationPractice';
 import { getLessonSections } from '../../services/lessonSectionService';
 import { getProgress, updateProgress, getSummary } from '../../services/progressService';
 import lessonSectionSamples from './lessonSectionSamples';
@@ -21,8 +22,17 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
   const [reloadKey, setReloadKey] = useState(0);
   const [successMessage, setSuccessMessage] = useState('');
 
+  const [showPronunciationPractice, setShowPronunciationPractice] = useState(false);
+  const [practiceDone, setPracticeDone] = useState(false);
+  const pendingCompletionRef = useRef(null);
+
   useEffect(() => {
     let isMounted = true;
+
+    // Reset pronunciation gate when lesson changes/reloads.
+    setShowPronunciationPractice(false);
+    setPracticeDone(false);
+    pendingCompletionRef.current = null;
 
     const loadData = async () => {
       // EPIC 2.2.1, 2.2.4: Load ordered lesson sections + resume progress for a consistent step structure.
@@ -119,6 +129,99 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
     return map;
   }, [sections]);
 
+  const pronunciationItems = useMemo(() => {
+    const phrases = [];
+    for (const section of sections) {
+      const highlights = Array.isArray(section?.highlights) ? section.highlights : [];
+      for (const h of highlights) {
+        const phrase = typeof h === 'string' ? h : (h?.phrase || '');
+        const clean = String(phrase || '').trim();
+        if (clean) phrases.push(clean);
+      }
+    }
+    const unique = Array.from(new Set(phrases.map((p) => p.toLowerCase())))
+      .map((lower) => phrases.find((p) => p.toLowerCase() === lower))
+      .filter(Boolean);
+
+    return unique.map((label, idx) => ({
+      id: `dyslexia-${lessonId}-${idx}-${label}`,
+      label,
+      speakText: label,
+      expectedForms: [label],
+    }));
+  }, [sections, lessonId]);
+
+  const completeLesson = useCallback(async ({ displayedSectionId, nextCompleted }) => {
+    if (!displayedSectionId) return;
+
+    if (!isSample) {
+      try {
+        // EPIC 6.4.1: Auto-save completion state to backend at the end of the lesson.
+        const updated = await updateProgress({
+          lessonId,
+          currentSectionId: displayedSectionId,
+          completedSections: nextCompleted,
+          isReplay: false,
+        });
+
+        setProgress(updated);
+
+        if (updated?.completed) {
+          const msgs = ['Good job!', 'Lesson completed!', 'Keep going!'];
+          const msg = `${msgs[Math.floor(Math.random() * msgs.length)]} You completed this lesson. Try the next lesson!`;
+          setSuccessMessage(msg);
+          try {
+            let summary = null;
+            try { summary = await getSummary(); } catch (e) { /* ignore */ }
+            window.dispatchEvent(new CustomEvent('progress:updated', { detail: { lessonId, summary } }));
+            setTimeout(async () => {
+              try {
+                const summary2 = await getSummary().catch(() => null);
+                window.dispatchEvent(new CustomEvent('progress:updated', { detail: { lessonId, summary: summary2 } }));
+              } catch (e) {}
+            }, 500);
+          } catch (e) {}
+          setTimeout(() => setSuccessMessage(''), 4000);
+        }
+      } catch (e) {
+        setError('Unable to save progress. Please try again.');
+      }
+      return;
+    }
+
+    // Sample lesson completion path
+    setProgress((prev) => ({
+      ...(prev || {}),
+      currentSectionId: displayedSectionId,
+      completedSections: nextCompleted,
+      completed: true,
+    }));
+
+    setSuccessMessage('Good job! Lesson completed! Keep going!');
+
+    try {
+      const api = await import('../../utils/api');
+      const lessonKey = `sample-${lessonId}`;
+      const res = await api.default.post('/users/complete-lesson', { lessonKey });
+      const summary = res?.data?.summary;
+      if (summary) {
+        window.dispatchEvent(new CustomEvent('progress:updated', { detail: { summary } }));
+      } else {
+        window.dispatchEvent(new CustomEvent('progress:updated', { detail: { lessonId } }));
+        setTimeout(() => {
+          try { window.dispatchEvent(new CustomEvent('progress:updated', { detail: { lessonId } })); } catch (e) {}
+        }, 500);
+      }
+    } catch (e) {
+      try { window.dispatchEvent(new CustomEvent('progress:updated', { detail: { lessonId } })); } catch (e) {}
+      setTimeout(() => {
+        try { window.dispatchEvent(new CustomEvent('progress:updated', { detail: { lessonId } })); } catch (e) {}
+      }, 500);
+    }
+
+    setTimeout(() => setSuccessMessage(''), 4000);
+  }, [isSample, lessonId]);
+
   const displayedSectionId = replaySectionId || activeSectionId;
   const displayedSection = displayedSectionId ? sectionMap.get(displayedSectionId) : null;
   const completedSections = progress?.completedSections || [];
@@ -171,85 +274,14 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
       // EPIC 2.2.3: Manual forward navigation completes the final step.
       const nextCompleted = Array.from(new Set([...completedSections, displayedSectionId]));
 
-      if (!isSample) {
-        try {
-          // EPIC 6.4.1: Auto-save completion state to backend at the end of the lesson.
-          const updated = await updateProgress({
-            lessonId,
-            currentSectionId: displayedSectionId,
-            completedSections: nextCompleted,
-            isReplay: false,
-          });
-
-            // EPIC 6.4.3: No manual save button; progress is saved automatically via updateProgress().
-
-          setProgress(updated);
-
-          if (updated?.completed) {
-            const msgs = ['Good job!', 'Lesson completed!', 'Keep going!'];
-            // EPIC 6.2.2: Encourage with positive words (no harsh feedback).
-            // EPIC 6.2.3: Avoid negative or harsh messages.
-            // EPIC 6.2.4: Encourage next lesson.
-            const msg = `${msgs[Math.floor(Math.random() * msgs.length)]} You completed this lesson. Try the next lesson!`;
-            setSuccessMessage(msg);
-            // Notify other parts of app (Progress page, Dashboard) to refresh progress summary
-            try {
-              let summary = null;
-              try { summary = await getSummary(); } catch (e) { /* ignore */ }
-
-              // EPIC 6.4.1: Broadcast completion so Progress UI updates without manual refresh.
-              // EPIC 6.1.3: Update progress after each lesson completion.
-              window.dispatchEvent(new CustomEvent('progress:updated', { detail: { lessonId, summary } }));
-              // dispatch again after a short delay to guard against race / eventual consistency
-              setTimeout(async () => {
-                try {
-                  const summary2 = await getSummary().catch(() => null);
-                  window.dispatchEvent(new CustomEvent('progress:updated', { detail: { lessonId, summary: summary2 } }));
-                } catch (e) {}
-              }, 500);
-            } catch (e) {}
-            setTimeout(() => setSuccessMessage(''), 4000);
-          }
-        } catch (e) {
-          // EPIC 6.7.1: Friendly client error when backend save fails.
-          setError('Unable to save progress. Please try again.');
-        }
-      } else {
-        setProgress((prev) => ({
-          ...(prev || {}),
-          currentSectionId: displayedSectionId,
-          completedSections: nextCompleted,
-          completed: true,
-        }));
-
-        setSuccessMessage('Good job! Lesson completed! Keep going!');
-
-        // Persist sample lesson completion server-side so Dashboard/summaries reflect it
-        try {
-          const api = await import('../../utils/api');
-          const lessonKey = `sample-${lessonId}`;
-          // EPIC 6.4.1: Save completion marker for sample lesson as well.
-          const res = await api.default.post('/users/complete-lesson', { lessonKey });
-          const summary = res?.data?.summary;
-          if (summary) {
-            window.dispatchEvent(new CustomEvent('progress:updated', { detail: { summary } }));
-          } else {
-            window.dispatchEvent(new CustomEvent('progress:updated', { detail: { lessonId } }));
-            setTimeout(() => {
-              try { window.dispatchEvent(new CustomEvent('progress:updated', { detail: { lessonId } })); } catch (e) {}
-            }, 500);
-          }
-        } catch (e) {
-          // EPIC 6.7.1-6.7.2: Degrade gracefully if completion write fails; keep the lesson flow unblocked.
-          // If server call fails, still fire the event for UI to refresh
-          try { window.dispatchEvent(new CustomEvent('progress:updated', { detail: { lessonId } })); } catch (e) {}
-          setTimeout(() => {
-            try { window.dispatchEvent(new CustomEvent('progress:updated', { detail: { lessonId } })); } catch (e) {}
-          }, 500);
-        }
-
-        setTimeout(() => setSuccessMessage(''), 4000);
+      // EPIC 3.3: Gate lesson completion behind pronunciation practice.
+      if (!practiceDone && pronunciationItems.length > 0) {
+        pendingCompletionRef.current = { displayedSectionId, nextCompleted };
+        setShowPronunciationPractice(true);
+        return;
       }
+
+      await completeLesson({ displayedSectionId, nextCompleted });
 
       return;
     }
@@ -344,7 +376,7 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
           )}
         </div>
       )}
-      footer={(
+      footer={showPronunciationPractice ? null : (
         <LessonNav
           // EPIC 2.2.3, 2.7.2: Manual navigation with buttons kept in fixed positions.
           onBack={() => handleNavigate(-1)}
@@ -358,6 +390,31 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
         />
       )}
     >
+      {showPronunciationPractice ? (
+        <PronunciationPractice
+          title="Pronunciation Practice"
+          subtitle="Practice the key words from this lesson. Complete all to finish."
+          items={pronunciationItems}
+          recognitionLang="en-US"
+          ttsLang="en-US"
+          playbackRate={0.85}
+          onExit={() => {
+            setShowPronunciationPractice(false);
+          }}
+          onComplete={async () => {
+            setPracticeDone(true);
+            setShowPronunciationPractice(false);
+            const pending = pendingCompletionRef.current;
+            pendingCompletionRef.current = null;
+            if (pending?.displayedSectionId && Array.isArray(pending?.nextCompleted)) {
+              await completeLesson({
+                displayedSectionId: pending.displayedSectionId,
+                nextCompleted: pending.nextCompleted,
+              });
+            }
+          }}
+        />
+      ) : (
       <div className="lesson-replay">
         <div className="lesson-replay-grid">
           <div className="lesson-replay-panel fx-card">
@@ -423,6 +480,7 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
           </div>
         </div>
       </div>
+      )}
     </LessonLayout>
   );
 };

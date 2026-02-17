@@ -16,7 +16,7 @@ const getPythonExecutable = () => {
 
 // Endpoint to generate audio
 router.post('/speak', (req, res) => {
-    const { text, speed } = req.body;
+    const { text, speed, lang, language } = req.body;
 
     // EPIC 3.1.2, 3.5.3: Generate clear audio via backend TTS (consistent quality across devices).
     // EPIC 3.1.4: Support slow/easy-to-understand playback via the `speed` parameter.
@@ -32,8 +32,14 @@ router.post('/speak', (req, res) => {
     const pythonExe = getPythonExecutable();
 
     // Spawn python process
-    // args: text, speed
-    const pythonProcess = spawn(pythonExe, [scriptPath, text, speed || '1.0']);
+    // args: text, speed, lang
+    const resolvedLang = (typeof lang === 'string' && lang.trim())
+        ? lang.trim()
+        : (typeof language === 'string' && language.trim())
+            ? language.trim()
+            : 'en';
+
+    const pythonProcess = spawn(pythonExe, [scriptPath, text, speed || '1.0', resolvedLang]);
 
     let sentAudio = false;
 

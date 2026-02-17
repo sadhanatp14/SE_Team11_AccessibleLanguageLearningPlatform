@@ -425,6 +425,30 @@
   margin-top: 30px;
 }
 
+.voice-transcript {
+  margin-top: 12px;
+  width: 100%;
+  max-width: 600px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  font-weight: 600;
+}
+
+.voice-error {
+  margin-top: 12px;
+  width: 100%;
+  max-width: 600px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  font-weight: 700;
+}
+
 .btn-option {
   padding: 20px;
   background: white;
@@ -552,11 +576,134 @@
   cursor: pointer;
 }
 
+.quiz-audio-actions {
+  width: 100%;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.quiz-audio-actions .btn-audio {
+  justify-content: center;
+  flex: 1;
+  min-width: 180px;
+  max-width: 260px;
+}
+
 .btn-audio:hover {
   background: #e0f2fe;
   color: #0369a1;
   border-color: #7dd3fc;
   transform: scale(1.05);
+}
+
+/* Visual Support for Audio Learning (ADHD): active-word highlighting */
+.adhd-word {
+  display: inline-block;
+  padding: 0 2px;
+  border-radius: 6px;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.adhd-active-word {
+  background: #fde68a; /* amber-200 */
+  color: #111827; /* gray-900 */
+  padding: 2px 6px;
+  transform: scale(1.02);
+}
+
+/* Instructions (ADHD): exam-style modal */
+.btn-instructions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 2px solid #e5e7eb;
+  background: white;
+  color: #374151;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: auto;
+}
+
+.btn-instructions:hover {
+  border-color: #60a5fa;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.adhd-instructions-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1000;
+}
+
+.adhd-instructions-modal {
+  width: min(720px, 100%);
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+  padding: 18px 18px 16px;
+}
+
+.adhd-instructions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.adhd-instructions-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #111827;
+}
+
+.adhd-instructions-close {
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.adhd-instructions-close:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.adhd-instructions-text {
+  margin: 0;
+  color: #374151;
+  line-height: 1.6;
+  font-size: 16px;
+}
+
+.adhd-instructions-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.adhd-instructions-hint {
+  margin: 12px 0 0;
+  color: #6b7280;
+  font-size: 13px;
 }
 
 /* 4. Responsive adjustments */

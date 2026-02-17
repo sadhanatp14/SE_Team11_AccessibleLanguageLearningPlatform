@@ -77,6 +77,60 @@ const renderWithAuth = (component, userValue = { name: 'Test User', id: '123' })
   );
 };
 
+const completePronunciationPracticeIfPresent = () => {
+  if (!screen.queryByText('Pronunciation Practice')) return;
+  const proceedButton = screen.getByText('Proceed');
+  fireEvent.click(proceedButton);
+};
+
+const normalizeText = (text) => (text || '').replace(/\s+/g, ' ').trim();
+
+const getStepCounterText = () => {
+  const node = document.querySelector('.step-number');
+  return normalizeText(node?.textContent);
+};
+
+const advanceLessonStep = async () => {
+  const before = getStepCounterText();
+  const nextButtonInitial = screen.queryByText(/Next →|Complete Lesson/);
+  if (!nextButtonInitial) return;
+
+  fireEvent.click(nextButtonInitial);
+  await new Promise((r) => setTimeout(r, 0));
+
+  const afterDirect = getStepCounterText();
+  if (afterDirect && afterDirect !== before) return;
+
+  const optionButtons = Array.from(document.querySelectorAll('.interaction-options button'));
+  for (const optionButton of optionButtons) {
+    if (optionButton.disabled) continue;
+    fireEvent.click(optionButton);
+
+    const nextButton = screen.queryByText(/Next →|Complete Lesson/);
+    if (nextButton) fireEvent.click(nextButton);
+    await new Promise((r) => setTimeout(r, 0));
+
+    const afterOption = getStepCounterText();
+    if (afterOption && afterOption !== before) return;
+
+    const retryButton = screen.queryByText('Retry Question');
+    if (retryButton && !retryButton.disabled) {
+      fireEvent.click(retryButton);
+      await new Promise((r) => setTimeout(r, 0));
+    }
+  }
+};
+
+const getPrevNavButton = () =>
+  screen.queryByRole('button', { name: /^prev$/i }) ||
+  screen.queryByRole('button', { name: /previous/i });
+
+const advanceLessonSteps = async (count) => {
+  for (let i = 0; i < count; i++) {
+    await advanceLessonStep();
+  }
+};
+
 describe('AutismView Component - Autism Learning Features', () => {
   beforeEach(() => {
     // Reset mocks before each test
@@ -101,9 +155,8 @@ describe('AutismView Component - Autism Learning Features', () => {
       });
       
       // Verify lesson icons are present
-      expect(screen.getByText('🙏')).toBeInTheDocument();
-      expect(screen.getByText('🔤')).toBeInTheDocument();
-      expect(screen.getByText('🔢')).toBeInTheDocument();
+      const lessonIcons = document.querySelectorAll('.lesson-large-icon svg');
+      expect(lessonIcons.length).toBe(3);
     });
 
     test('should display text content when lesson is started', async () => {
@@ -155,7 +208,7 @@ describe('AutismView Component - Autism Learning Features', () => {
       
       await waitFor(() => {
         // Verify audio button is present
-        expect(screen.getByText('🔊 Play Audio')).toBeInTheDocument();
+        expect(screen.getByText('Play Audio')).toBeInTheDocument();
         expect(screen.getByText('Click to hear the pronunciation')).toBeInTheDocument();
       });
     });
@@ -214,9 +267,8 @@ describe('AutismView Component - Autism Learning Features', () => {
         expect(screen.getByText('Step 1 of 10')).toBeInTheDocument();
       });
       
-      // Click Next button
-      const nextButton = screen.getByText('Next →');
-      fireEvent.click(nextButton);
+      // Advance to step 2 (Next is gated until an answer is selected)
+      await advanceLessonStep();
       
       await waitFor(() => {
         // Should move to step 2
@@ -240,15 +292,17 @@ describe('AutismView Component - Autism Learning Features', () => {
         expect(screen.getByText('Step 1 of 10')).toBeInTheDocument();
       });
       
-      // Go to step 2
-      fireEvent.click(screen.getByText('Next →'));
+      // Go to step 2 (requires answering step 1)
+      await advanceLessonStep();
       
       await waitFor(() => {
         expect(screen.getByText('Step 2 of 10')).toBeInTheDocument();
       });
       
       // Go back to step 1
-      fireEvent.click(screen.getByText('← Previous'));
+      const prevButton = getPrevNavButton();
+      expect(prevButton).toBeInTheDocument();
+      fireEvent.click(prevButton);
       
       await waitFor(() => {
         expect(screen.getByText('Step 1 of 10')).toBeInTheDocument();
@@ -271,7 +325,8 @@ describe('AutismView Component - Autism Learning Features', () => {
       fireEvent.click(startButton);
       
       await waitFor(() => {
-        const prevButton = screen.getByText('← Previous');
+        const prevButton = getPrevNavButton();
+        expect(prevButton).toBeInTheDocument();
         expect(prevButton).toBeDisabled();
       });
     });
@@ -287,12 +342,9 @@ describe('AutismView Component - Autism Learning Features', () => {
       fireEvent.click(startButton);
       
       // Navigate to last step (step 10)
-      for (let i = 0; i < 10; i++) {
-        await waitFor(() => {
-          const nextButton = screen.getByText(/Next →|Complete Lesson ✓/);
-          fireEvent.click(nextButton);
-        });
-      }
+      await advanceLessonSteps(10);
+
+      completePronunciationPracticeIfPresent();
       
       await waitFor(() => {
         // Check completion screen appears
@@ -393,11 +445,11 @@ describe('AutismView Component - Autism Learning Features', () => {
       
       await waitFor(() => {
         // Retry button should appear after 1 wrong answer
-        expect(screen.getByText('🔄 Retry Question')).toBeInTheDocument();
+          expect(screen.getByText('Retry Question')).toBeInTheDocument();
       });
     });
 
-    test('should allow progression without answering question', async () => {
+    test('should prevent progression without answering question', async () => {
       renderWithAuth(<AutismView />);
       
       await waitFor(() => {
@@ -416,8 +468,9 @@ describe('AutismView Component - Autism Learning Features', () => {
       fireEvent.click(nextButton);
       
       await waitFor(() => {
-        // Should move to step 2 even without answering
-        expect(screen.getByText('Step 2 of 10')).toBeInTheDocument();
+        // Should remain on step 1 and show gentle guidance
+        expect(getStepCounterText()).toBe('Step 1 of 10');
+        expect(screen.getByText(/Please answer the question correctly before moving to the next step\./i)).toBeInTheDocument();
       });
     });
 
@@ -508,11 +561,11 @@ describe('AutismView Component - Autism Learning Features', () => {
       fireEvent.click(wrongButton);
       
       await waitFor(() => {
-        expect(screen.getByText('🔄 Retry Question')).toBeInTheDocument();
+        expect(screen.getByText('Retry Question')).toBeInTheDocument();
       });
       
       // Click retry
-      const retryButton = screen.getByText('🔄 Retry Question');
+      const retryButton = screen.getByText('Retry Question');
       fireEvent.click(retryButton);
       
       await waitFor(() => {
@@ -540,7 +593,7 @@ describe('AutismView Component - Autism Learning Features', () => {
       
       await waitFor(() => {
         // Hint button should be present
-        expect(screen.getByText('💡 Show Hint')).toBeInTheDocument();
+        expect(screen.getByText('Show Hint')).toBeInTheDocument();
       });
     });
 
@@ -555,11 +608,11 @@ describe('AutismView Component - Autism Learning Features', () => {
       fireEvent.click(startButton);
       
       await waitFor(() => {
-        expect(screen.getByText('💡 Show Hint')).toBeInTheDocument();
+        expect(screen.getByText('Show Hint')).toBeInTheDocument();
       });
       
       // Click hint button
-      const hintButton = screen.getByText('💡 Show Hint');
+      const hintButton = screen.getByText('Show Hint');
       fireEvent.click(hintButton);
       
       await waitFor(() => {
@@ -579,23 +632,23 @@ describe('AutismView Component - Autism Learning Features', () => {
       fireEvent.click(startButton);
       
       await waitFor(() => {
-        expect(screen.getByText('💡 Show Hint')).toBeInTheDocument();
+        expect(screen.getByText('Show Hint')).toBeInTheDocument();
       });
       
       // Click to show hint
-      let hintButton = screen.getByText('💡 Show Hint');
+      let hintButton = screen.getByText('Show Hint');
       fireEvent.click(hintButton);
       
       await waitFor(() => {
-        expect(screen.getByText('💡 Hide Hint')).toBeInTheDocument();
+        expect(screen.getByText('Hide Hint')).toBeInTheDocument();
       });
       
       // Click to hide hint
-      hintButton = screen.getByText('💡 Hide Hint');
+      hintButton = screen.getByText('Hide Hint');
       fireEvent.click(hintButton);
       
       await waitFor(() => {
-        expect(screen.getByText('💡 Show Hint')).toBeInTheDocument();
+        expect(screen.getByText('Show Hint')).toBeInTheDocument();
       });
     });
 
@@ -610,22 +663,22 @@ describe('AutismView Component - Autism Learning Features', () => {
       fireEvent.click(startButton);
       
       await waitFor(() => {
-        expect(screen.getByText('💡 Show Hint')).toBeInTheDocument();
+        expect(screen.getByText('Show Hint')).toBeInTheDocument();
       });
       
       // Show hint
-      fireEvent.click(screen.getByText('💡 Show Hint'));
+      fireEvent.click(screen.getByText('Show Hint'));
       
       await waitFor(() => {
-        expect(screen.getByText('💡 Hide Hint')).toBeInTheDocument();
+        expect(screen.getByText('Hide Hint')).toBeInTheDocument();
       });
       
       // Move to next step
-      fireEvent.click(screen.getByText('Next →'));
+      await advanceLessonStep();
       
       await waitFor(() => {
         // Hint should be hidden (button text reset)
-        expect(screen.getByText('💡 Show Hint')).toBeInTheDocument();
+        expect(screen.getByText('Show Hint')).toBeInTheDocument();
       });
     });
 
@@ -641,7 +694,7 @@ describe('AutismView Component - Autism Learning Features', () => {
       
       // Step 1 hint
       await waitFor(() => {
-        fireEvent.click(screen.getByText('💡 Show Hint'));
+        fireEvent.click(screen.getByText('Show Hint'));
       });
       
       await waitFor(() => {
@@ -649,11 +702,11 @@ describe('AutismView Component - Autism Learning Features', () => {
       });
       
       // Go to step 2
-      fireEvent.click(screen.getByText('Next →'));
+      await advanceLessonStep();
       
       // Step 2 hint
       await waitFor(() => {
-        fireEvent.click(screen.getByText('💡 Show Hint'));
+        fireEvent.click(screen.getByText('Show Hint'));
       });
       
       await waitFor(() => {
@@ -702,7 +755,7 @@ describe('AutismView Component - Autism Learning Features', () => {
       });
       
       // Move to step 2
-      fireEvent.click(screen.getByText('Next →'));
+      await advanceLessonStep();
       
       await waitFor(() => {
         // Step 2 should have different image
@@ -716,10 +769,8 @@ describe('AutismView Component - Autism Learning Features', () => {
       renderWithAuth(<AutismView />);
       
       await waitFor(() => {
-        // Check lesson icons
-        expect(screen.getByText('🙏')).toBeInTheDocument(); // Greetings
-        expect(screen.getByText('🔤')).toBeInTheDocument(); // Basic Words
-        expect(screen.getByText('🔢')).toBeInTheDocument(); // Numbers
+        const lessonIcons = document.querySelectorAll('.lesson-large-icon svg');
+        expect(lessonIcons.length).toBe(3);
       });
     });
 
@@ -734,12 +785,9 @@ describe('AutismView Component - Autism Learning Features', () => {
       fireEvent.click(startButton);
       
       // Complete all steps
-      for (let i = 0; i < 10; i++) {
-        await waitFor(() => {
-          const nextButton = screen.getByText(/Next →|Complete Lesson ✓/);
-          fireEvent.click(nextButton);
-        });
-      }
+      await advanceLessonSteps(10);
+
+      completePronunciationPracticeIfPresent();
       
       await waitFor(() => {
         // Check completion icon
@@ -764,12 +812,9 @@ describe('AutismView Component - Autism Learning Features', () => {
       fireEvent.click(startButton);
       
       // Complete all steps
-      for (let i = 0; i < 10; i++) {
-        await waitFor(() => {
-          const nextButton = screen.getByText(/Next →|Complete Lesson ✓/);
-          fireEvent.click(nextButton);
-        });
-      }
+      await advanceLessonSteps(10);
+
+      completePronunciationPracticeIfPresent();
       
       await waitFor(() => {
         expect(screen.getByText('Great Job!')).toBeInTheDocument();
@@ -788,8 +833,9 @@ describe('AutismView Component - Autism Learning Features', () => {
       renderWithAuth(<AutismView />);
       
       await waitFor(() => {
-        // Check for completion badge
-        expect(screen.getByText('✓ Completed')).toBeInTheDocument();
+        const badge = document.querySelector('.completion-badge');
+        expect(badge).toBeInTheDocument();
+        expect((badge?.textContent || '')).toMatch(/Completed/i);
       });
     });
 
@@ -857,12 +903,9 @@ describe('AutismView Component - Autism Learning Features', () => {
       fireEvent.click(startButton);
       
       // Complete all steps
-      for (let i = 0; i < 10; i++) {
-        await waitFor(() => {
-          const nextButton = screen.getByText(/Next →|Complete Lesson ✓/);
-          fireEvent.click(nextButton);
-        });
-      }
+      await advanceLessonSteps(10);
+
+      completePronunciationPracticeIfPresent();
       
       await waitFor(() => {
         expect(screen.getByText('Go to Next Lesson')).toBeInTheDocument();
@@ -889,12 +932,9 @@ describe('AutismView Component - Autism Learning Features', () => {
       fireEvent.click(startButton);
       
       // Complete all steps
-      for (let i = 0; i < 10; i++) {
-        await waitFor(() => {
-          const nextButton = screen.getByText(/Next →|Complete Lesson ✓/);
-          fireEvent.click(nextButton);
-        });
-      }
+      await advanceLessonSteps(10);
+
+      completePronunciationPracticeIfPresent();
       
       await waitFor(() => {
         expect(screen.getByText('Back to Lessons')).toBeInTheDocument();
@@ -944,7 +984,7 @@ describe('AutismView Component - Autism Learning Features', () => {
       
       await waitFor(() => {
         // Check navigation buttons exist
-        expect(screen.getByText('← Previous')).toBeInTheDocument();
+        expect(getPrevNavButton()).toBeInTheDocument();
         expect(screen.getByText('Next →')).toBeInTheDocument();
       });
       
@@ -953,7 +993,7 @@ describe('AutismView Component - Autism Learning Features', () => {
       
       await waitFor(() => {
         // Navigation buttons should still be there
-        expect(screen.getByText('← Previous')).toBeInTheDocument();
+        expect(getPrevNavButton()).toBeInTheDocument();
         expect(screen.getByText('Next →')).toBeInTheDocument();
       });
     });
@@ -1009,30 +1049,27 @@ describe('AutismView Component - Autism Learning Features', () => {
       fireEvent.click(startButton);
       
       // Move to step 3
-      await waitFor(() => {
-        fireEvent.click(screen.getByText('Next →'));
-      });
-      await waitFor(() => {
-        fireEvent.click(screen.getByText('Next →'));
-      });
+      await advanceLessonSteps(2);
       
       await waitFor(() => {
-        expect(screen.getByText('Step 3 of 10')).toBeInTheDocument();
+        expect(getStepCounterText()).toBe('Step 3 of 10');
       });
       
       // Go back
-      fireEvent.click(screen.getByText('← Previous'));
+      const prevButton = getPrevNavButton();
+      expect(prevButton).toBeInTheDocument();
+      fireEvent.click(prevButton);
       
       await waitFor(() => {
-        expect(screen.getByText('Step 2 of 10')).toBeInTheDocument();
+        expect(getStepCounterText()).toBe('Step 2 of 10');
       });
       
       // Go forward again
-      fireEvent.click(screen.getByText('Next →'));
+      await advanceLessonStep();
       
       await waitFor(() => {
         // Should be back at step 3
-        expect(screen.getByText('Step 3 of 10')).toBeInTheDocument();
+        expect(getStepCounterText()).toBe('Step 3 of 10');
       });
     });
 
@@ -1047,22 +1084,18 @@ describe('AutismView Component - Autism Learning Features', () => {
       fireEvent.click(startButton);
       
       // Navigate to step 9 (second to last)
-      for (let i = 0; i < 8; i++) {
-        await waitFor(() => {
-          fireEvent.click(screen.getByText('Next →'));
-        });
-      }
+      await advanceLessonSteps(8);
       
       await waitFor(() => {
         expect(screen.getByText('Next →')).toBeInTheDocument();
       });
       
       // Move to last step (step 10)
-      fireEvent.click(screen.getByText('Next →'));
+      await advanceLessonStep();
       
       await waitFor(() => {
         // Button text should change
-        expect(screen.getByText('Complete Lesson ✓')).toBeInTheDocument();
+        expect(screen.getByText('Complete Lesson')).toBeInTheDocument();
       });
     });
 
@@ -1079,11 +1112,11 @@ describe('AutismView Component - Autism Learning Features', () => {
       // Check each step has counter
       for (let i = 1; i <= 5; i++) {
         await waitFor(() => {
-          expect(screen.getByText(`Step ${i} of 10`)).toBeInTheDocument();
+          expect(getStepCounterText()).toBe(`Step ${i} of 10`);
         });
         
         if (i < 5) {
-          fireEvent.click(screen.getByText('Next →'));
+          await advanceLessonStep();
         }
       }
     });
@@ -1092,7 +1125,9 @@ describe('AutismView Component - Autism Learning Features', () => {
       renderWithAuth(<AutismView />, { name: 'John Doe', id: '123' });
       
       await waitFor(() => {
-        expect(screen.getByText('Hello, John Doe 👋')).toBeInTheDocument();
+        expect(
+          screen.getByText((_, node) => normalizeText(node?.textContent) === 'Hello, John Doe', { selector: 'h2' })
+        ).toBeInTheDocument();
       });
     });
   });
@@ -1159,12 +1194,18 @@ describe('AutismView Component - Autism Learning Features', () => {
       fireEvent.click(startButtons[2]);
       
       // Complete all steps
-      for (let i = 0; i < 10; i++) {
-        await waitFor(() => {
-          const nextButton = screen.getByText(/Next →|Complete Lesson ✓/);
-          fireEvent.click(nextButton);
-        });
-      }
+      await advanceLessonSteps(10);
+
+      await waitFor(() => {
+        expect(screen.getByText('Pronunciation Practice')).toBeInTheDocument();
+      });
+
+      completePronunciationPracticeIfPresent();
+
+      await waitFor(() => {
+        expect(screen.getByText('Great Job!')).toBeInTheDocument();
+        expect(screen.getByText(/You completed "Numbers" lesson!/)).toBeInTheDocument();
+      });
       
       await waitFor(() => {
         // Next lesson button should not appear

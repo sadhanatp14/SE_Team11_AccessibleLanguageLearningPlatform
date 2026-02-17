@@ -43,6 +43,13 @@ export const completeSteps = async (fireEvent, screen, steps, waitFor) => {
       fireEvent.click(nextButton);
     });
   }
+
+  // EPIC 3.3: If pronunciation practice gate appears, mark all items done and proceed.
+  // (JSDOM cannot do real SpeechRecognition; this keeps completion-flow tests stable.)
+  if (screen.queryByText('Pronunciation Practice')) {
+    const proceedBtn = screen.getByText('Proceed');
+    fireEvent.click(proceedBtn);
+  }
 };
 
 /**

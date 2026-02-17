@@ -80,6 +80,7 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
   const condition = user?.learningCondition || '';
   const dyslexia = useDyslexiaContext({ condition, lessonId, defaultSyllableMode: true });
   const audioRef = useRef(null);
+  const boundaryUtteranceRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -154,10 +155,62 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
     setIsUsingTTS(false);
     setAudioFailed(false);
     window.speechSynthesis.cancel();
+    boundaryUtteranceRef.current = null;
     if (onInteractionChange && sectionId) {
       onInteractionChange(sectionId, 0);
     }
   }, [sectionKey, onInteractionChange, sectionId]);
+
+  const stopBoundaryTracking = () => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    if (!boundaryUtteranceRef.current) return;
+    try {
+      window.speechSynthesis.cancel();
+    } catch (e) {
+      // ignore
+    }
+    boundaryUtteranceRef.current = null;
+    setActiveWord('');
+  };
+
+  const startBoundaryTracking = (text) => {
+    // EPIC 3.3.1-3.3.3: Highlight text in sync with audio.
+    // When we play backend/pre-recorded audio, we use a silent SpeechSynthesisUtterance
+    // purely for `onboundary` word events so the highlighted word roughly follows the narration.
+    if (!text) return;
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    if (typeof window.SpeechSynthesisUtterance === 'undefined') return;
+
+    stopBoundaryTracking();
+
+    try {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = playbackRate;
+      utterance.lang = 'en-US';
+      utterance.volume = 0;
+
+      utterance.onboundary = (event) => {
+        if (event.name === 'word') {
+          const charIndex = event.charIndex;
+          const textBefore = text.slice(charIndex);
+          const firstSpace = textBefore.search(/\s/);
+          const word = firstSpace === -1 ? textBefore : textBefore.slice(0, firstSpace);
+          setActiveWord(word.replace(/[.,!?;:()"]+/g, ''));
+        }
+      };
+
+      utterance.onend = () => {
+        boundaryUtteranceRef.current = null;
+        setActiveWord('');
+      };
+
+      boundaryUtteranceRef.current = utterance;
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      // If the browser blocks speech synthesis, we just skip synced highlighting.
+      boundaryUtteranceRef.current = null;
+    }
+  };
 
   useEffect(() => {
     if (!lessonKey) return;
@@ -209,6 +262,7 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
       audioRef.current = null;
     }
     window.speechSynthesis.cancel();
+    boundaryUtteranceRef.current = null;
 
     setIsPlaying(false);
     setIsUsingTTS(false);
@@ -229,11 +283,19 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
       audio.playbackRate = playbackRate;
 
       // Setup Backend Audio Handlers
-      audio.onplay = () => setIsPlaying(true);
+      audio.onplay = () => {
+        setIsPlaying(true);
+        startBoundaryTracking(text);
+      };
+      audio.onpause = () => {
+        setIsPlaying(false);
+        stopBoundaryTracking();
+      };
       audio.onended = () => {
         setIsPlaying(false);
         URL.revokeObjectURL(url);
         setActiveWord('');
+        stopBoundaryTracking();
       };
 
       // Note: Backend TTS (mp3) doesn't support word-level timestamps easily.
@@ -284,14 +346,17 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
       if (isPlaying) {
         audioRef.current.pause();
         setIsPlaying(false);
+        stopBoundaryTracking();
         return;
       }
       try {
         await audioRef.current.play();
         setIsPlaying(true);
+        startBoundaryTracking(section.textContent || section.title || '');
       } catch (error) {
         // Audio file failed to play, fall back to TTS
         setAudioFailed(true);
+        stopBoundaryTracking();
         speakText(section.textContent || section.title || 'No text content');
       }
     } else {
@@ -300,6 +365,7 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
         window.speechSynthesis.cancel();
         setIsPlaying(false);
         setIsUsingTTS(false);
+        stopBoundaryTracking();
       } else {
         // Read content
         speakText(section.textContent || section.title || "No text content");
@@ -315,9 +381,11 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
         audioRef.current.currentTime = 0;
         audioRef.current.play().catch(() => {
           setAudioFailed(true);
+          stopBoundaryTracking();
           speakText(section.textContent);
         });
         setIsPlaying(true);
+        startBoundaryTracking(section.textContent || section.title || '');
       }
     } else {
       speakText(section.textContent);
@@ -402,6 +470,7 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
             <InteractionCard
               // EPIC 2.3.1-2.3.4, 2.4.1-2.4.4: Simple interactions + immediate feedback + hints/explanations/encouragement.
               lessonId={lessonKey}
+              condition={condition}
               interaction={displayedInteraction}
               readOnly={isReplay}
               useLocalSubmission={useLocalSubmission}
@@ -409,7 +478,7 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
               onAnswered={handleAnswered}
               autoAdvanceOnCorrect={!isReplay}
               enableTimer={!isReplay}
-              enableSpeech={false}
+              enableSpeech={!isReplay}
               autoPlayNarration={false}
               disableAutoSpeak={true}
             />
