@@ -16,6 +16,7 @@ import {
   Hash,
   Info,
   Lightbulb,
+  Mic,
   Pause,
   RotateCcw,
   Settings,
@@ -23,6 +24,7 @@ import {
   Timer,
   Volume2,
 } from 'lucide-react';
+import PronunciationPractice from './PronunciationPractice';
 import './AutismView.css';
 
 const AutismView = ({ initialLessonId = null }) => {
@@ -44,6 +46,7 @@ const AutismView = ({ initialLessonId = null }) => {
   const [stepAnsweredCorrectly, setStepAnsweredCorrectly] = useState({}); // Track correct answers per step
   const [wrongAnswerCount, setWrongAnswerCount] = useState({}); // Track wrong answers per step
   const [showCompletionScreen, setShowCompletionScreen] = useState(false); // Show completion UI
+  const [showPronunciationPractice, setShowPronunciationPractice] = useState(false);
 
   // Timer state for questions
   const [timeRemaining, setTimeRemaining] = useState(null); // Time left for current question
@@ -595,6 +598,52 @@ const AutismView = ({ initialLessonId = null }) => {
   const currentStep = currentLesson?.steps[currentStepIndex];
   const totalSteps = currentLesson?.steps.length || 0;
 
+  const resolveLessonLang = useCallback((lessonLanguage) => {
+    const raw = String(lessonLanguage || '').toLowerCase();
+    if (raw.includes('tamil')) return 'ta-IN';
+    if (raw.includes('hindi')) return 'hi-IN';
+    return 'en-US';
+  }, []);
+
+  const practiceItems = useMemo(() => {
+    if (!currentLesson?.steps) return [];
+
+    const items = currentLesson.steps
+      .map((step) => {
+        const label = (step?.highlight || '').trim() || String(step?.content || '').trim();
+        if (!label) return null;
+
+        const content = String(step?.content || '');
+        const match = content.match(/\(([^)]+)\)/);
+        const transliteration = match?.[1] ? String(match[1]).trim() : '';
+
+        const expectedForms = [
+          step?.highlight,
+          transliteration,
+          label,
+        ].map((x) => String(x || '').trim()).filter(Boolean);
+
+        return {
+          id: `autism-${currentLesson.id}-${step.id || step.title || label}`,
+          label,
+          speakText: step?.highlight || label,
+          expectedForms,
+        };
+      })
+      .filter(Boolean);
+
+    // Deduplicate by label
+    const seen = new Set();
+    const unique = [];
+    for (const item of items) {
+      const key = String(item.label).toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      unique.push(item);
+    }
+    return unique;
+  }, [currentLesson?.id, currentLesson?.steps]);
+
   // EPIC 2.6.1-2.6.4: Navigation handlers with replay support
   const handleNext = () => {
     // Check if current step has been answered correctly
@@ -617,14 +666,8 @@ const AutismView = ({ initialLessonId = null }) => {
     if (currentStepIndex < totalSteps - 1) {
       setCurrentStepIndex(currentStepIndex + 1);
     } else {
-      // Mark lesson as completed
-      if (!completedLessons.includes(selectedLesson)) {
-        setCompletedLessons([...completedLessons, selectedLesson]);
-        // Save to backend
-        saveLessonCompletion(selectedLesson);
-      }
-      // Show completion screen instead of just feedback
-      setShowCompletionScreen(true);
+      // Lesson content complete -> move to pronunciation practice gate.
+      setShowPronunciationPractice(true);
     }
   };
 
@@ -708,6 +751,108 @@ const AutismView = ({ initialLessonId = null }) => {
 
   const [activeWord, setActiveWord] = useState('');
   const [playbackSpeed, setPlaybackSpeed] = useState(0.8);
+
+  // EPIC 3.2: Voice-based answer input (STT)
+  const answerRecognitionRef = useRef(null);
+  const [isAnswerListening, setIsAnswerListening] = useState(false);
+  const [answerTranscript, setAnswerTranscript] = useState('');
+  const [answerVoiceError, setAnswerVoiceError] = useState('');
+
+  const normalizeVoice = useCallback((value) => {
+    return String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/[.,!?;:()"'{}\u005B\u005D\u201C\u201D\u2018\u2019\u2013\u2014]/g, '');
+  }, []);
+
+  const initAnswerSpeechRecognition = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return null;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-IN';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    return recognition;
+  }, []);
+
+  const stopAnswerListening = useCallback(() => {
+    try {
+      answerRecognitionRef.current?.stop?.();
+    } catch (e) {
+      // ignore
+    }
+    setIsAnswerListening(false);
+  }, []);
+
+  const startAnswerListening = useCallback(() => {
+    if (questionAnswered) return;
+    setAnswerVoiceError('');
+
+    if (!answerRecognitionRef.current) {
+      answerRecognitionRef.current = initAnswerSpeechRecognition();
+    }
+
+    const recognition = answerRecognitionRef.current;
+    if (!recognition) {
+      setAnswerVoiceError('Voice input is not supported in this browser.');
+      return;
+    }
+
+    recognition.onstart = () => {
+      setIsAnswerListening(true);
+      setAnswerVoiceError('');
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results?.[0]?.[0]?.transcript || '';
+      const cleaned = transcript.trim();
+      setAnswerTranscript(cleaned);
+
+      const options = currentStep?.interaction?.options || [];
+      if (!options.length) return;
+
+      const normalized = normalizeVoice(cleaned);
+
+      // Support speaking A/B/C
+      const letterMap = { a: 0, b: 1, c: 2, d: 3 };
+      if (letterMap[normalized] !== undefined) {
+        const idx = letterMap[normalized];
+        if (idx >= 0 && idx < options.length) {
+          handleInteraction(idx);
+          return;
+        }
+      }
+
+      // Match by option text
+      const matchedIndex = options.findIndex((opt) => {
+        const optNorm = normalizeVoice(opt);
+        return optNorm === normalized || normalized.includes(optNorm) || optNorm.includes(normalized);
+      });
+
+      if (matchedIndex >= 0) {
+        handleInteraction(matchedIndex);
+      }
+    };
+
+    recognition.onerror = (event) => {
+      setIsAnswerListening(false);
+      if (event.error === 'no-speech') setAnswerVoiceError('No speech detected. Please try again.');
+      else if (event.error === 'audio-capture') setAnswerVoiceError('No microphone found.');
+      else if (event.error === 'not-allowed') setAnswerVoiceError('Microphone permission denied.');
+      else setAnswerVoiceError('Could not hear clearly. Please try again.');
+    };
+
+    recognition.onend = () => {
+      setIsAnswerListening(false);
+    };
+
+    try {
+      recognition.start();
+    } catch (e) {
+      setIsAnswerListening(false);
+    }
+  }, [currentStep?.interaction?.options, handleInteraction, initAnswerSpeechRecognition, normalizeVoice, questionAnswered]);
 
   const getInstructionsTextForStep = useCallback((step) => {
     if (!step) return 'Follow the on-screen instructions. Use Play Audio to listen, and use Next to continue.';
@@ -1009,8 +1154,13 @@ const AutismView = ({ initialLessonId = null }) => {
     }));
   };
 
+  useEffect(() => {
+    // Stop listening when moving to a new step or after answering.
+    if (questionAnswered) stopAnswerListening();
+  }, [questionAnswered, stopAnswerListening, currentStepIndex, selectedLesson]);
+
   // EPIC 2.3.1-2.3.4: Interactive engagement with immediate feedback
-  const handleInteraction = (optionIndex) => {
+  function handleInteraction(optionIndex) {
     if (currentStep?.interaction && !questionAnswered) {
       setQuestionAnswered(true);
       setTimerActive(false);
@@ -1049,7 +1199,7 @@ const AutismView = ({ initialLessonId = null }) => {
         }
       }
     }
-  };
+  }
 
   const renderDifficultyLabel = (difficulty) => {
     const normalized = difficulty || 'medium';
@@ -1077,6 +1227,7 @@ const AutismView = ({ initialLessonId = null }) => {
     setWrongAnswerCount({});
     setQuestionAnswered(false);
     setShowCompletionScreen(false);
+    setShowPronunciationPractice(false);
   };
 
   const autoOpenedLessonRef = React.useRef(null);
@@ -1104,6 +1255,7 @@ const AutismView = ({ initialLessonId = null }) => {
     setWrongAnswerCount({});
     setQuestionAnswered(false);
     setShowCompletionScreen(false);
+    setShowPronunciationPractice(false);
   };
 
   // Handle next lesson from completion screen
@@ -1134,6 +1286,36 @@ const AutismView = ({ initialLessonId = null }) => {
 
   // EPIC 1.6: Distraction-free mode when in lesson view
   if (selectedLesson && currentStep) {
+    if (showPronunciationPractice) {
+      const lessonLang = resolveLessonLang(currentLesson?.language);
+      return (
+        <div className="autism-view pronunciation-screen">
+          <div className="completion-container">
+            <div className="completion-content">
+              <PronunciationPractice
+                title="Pronunciation Practice"
+                subtitle={`Practice the words from “${currentLesson?.title || 'this lesson'}”. Complete all to proceed.`}
+                items={practiceItems}
+                recognitionLang={lessonLang}
+                ttsLang={lessonLang}
+                playbackRate={0.85}
+                onExit={handleBackToLessons}
+                onComplete={() => {
+                  // Mark lesson as completed *after* practice.
+                  if (!completedLessons.includes(selectedLesson)) {
+                    setCompletedLessons([...completedLessons, selectedLesson]);
+                    saveLessonCompletion(selectedLesson);
+                  }
+                  setShowPronunciationPractice(false);
+                  setShowCompletionScreen(true);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     // Show completion screen after finishing all steps
     if (showCompletionScreen) {
       return (
@@ -1223,6 +1405,30 @@ const AutismView = ({ initialLessonId = null }) => {
                 {currentStep.interaction && (
                   <div className="step-interaction-left">
                     <p className="interaction-question">{currentStep.interaction.question}</p>
+
+                    <div className="interaction-voice-answer">
+                      <button
+                        type="button"
+                        onClick={isAnswerListening ? stopAnswerListening : startAnswerListening}
+                        className="btn-audio btn-voice"
+                        disabled={questionAnswered}
+                        title="Answer by voice"
+                      >
+                        <Mic size={18} aria-hidden="true" />
+                        <span>{isAnswerListening ? 'Stop Voice' : 'Answer by Voice'}</span>
+                      </button>
+
+                      {answerTranscript && (
+                        <div className="voice-transcript" aria-live="polite">
+                          Heard: {answerTranscript}
+                        </div>
+                      )}
+                      {answerVoiceError && (
+                        <div className="voice-error" role="alert">
+                          {answerVoiceError}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 

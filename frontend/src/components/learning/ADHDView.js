@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { usePreferences } from '../../context/PreferencesContext';
 import ProfileSettings from '../ProfileSettings';
 import './ADHDView.css';
+import PronunciationPractice from './PronunciationPractice';
 import ReactConfetti from 'react-confetti';
 import { getSummary } from '../../services/progressService';
 import api from '../../utils/api';
@@ -22,6 +23,7 @@ import {
   Headphones,
   Info,
   Lightbulb,
+  Mic,
   Pause,
   Pencil,
   Play,
@@ -635,6 +637,44 @@ const ADHDView = ({ initialLessonId = null }) => {
     }
   ];
 
+  const pronunciationItems = React.useMemo(() => {
+    if (!activeLesson?.id) return [];
+    if (!Array.isArray(steps) || steps.length === 0) return [];
+
+    const learnSteps = steps.filter((s) => s?.type === 'learn');
+
+    const items = learnSteps
+      .map((step, idx) => {
+        const label = String(step?.content || '').trim();
+        if (!label) return null;
+
+        const withoutParens = label.replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+        const expectedForms = [
+          label,
+          withoutParens,
+          step?.highlight,
+        ].map((x) => String(x || '').trim()).filter(Boolean);
+
+        return {
+          id: `adhd-${activeLesson.id}-${idx}-${withoutParens || label}`,
+          label: withoutParens || label,
+          speakText: withoutParens || label,
+          expectedForms,
+        };
+      })
+      .filter(Boolean);
+
+    const seen = new Set();
+    const unique = [];
+    for (const item of items) {
+      const key = String(item.label).toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      unique.push(item);
+    }
+    return unique;
+  }, [activeLesson?.id, steps]);
+
   const handleStartLesson = async (lesson) => {
     setActiveLesson(lesson);
     setIsLoading(true);
@@ -682,7 +722,7 @@ const ADHDView = ({ initialLessonId = null }) => {
       setAttempts(0);
       setIsTransitioning(false);
     } else {
-      setLessonPhase('complete');
+      setLessonPhase('pronunciation');
       // Removed completion audio
     }
   }
@@ -778,6 +818,196 @@ const ADHDView = ({ initialLessonId = null }) => {
       }
     }
   };
+
+  // EPIC 3.2: Voice-based answer input (STT) for quiz steps
+  const answerRecognitionRef = React.useRef(null);
+  const [isAnswerListening, setIsAnswerListening] = useState(false);
+  const [answerTranscript, setAnswerTranscript] = useState('');
+  const [answerVoiceError, setAnswerVoiceError] = useState('');
+
+  const normalizeVoice = useCallback((value) => {
+    return String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/[.,!?;:()"'{}\u005B\u005D\u201C\u201D\u2018\u2019\u2013\u2014]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }, []);
+
+  const toNumberToken = useCallback((token) => {
+    const t = normalizeVoice(token);
+    const map = {
+      zero: '0',
+      one: '1',
+      two: '2',
+      to: '2',
+      too: '2',
+      three: '3',
+      four: '4',
+      for: '4',
+      five: '5',
+      six: '6',
+      seven: '7',
+      eight: '8',
+      ate: '8',
+      nine: '9',
+      ten: '10',
+    };
+    if (map[t]) return map[t];
+    if (/^\d+$/.test(t)) return t;
+    return token;
+  }, [normalizeVoice]);
+
+  const toWordToken = useCallback((token) => {
+    const t = normalizeVoice(token);
+    const map = {
+      '0': 'zero',
+      '1': 'one',
+      '2': 'two',
+      '3': 'three',
+      '4': 'four',
+      '5': 'five',
+      '6': 'six',
+      '7': 'seven',
+      '8': 'eight',
+      '9': 'nine',
+      '10': 'ten',
+    };
+    if (map[t]) return map[t];
+    return token;
+  }, [normalizeVoice]);
+
+  const makeAnswerForms = useCallback((value) => {
+    const base = normalizeVoice(value);
+    if (!base) return [];
+
+    const tokens = base.split(' ').filter(Boolean);
+    const wordsToDigits = tokens.map(toNumberToken).join(' ');
+    const digitsToWords = tokens.map(toWordToken).join(' ');
+    const compact = (s) => String(s).replace(/\s+/g, '');
+
+    const forms = [
+      base,
+      compact(base),
+      normalizeVoice(wordsToDigits),
+      compact(wordsToDigits),
+      normalizeVoice(digitsToWords),
+      compact(digitsToWords),
+    ].filter(Boolean);
+
+    return Array.from(new Set(forms));
+  }, [normalizeVoice, toNumberToken, toWordToken]);
+
+  const isVoiceMatch = useCallback((heard, option) => {
+    const heardForms = makeAnswerForms(heard);
+    const optionForms = makeAnswerForms(option);
+    if (!heardForms.length || !optionForms.length) return false;
+
+    for (const h of heardForms) {
+      for (const o of optionForms) {
+        if (h === o) return true;
+
+        // Avoid over-matching very short tokens like "a".
+        const minLen = Math.min(h.length, o.length);
+        if (minLen < 3) continue;
+
+        if (h.includes(o) || o.includes(h)) return true;
+      }
+    }
+    return false;
+  }, [makeAnswerForms]);
+
+  const initAnswerSpeechRecognition = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return null;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-IN';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    return recognition;
+  }, []);
+
+  const stopAnswerListening = useCallback(() => {
+    try {
+      answerRecognitionRef.current?.stop?.();
+    } catch (e) {
+      // ignore
+    }
+    setIsAnswerListening(false);
+  }, []);
+
+  const startAnswerListening = useCallback(() => {
+    const step = steps.length > 0 ? steps[currentStepIndex] : null;
+    if (!step || step.type !== 'quiz') return;
+    if (isTransitioning) return;
+
+    setAnswerVoiceError('');
+
+    if (!answerRecognitionRef.current) {
+      answerRecognitionRef.current = initAnswerSpeechRecognition();
+    }
+    const recognition = answerRecognitionRef.current;
+    if (!recognition) {
+      setAnswerVoiceError('Voice input is not supported in this browser.');
+      return;
+    }
+
+    recognition.onstart = () => {
+      setIsAnswerListening(true);
+      setAnswerVoiceError('');
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results?.[0]?.[0]?.transcript || '';
+      const cleaned = transcript.trim();
+      setAnswerTranscript(cleaned);
+
+      const options = Array.isArray(step?.options) ? step.options : [];
+      if (!options.length) return;
+
+      const normalized = normalizeVoice(cleaned);
+      const letterMap = { a: 0, b: 1, c: 2, d: 3 };
+      if (letterMap[normalized] !== undefined) {
+        const idx = letterMap[normalized];
+        if (idx >= 0 && idx < options.length) {
+          handleAnswer(options[idx]);
+          return;
+        }
+      }
+
+      const matched = options.find((opt) => {
+        return isVoiceMatch(cleaned, opt);
+      });
+      if (matched) {
+        handleAnswer(matched);
+      }
+    };
+
+    recognition.onerror = (event) => {
+      setIsAnswerListening(false);
+      if (event.error === 'no-speech') setAnswerVoiceError('No speech detected. Please try again.');
+      else if (event.error === 'audio-capture') setAnswerVoiceError('No microphone found.');
+      else if (event.error === 'not-allowed') setAnswerVoiceError('Microphone permission denied.');
+      else setAnswerVoiceError('Could not hear clearly. Please try again.');
+    };
+
+    recognition.onend = () => {
+      setIsAnswerListening(false);
+    };
+
+    try {
+      recognition.start();
+    } catch (e) {
+      setIsAnswerListening(false);
+    }
+  }, [steps, currentStepIndex, handleAnswer, initAnswerSpeechRecognition, isTransitioning, isVoiceMatch, normalizeVoice]);
+
+  useEffect(() => {
+    stopAnswerListening();
+    setAnswerTranscript('');
+    setAnswerVoiceError('');
+  }, [currentStepIndex, activeLesson, stopAnswerListening]);
 
   const handlePlayStory = () => {
     const step = steps[currentStepIndex];
@@ -976,6 +1206,19 @@ const ADHDView = ({ initialLessonId = null }) => {
               }}>
                 {countdownValue === 0 ? 'GO!' : countdownValue}
               </div>
+            </div>
+          ) : lessonPhase === 'pronunciation' ? (
+            <div className="lesson-complete-view" style={{ padding: '1.5rem' }}>
+              <PronunciationPractice
+                title="Pronunciation Practice"
+                subtitle={`Practice the words from “${activeLesson?.title || 'this lesson'}”. Complete all to proceed.`}
+                items={pronunciationItems}
+                recognitionLang="en-US"
+                ttsLang="en-US"
+                playbackRate={0.85}
+                onExit={exitLesson}
+                onComplete={() => setLessonPhase('complete')}
+              />
             </div>
           ) : lessonPhase === 'complete' ? (
             <div className="lesson-complete-view" style={{ textAlign: 'center', padding: '3rem', animation: 'fadeIn 0.5s ease', position: 'relative', overflow: 'hidden' }}>
@@ -1181,12 +1424,37 @@ const ADHDView = ({ initialLessonId = null }) => {
                       {currentStep.type === 'quiz' && (
                         <div className="quiz-mode">
                           <h2>{renderTextWithActiveWord(currentStep.question)}</h2>
-                          <button type="button" onClick={handleListenCurrentStep} className="btn-audio" title="Listen to question">
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
-                              <Volume2 size={18} aria-hidden="true" />
-                              <span>Listen</span>
-                            </span>
-                          </button>
+                          <div className="quiz-audio-actions">
+                            <button type="button" onClick={handleListenCurrentStep} className="btn-audio" title="Listen to question">
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
+                                <Volume2 size={18} aria-hidden="true" />
+                                <span>Listen</span>
+                              </span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={isAnswerListening ? stopAnswerListening : startAnswerListening}
+                              className="btn-audio"
+                              title="Answer by voice"
+                              disabled={feedback?.type === 'success' || isTransitioning}
+                            >
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
+                                <Mic size={18} aria-hidden="true" />
+                                <span>{isAnswerListening ? 'Stop Voice' : 'Answer by Voice'}</span>
+                              </span>
+                            </button>
+                          </div>
+
+                          {answerTranscript && (
+                            <div className="voice-transcript" aria-live="polite">
+                              Heard: {answerTranscript}
+                            </div>
+                          )}
+                          {answerVoiceError && (
+                            <div className="voice-error" role="alert">
+                              {answerVoiceError}
+                            </div>
+                          )}
                           <div className="options-grid">
                             {currentStep.options.map(opt => (
                               <button

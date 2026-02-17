@@ -478,7 +478,7 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
               onAnswered={handleAnswered}
               autoAdvanceOnCorrect={!isReplay}
               enableTimer={!isReplay}
-              enableSpeech={false}
+              enableSpeech={!isReplay}
               autoPlayNarration={false}
               disableAutoSpeak={true}
             />

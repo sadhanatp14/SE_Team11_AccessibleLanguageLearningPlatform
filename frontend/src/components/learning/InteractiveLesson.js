@@ -194,6 +194,7 @@ const InteractiveLesson = ({ lesson, isLoading, error, onClose }) => {
                 onContinue={handleContinue}
                 disableContinue={activeInteractionIndex >= interactions.length - 1 && paragraphs.length === visibleParagraphs.length}
                 useLocalSubmission={isLocalLessonId}
+                enableSpeech={true}
               />
             ) : (
               <p className="interaction-empty">No interactions in this lesson yet.</p>

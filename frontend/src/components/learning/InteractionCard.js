@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { requestInteractionHelp, submitInteraction } from '../../services/interactionService';
 import GuidedSupport from './GuidedSupport';
 import { decorateDyslexiaText, useDyslexiaContext } from '../../utils/dyslexiaSyllableMode';
+import { Mic } from 'lucide-react';
 import './InteractionCard.css';
 
 const normalizeAnswer = (value) => {
@@ -761,7 +762,10 @@ const InteractionCard = ({
                 onClick={isListening ? handleStopListening : handleStartListening}
                 aria-pressed={isListening}
               >
-                {isListening ? 'Stop voice input' : 'Use voice input'}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
+                  <Mic size={18} aria-hidden="true" />
+                  <span>{isListening ? 'Stop Voice' : 'Answer by Voice'}</span>
+                </span>
               </button>
               {lastTranscript && (
                 <span className="voice-transcript">Heard: {lastTranscript}</span>

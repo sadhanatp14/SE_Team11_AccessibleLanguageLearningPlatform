@@ -661,6 +661,36 @@
   transform: none;
 }
 
+.interaction-voice-answer {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.interaction-voice-answer .btn-voice {
+  width: 100%;
+  justify-content: center;
+}
+
+.voice-transcript {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.voice-error {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  font-weight: 700;
+}
+
 /* Instructions (Autism): simple, predictable exam-style modal */
 .btn-instructions {
   display: flex;
@@ -933,6 +963,26 @@
   align-items: center;
   justify-content: center;
   animation: none;
+}
+
+/* Pronunciation Practice Screen (reuses completion layout container) */
+.autism-view.pronunciation-screen {
+  background: #f6f7f9;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: none;
+}
+
+.autism-view.pronunciation-screen .completion-container {
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+.autism-view.pronunciation-screen .completion-content {
+  padding: 20px;
+  text-align: left;
 }
 
 .completion-container {
