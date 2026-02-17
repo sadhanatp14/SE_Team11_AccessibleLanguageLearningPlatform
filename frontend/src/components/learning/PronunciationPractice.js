@@ -229,19 +229,28 @@ const PronunciationPractice = ({
     [playbackRate, ttsLang]
   );
 
-  const handleRetry = useCallback((item) => {
-    setVoiceError('');
-    setStateById((prev) => {
-      const current = prev?.[item.id] || { attempts: 0, transcript: '', passed: false };
-      return {
-        ...(prev || {}),
-        [item.id]: {
-          ...current,
-          transcript: '',
-        },
-      };
-    });
-  }, []);
+  const handleRetry = useCallback(
+    (item) => {
+      setVoiceError('');
+
+      if (listeningItemId === item.id) {
+        stopListening();
+      }
+
+      setStateById((prev) => {
+        const current = prev?.[item.id] || { attempts: 0, transcript: '', passed: false };
+        return {
+          ...(prev || {}),
+          [item.id]: {
+            ...current,
+            transcript: '',
+            passed: false,
+          },
+        };
+      });
+    },
+    [listeningItemId, stopListening]
+  );
 
 
   const startListening = useCallback(
