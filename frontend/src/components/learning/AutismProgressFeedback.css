@@ -1,0 +1,179 @@
+/* AutismProgressFeedback.css */
+/* EPIC 4.4 & 4.5: Practice Suggestions and Motivation Styling */
+
+.autism-progress-feedback {
+  margin: 20px 0;
+}
+
+/* EPIC 4.5: Motivational Section */
+.motivation-section {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+}
+
+.motivation-badge {
+  font-size: 48px;
+  margin-bottom: 12px;
+  animation: bounce 1s ease-in-out;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.motivation-message {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #333;
+}
+
+.motivation-stats {
+  margin: 8px 0 0 0;
+  font-size: 16px;
+  color: #555;
+  font-weight: 500;
+}
+
+/* EPIC 4.4: Practice Suggestion */
+.practice-suggestion {
+  background: #FFF3E0;
+  border-left: 4px solid #FF9800;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.practice-icon {
+  width: 48px;
+  height: 48px;
+  background: #FF9800;
+  color: white;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.practice-content h4 {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #E65100;
+}
+
+.practice-content h5 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.practice-description {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #666;
+  line-height: 1.5;
+}
+
+.practice-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px 0;
+}
+
+.practice-steps li {
+  padding: 8px 12px;
+  background: white;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: #555;
+}
+
+.practice-steps li:before {
+  content: '✓ ';
+  color: #4CAF50;
+  font-weight: bold;
+  margin-right: 8px;
+}
+
+.practice-score {
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  margin: 8px 0 0 0;
+}
+
+.practice-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.btn-practice,
+.btn-continue {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.btn-practice {
+  background: #FF9800;
+  color: white;
+}
+
+.btn-practice:hover {
+  background: #F57C00;
+  transform: scale(1.02);
+}
+
+.btn-continue {
+  background: #4CAF50;
+  color: white;
+}
+
+.btn-continue:hover {
+  background: #45a049;
+  transform: scale(1.02);
+}
+
+/* No Practice Needed */
+.no-practice-needed {
+  background: #E8F5E9;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.no-practice-needed p {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2E7D32;
+}

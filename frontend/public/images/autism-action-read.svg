@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <rect width="200" height="200" fill="#F3E5F5"/>
+  <circle cx="90" cy="55" r="18" fill="#FFD4A3"/>
+  <line x1="90" y1="73" x2="90" y2="120" stroke="#9C27B0" stroke-width="6"/>
+  <line x1="90" y1="85" x2="65" y2="100" stroke="#9C27B0" stroke-width="5"/>
+  <line x1="90" y1="85" x2="120" y2="95" stroke="#9C27B0" stroke-width="5"/>
+  <circle cx="83" cy="52" r="2" fill="#333"/>
+  <circle cx="97" cy="52" r="2" fill="#333"/>
+  <rect x="105" y="85" width="45" height="35" rx="2" fill="#CE93D8" stroke="#9C27B0" stroke-width="2"/>
+  <line x1="127.5" y1="85" x2="127.5" y2="120" stroke="#9C27B0" stroke-width="1.5"/>
+  <line x1="115" y1="92" x2="122" y2="92" stroke="#7B1FA2" stroke-width="1"/>
+  <line x1="115" y1="97" x2="122" y2="97" stroke="#7B1FA2" stroke-width="1"/>
+  <line x1="115" y1="102" x2="122" y2="102" stroke="#7B1FA2" stroke-width="1"/>
+  <line x1="133" y1="92" x2="140" y2="92" stroke="#7B1FA2" stroke-width="1"/>
+  <line x1="133" y1="97" x2="140" y2="97" stroke="#7B1FA2" stroke-width="1"/>
+  <line x1="133" y1="102" x2="140" y2="102" stroke="#7B1FA2" stroke-width="1"/>
+</svg>
