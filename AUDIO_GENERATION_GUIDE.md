@@ -19,7 +19,7 @@ node generate-audio-files.js
 ```
 
 This script will:
-- Connect to your TTS service at `http://localhost:5000/api/tts/generate`
+- Connect to your TTS service at `http://localhost:5002/api/tts/speak`
 - Generate all 60 audio files (15 questions × 4 audio types each)
 - Save them to `/frontend/public/audio/` directory
 - Display progress for each file
@@ -29,7 +29,7 @@ This script will:
 You can also generate audio files manually using the TTS API endpoint:
 
 ```bash
-curl -X POST http://localhost:5000/api/tts/generate \
+curl -X POST http://localhost:5002/api/tts/speak \
   -H "Content-Type: application/json" \
   -d '{
     "text": "Is Hello a friendly greeting?",
@@ -42,7 +42,7 @@ curl -X POST http://localhost:5000/api/tts/generate \
 
 ### Option 3: Using Postman or Similar Tool
 
-1. **Endpoint**: `POST http://localhost:5000/api/tts/generate`
+1. **Endpoint**: `POST http://localhost:5002/api/tts/speak`
 2. **Headers**: `Content-Type: application/json`
 3. **Body**: 
 ```json
@@ -87,7 +87,7 @@ See [ASSETS_REQUIRED.md](./ASSETS_REQUIRED.md) for the complete list of all text
 ## Troubleshooting
 
 ### Script fails to connect
-- Ensure backend server is running on port 5000
+- Ensure backend server is running on port 5002
 - Check that the TTS route is configured at `/api/tts/generate`
 - Verify your `.env` file has the correct TTS service configuration
 

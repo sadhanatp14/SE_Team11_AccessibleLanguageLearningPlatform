@@ -1,6 +1,17 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
+/**
+ * User Model
+ * ----------
+ * Core identity record for the platform.
+ * Includes:
+ * - authentication fields (email/password hash)
+ * - learningCondition selection (dyslexia/adhd/autism/none)
+ * - parental-control flags for minors
+ * - completed lesson keys for lightweight progress tracking across modules
+ */
+
 const UserSchema = new mongoose.Schema(
   {
     name: {
@@ -67,11 +78,14 @@ const UserSchema = new mongoose.Schema(
       default: true,
     },
     // Completed lessons tracking (simple list of keys)
+    // Keys may be DB ObjectId strings (for DB-backed lessons) or logical keys
+    // like `autism-lesson-1` (for hard-coded lesson centers).
     completedLessons: {
       type: [String],
       default: []
     },
     // Metadata for completed lessons (preserve timestamps for non-DB/sample completions)
+    // When keys aren't tied to a Lesson document, meta preserves completion timestamps.
     completedLessonsMeta: {
       type: [
         new mongoose.Schema(
@@ -92,6 +106,10 @@ const UserSchema = new mongoose.Schema(
 
 // EPIC 1.1.3: Secure password hashing (bcrypt) before persisting users
 // Hash password before saving
+/**
+ * Pre-save hook: hash password when it changes.
+ * This ensures `password` is never stored in plaintext.
+ */
 UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     return next();
@@ -104,6 +122,11 @@ UserSchema.pre('save', async function (next) {
 
 // EPIC 1.2.2: Credential verification during login
 // Method to compare password
+/**
+ * Compares a candidate password to the stored bcrypt hash.
+ * @param {string} enteredPassword
+ * @returns {Promise<boolean>}
+ */
 UserSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };

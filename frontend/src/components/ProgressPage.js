@@ -9,6 +9,19 @@ import api from '../utils/api';
 import { BookOpen } from 'lucide-react';
 import { getDyslexiaLessonTitle, useDyslexiaSyllableMode } from '../utils/dyslexiaSyllableMode';
 
+/**
+ * ProgressPage
+ * ------------
+ * Unified progress UI across learning conditions.
+ *
+ * Data sources:
+ * - Dyslexia: lesson progress is tracked locally (localStorage) using dyslexiaProgressService
+ * - ADHD/Autism: completion is tracked remotely via the backend `/users/completed-lessons`
+ * - Summary card: `progressService.getSummary()` fetches a backend-computed summary
+ *
+ * The page listens for a custom `progress:updated` browser event so lesson pages can
+ * trigger an immediate refresh after completion without forcing a full reload.
+ */
 const ProgressPage = () => {
   const { user } = useAuth();
   const { preferences } = usePreferences();
@@ -23,6 +36,7 @@ const ProgressPage = () => {
   const [completedLessonKeys, setCompletedLessonKeys] = useState([]);
 
   const refreshLocalProgress = React.useCallback(() => {
+    // Dyslexia uses a localStorage key derived from the current user.
     const key = normalizeUserId(user);
     if (!key) {
       setLocalProgress({});
@@ -33,6 +47,7 @@ const ProgressPage = () => {
 
   const refreshCompletedLessonKeys = React.useCallback(async () => {
     try {
+      // Remote completion list is keyed by `condition-lesson-N`.
       const res = await api.get('/users/completed-lessons');
       if (res?.data?.success && Array.isArray(res.data.completedLessons)) {
         setCompletedLessonKeys(res.data.completedLessons);
@@ -40,6 +55,7 @@ const ProgressPage = () => {
         setCompletedLessonKeys([]);
       }
     } catch (e) {
+      // Swallow errors: progress UI should still render even if remote is down.
       setCompletedLessonKeys([]);
     }
   }, []);
@@ -149,9 +165,13 @@ const ProgressPage = () => {
       // Local dyslexia progress is stored in localStorage; refresh it immediately.
       refreshLocalProgress();
       refreshCompletedLessonKeys();
+
+      // Some emitters include a summary payload so we can update instantly.
       if (e?.detail?.summary && e.detail.summary.success) {
         setSummary(e.detail.summary);
       }
+
+      // Also re-fetch the summary to keep the progress card authoritative.
       loadSummary();
       setTimeout(() => loadSummary(), 600);
     };

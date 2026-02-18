@@ -12,7 +12,8 @@ const path = require('path');
 const axios = require('axios');
 
 // Configuration
-const TTS_SERVICE_URL = 'http://localhost:5000/api/tts/generate';
+// Backend TTS endpoint is exposed at POST /api/tts/speak
+const TTS_SERVICE_URL = 'http://localhost:5002/api/tts/speak';
 const OUTPUT_DIR = path.join(__dirname, 'frontend', 'public', 'audio');
 
 // Ensure output directory exists
@@ -119,10 +120,8 @@ async function generateAudioFile(filename, text) {
     console.log(`Generating: ${filename}.mp3`);
     
     const response = await axios.post(TTS_SERVICE_URL, {
-      text: text,
-      language: 'en',
+      text,
       speed: 1.0,
-      voice: 'default'
     }, {
       responseType: 'arraybuffer'
     });

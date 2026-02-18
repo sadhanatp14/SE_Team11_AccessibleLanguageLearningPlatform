@@ -3,6 +3,17 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './Register.css';
 
+/**
+ * Register
+ * --------
+ * Account creation form with client-side validation.
+ * The backend still enforces the real constraints; these checks exist to:
+ * - provide immediate feedback (password/age/parent-email)
+ * - reduce round trips on obvious mistakes
+ *
+ * After a successful registration, users are routed into `AccessibilitySetup`
+ * to select accessibility preferences before starting lessons.
+ */
 const Register = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
@@ -22,10 +33,12 @@ const Register = () => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    // Controlled inputs: checkboxes use `checked`, everything else uses `value`.
     setFormData({
       ...formData,
       [name]: type === 'checkbox' ? checked : value,
     });
+    // Clear any prior error as the user edits the form.
     setError('');
   };
 
@@ -42,6 +55,7 @@ const Register = () => {
     }
 
 
+    // Age is optional; when provided, enforce a reasonable range.
     const age = parseInt(formData.age);
     if (age && (age < 3 || age > 100)) {
       setError('Please enter a valid age (3-100)');
@@ -71,9 +85,12 @@ const Register = () => {
     setLoading(true);
     setError('');
 
+    // Remove fields that the backend doesn't need.
     const { confirmPassword, ...registrationData } = formData;
+    // Normalize age to number or omit it entirely.
     registrationData.age = parseInt(registrationData.age) || undefined;
 
+    // Only send `parentEmail` when minor flow is enabled.
     if (!registrationData.isMinor) {
       delete registrationData.parentEmail;
     }

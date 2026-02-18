@@ -4,6 +4,16 @@ import { usePreferences } from '../context/PreferencesContext';
 import { Accessibility, Check, LogOut, User, X } from 'lucide-react';
 import './ProfileSettings.css';
 
+/**
+ * ProfileSettings
+ * ---------------
+ * Modal settings panel with two tabs:
+ * - Profile: read-only details (plus a placeholder edit UI)
+ * - Accessibility: updates persisted preferences via `PreferencesContext`
+ *
+ * The component intentionally keeps "profile update" as a stub (alert) unless
+ * backend endpoints exist for profile mutation.
+ */
 const ProfileSettings = ({ onClose }) => {
   const { user, logout } = useAuth();
   const { preferences, updateAccessibilitySettings } = usePreferences();
@@ -28,6 +38,7 @@ const ProfileSettings = ({ onClose }) => {
   // Sync local state with preferences when they change
   useEffect(() => {
     if (preferences) {
+      // Keep the modal UI aligned with the latest persisted preferences.
       setAccessibilitySettings({
         fontSize: preferences.fontSize || 'medium',
         contrastTheme: preferences.contrastTheme || 'default',
@@ -41,10 +52,12 @@ const ProfileSettings = ({ onClose }) => {
 
   const handleProfileChange = (e) => {
     const { name, value } = e.target;
+    // Local-only editing for now; no backend update is performed.
     setProfileData({ ...profileData, [name]: value });
   };
 
   const handleAccessibilityChange = (name, value) => {
+    // Local state first; persist only when user clicks "Save Settings".
     setAccessibilitySettings({ ...accessibilitySettings, [name]: value });
   };
 
@@ -59,6 +72,7 @@ const ProfileSettings = ({ onClose }) => {
   };
 
   const handleLogout = () => {
+    // Confirm reduces accidental logouts from a modal.
     if (window.confirm('Are you sure you want to logout?')) {
       logout();
     }

@@ -1,5 +1,16 @@
 const mongoose = require('mongoose');
 
+/**
+ * Preferences Model
+ * -----------------
+ * Stores per-user accessibility and learning experience preferences.
+ * These preferences are primarily applied by the frontend as CSS classes
+ * scoped to the learning container.
+ *
+ * One-to-one relationship:
+ * - Each user has a single Preferences document (unique `user` field).
+ */
+
 const PreferencesSchema = new mongoose.Schema(
   {
     user: {
@@ -138,6 +149,9 @@ const PreferencesSchema = new mongoose.Schema(
 );
 
 // Update lastModified on save
+/**
+ * Pre-save hook: keep a simple "last touched" timestamp for preferences.
+ */
 PreferencesSchema.pre('save', function (next) {
   this.lastModified = Date.now();
   next();

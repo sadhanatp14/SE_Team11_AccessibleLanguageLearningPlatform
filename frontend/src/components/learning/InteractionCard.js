@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { requestInteractionHelp, submitInteraction } from '../../services/interactionService';
 import GuidedSupport from './GuidedSupport';
+import { decorateDyslexiaText, useDyslexiaContext } from '../../utils/dyslexiaSyllableMode';
+import { Mic } from 'lucide-react';
 import './InteractionCard.css';
 
 const normalizeAnswer = (value) => {
@@ -25,6 +27,7 @@ const pickEncouragement = () => {
 
 const InteractionCard = ({
   lessonId,
+  condition,
   interaction,
   onContinue,
   disableContinue = false,
@@ -51,9 +54,14 @@ const InteractionCard = ({
   const [isListening, setIsListening] = useState(false);
   const [voiceError, setVoiceError] = useState('');
   const [lastTranscript, setLastTranscript] = useState('');
+  const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
+  const [instructionsActiveWord, setInstructionsActiveWord] = useState('');
   const recognitionRef = useRef(null);
   const timerRef = useRef(null);
   const audioRef = useRef(null);
+  const instructionBoundaryRef = useRef(null);
+
+  const dyslexia = useDyslexiaContext({ condition, lessonId, defaultSyllableMode: true });
 
   const hintTriggerAttempts = useMemo(() => 2, []);
   const resolvedTimeLimit = Number.isFinite(interaction?.timeLimitSeconds)
@@ -84,6 +92,129 @@ const InteractionCard = ({
       : interaction.options || [];
 
   const isShortAnswer = interaction.type === 'short_answer';
+
+  const instructionSteps = useMemo(() => {
+    // EPIC 3.7.1-3.7.4: Spoken instructions for activities that are short, replayable, and match on-screen actions.
+    const steps = [];
+
+    if (enableTts) {
+      steps.push('Press “Listen to Question” to hear the question.');
+    }
+
+    if (interaction?.type === 'short_answer') {
+      steps.push('Type your answer in the box.');
+    } else if (interaction?.type === 'true_false') {
+      steps.push('Choose True or False.');
+    } else if (interaction?.type === 'click') {
+      steps.push('Tap the option that matches the question.');
+    } else {
+      steps.push('Select one option.');
+    }
+
+    steps.push('Then press “Submit Answer”.');
+
+    if (!readOnly) {
+      steps.push('If you get stuck, press “Need help?” for a hint.');
+    }
+
+    if (enableTimer && !readOnly) {
+      steps.push('Keep an eye on the timer at the top.');
+    }
+
+    return steps.slice(0, 5);
+  }, [enableTts, enableTimer, interaction?.type, readOnly]);
+
+  const instructionText = useMemo(() => {
+    const header = 'Instructions.';
+    return [header, ...instructionSteps].join(' ');
+  }, [instructionSteps]);
+
+  const displayedInstructionText = useMemo(() => {
+    if (!dyslexia.applySyllables) return instructionText;
+    return decorateDyslexiaText(instructionText);
+  }, [dyslexia.applySyllables, instructionText]);
+
+  const displayedInstructionSteps = useMemo(() => {
+    if (!dyslexia.applySyllables) return instructionSteps;
+    return instructionSteps.map((step) => decorateDyslexiaText(step));
+  }, [dyslexia.applySyllables, instructionSteps]);
+
+  const stripWordPunctuation = useCallback((value) => {
+    // Remove common ASCII + Unicode punctuation so word highlighting matches
+    // things like “Listen”, It’s, or em–dash separated tokens.
+    return String(value ?? '').replace(/[.,!?;:()"'{}\u005B\u005D\u201C\u201D\u2018\u2019\u2013\u2014]/g, '');
+  }, []);
+
+  const renderHighlightableText = useCallback((text, activeWord) => {
+    if (!text) return null;
+    const raw = String(text);
+    return raw.split(' ').map((token, idx) => {
+      const clean = stripWordPunctuation(token);
+      const isActive = activeWord && clean && clean.toLowerCase() === activeWord.toLowerCase();
+      return (
+        <span
+          key={`${idx}-${token}`}
+          className={isActive ? 'instructions-word is-active' : 'instructions-word'}
+        >
+          {token}{' '}
+        </span>
+      );
+    });
+  }, [stripWordPunctuation]);
+
+  const startInstructionBoundaryTracking = useCallback((text, rate) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    if (!text) return;
+
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = rate;
+      utterance.volume = 0;
+
+      utterance.onboundary = (event) => {
+        if (event.name !== 'word') return;
+        if (instructionBoundaryRef.current !== utterance) return;
+        const charIndex = event.charIndex;
+        const textBefore = text.slice(charIndex);
+        const firstSpace = textBefore.search(/\s/);
+        const word = firstSpace === -1 ? textBefore : textBefore.slice(0, firstSpace);
+        const cleanWord = stripWordPunctuation(word);
+        setInstructionsActiveWord(cleanWord);
+      };
+
+      utterance.onend = () => {
+        setInstructionsActiveWord('');
+        if (instructionBoundaryRef.current === utterance) {
+          instructionBoundaryRef.current = null;
+        }
+      };
+
+      instructionBoundaryRef.current = utterance;
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      // best-effort
+    }
+  }, [stripWordPunctuation]);
+
+  const stopInstructionAudio = useCallback(() => {
+    try {
+      window.speechSynthesis.cancel();
+    } catch (e) {
+      // ignore
+    }
+    instructionBoundaryRef.current = null;
+    setInstructionsActiveWord('');
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+  }, []);
+
+  const closeInstructions = useCallback(() => {
+    setIsInstructionsOpen(false);
+    stopInstructionAudio();
+  }, [stopInstructionAudio]);
 
   const speak = useCallback(async (text, overrides = {}) => {
     // EPIC 2.1.2, 2.1.4: Audio narration for questions/feedback (backend TTS with fallback) integrated into the interaction flow.
@@ -116,9 +247,25 @@ const InteractionCard = ({
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
       audioRef.current = audio;
+      audio.playbackRate = overrides.rate ?? 0.85;
       audio.play().catch(e => console.warn("Backend Play error", e));
 
-      audio.onended = () => URL.revokeObjectURL(url);
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        if (overrides.trackWords) {
+          instructionBoundaryRef.current = null;
+          setInstructionsActiveWord('');
+          try {
+            window.speechSynthesis.cancel();
+          } catch (e) {
+            // ignore
+          }
+        }
+      };
+
+      if (overrides.trackWords) {
+        startInstructionBoundaryTracking(text, overrides.rate ?? 0.85);
+      }
 
     } catch (e) {
       // Fallback
@@ -126,10 +273,35 @@ const InteractionCard = ({
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = overrides.rate ?? 0.85;
         utterance.lang = overrides.lang ?? 'en-US';
+
+        if (overrides.trackWords) {
+          utterance.onboundary = (event) => {
+            if (event.name !== 'word') return;
+            const charIndex = event.charIndex;
+            const textBefore = text.slice(charIndex);
+            const firstSpace = textBefore.search(/\s/);
+            const word = firstSpace === -1 ? textBefore : textBefore.slice(0, firstSpace);
+            const cleanWord = stripWordPunctuation(word);
+            setInstructionsActiveWord(cleanWord);
+          };
+          utterance.onend = () => setInstructionsActiveWord('');
+        }
         window.speechSynthesis.speak(utterance);
       }
     }
-  }, [enableTts]);
+  }, [enableTts, startInstructionBoundaryTracking, stripWordPunctuation]);
+
+  useEffect(() => {
+    if (!isInstructionsOpen) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeInstructions();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isInstructionsOpen, closeInstructions]);
 
   const playAudio = useCallback((audioUrl) => {
     // EPIC 3.5.1-3.5.2: Audio can be replayed any number of times.
@@ -392,6 +564,12 @@ const InteractionCard = ({
     speak(interaction?.question);
   };
 
+  const handlePlayInstructions = () => {
+    // EPIC 3.7.1-3.7.3: Provide spoken instructions + allow replay.
+    setInstructionsActiveWord('');
+    speak(instructionText, { rate: 0.85, lang: 'en-US', trackWords: true });
+  };
+
   const initSpeechRecognition = () => {
     if (typeof window === 'undefined') return null;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -503,6 +681,15 @@ const InteractionCard = ({
           {/* EPIC 2.1.2, 2.3.4: Learner-controlled question narration (simple control, not overwhelming). */}
           Listen to Question
         </button>
+
+        <button
+          type="button"
+          className="instructions-btn fx-pressable fx-focus"
+          onClick={() => setIsInstructionsOpen(true)}
+          aria-label="Open instructions"
+        >
+          Instructions
+        </button>
       </div>
 
       <fieldset disabled={isLocked || readOnly}>
@@ -575,7 +762,10 @@ const InteractionCard = ({
                 onClick={isListening ? handleStopListening : handleStartListening}
                 aria-pressed={isListening}
               >
-                {isListening ? 'Stop voice input' : 'Use voice input'}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
+                  <Mic size={18} aria-hidden="true" />
+                  <span>{isListening ? 'Stop Voice' : 'Answer by Voice'}</span>
+                </span>
               </button>
               {lastTranscript && (
                 <span className="voice-transcript">Heard: {lastTranscript}</span>
@@ -667,6 +857,69 @@ const InteractionCard = ({
           </>
         )}
       </div>
+
+      {isInstructionsOpen && (
+        <div
+          className="instructions-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="instructions-title"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) closeInstructions();
+          }}
+        >
+          <div
+            className={
+              dyslexia.isDyslexia
+                ? 'instructions-modal instructions-modal--dyslexia'
+                : 'instructions-modal'
+            }
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="instructions-header">
+              <h3 id="instructions-title">Instructions</h3>
+              <button
+                type="button"
+                className="instructions-close fx-pressable fx-focus"
+                onClick={closeInstructions}
+                aria-label="Close instructions"
+              >
+                ×
+              </button>
+            </div>
+
+            <p className="instructions-text" data-testid="instructions-text">
+              {renderHighlightableText(displayedInstructionText, instructionsActiveWord)}
+            </p>
+
+            <ol className="instructions-list">
+              {displayedInstructionSteps.map((step) => (
+                <li key={step}>{renderHighlightableText(step, instructionsActiveWord)}</li>
+              ))}
+            </ol>
+
+            <div className="instructions-actions">
+              <button
+                type="button"
+                className="btn-instructions-audio fx-pressable fx-focus"
+                onClick={handlePlayInstructions}
+                disabled={!enableTts}
+              >
+                Play / Replay
+              </button>
+              <button
+                type="button"
+                className="btn-instructions-stop fx-pressable fx-focus"
+                onClick={stopInstructionAudio}
+              >
+                Stop
+              </button>
+            </div>
+
+            <p className="instructions-muted">Tip: You can press Esc to close.</p>
+          </div>
+        </div>
+      )}
     </form>
   );
 };

@@ -1,9 +1,20 @@
 const mongoose = require('mongoose');
 const LessonSection = require('../models/LessonSection');
 
+/**
+ * Lesson Section Controller
+ * -------------------------
+ * Provides sectioned lesson content for step-by-step lesson flows.
+ * Sections are fetched by `lessonId` and sorted by `order`.
+ */
+
 // @route   GET /api/lessons/:lessonId/sections
 // @desc    Get lesson sections for a lesson
 // @access  Private
+/**
+ * Returns ordered sections for a given lesson.
+ * Route params: { lessonId }
+ */
 exports.getLessonSections = async (req, res) => {
   const { lessonId } = req.params;
 
@@ -15,6 +26,7 @@ exports.getLessonSections = async (req, res) => {
   }
 
   try {
+    // `lean()` returns plain JS objects (faster + smaller) since we don't mutate documents here.
     const sections = await LessonSection.find({ lessonId })
       .sort({ order: 1 })
       .lean();

@@ -1,8 +1,28 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+/**
+ * Auth Middleware
+ * --------------
+ * Shared authentication/authorization helpers for Express routes.
+ *
+ * Contracts:
+ * - `protect` sets `req.user` (User doc, password excluded)
+ * - Downstream handlers can assume `req.user` exists on protected routes
+ * - `authorize` checks `req.user.role` against an allowed list
+ * - `requireParentalApproval` is a lightweight gate for minor accounts
+ */
+
 // EPIC 1.2.3: Token verification middleware to protect private routes
 // Protect routes - verify JWT token
+/**
+ * Verifies JWT from `Authorization: Bearer <token>` header.
+ * Failure cases:
+ * - missing token -> 401
+ * - invalid/expired token -> 401
+ * - user not found -> 404
+ * - user is deactivated -> 403
+ */
 exports.protect = async (req, res, next) => {
   let token;
 
@@ -27,6 +47,7 @@ exports.protect = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Get user from token
+    // NOTE: password is excluded because schema uses `select:false` and we also select -password.
     req.user = await User.findById(decoded.id).select('-password');
 
     if (!req.user) {
@@ -55,6 +76,11 @@ exports.protect = async (req, res, next) => {
 };
 
 // Check parental approval for minors
+/**
+ * Simple minor gate.
+ * Current implementation uses `x-parental-approval` header as a placeholder.
+ * In a production system this would be replaced with a real approval workflow.
+ */
 exports.requireParentalApproval = async (req, res, next) => {
   // EPIC 1.1.4 / 1.2: Parental approval gate (placeholder header-based check)
   if (req.user.isMinor && req.user.requiresParentalApproval) {
@@ -75,6 +101,11 @@ exports.requireParentalApproval = async (req, res, next) => {
 };
 
 // Authorize specific roles
+/**
+ * Role-based authorization.
+ * Usage: `authorize('admin')` or `authorize('admin', 'parent')`.
+ * Assumes `protect` already ran and set `req.user`.
+ */
 exports.authorize = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {

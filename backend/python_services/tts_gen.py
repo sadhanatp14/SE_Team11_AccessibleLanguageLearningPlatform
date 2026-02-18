@@ -3,13 +3,27 @@ import os
 from gtts import gTTS
 
 # Simple script to generate audio from text using Google TTS
-# Usage: python tts_gen.py "text_to_speak" [speed_boolean]
+# Usage: python tts_gen.py "text_to_speak" [speed] [lang]
 
-def generate_audio(text, slow=False):
+def resolve_lang(value: str) -> str:
+    raw = (value or '').strip().lower()
+    if not raw:
+        return 'en'
+    # Accept BCP-47 inputs (e.g., ta-IN) or raw gTTS codes.
+    if raw.startswith('ta'):
+        return 'ta'
+    if raw.startswith('hi'):
+        return 'hi'
+    if raw.startswith('en'):
+        return 'en'
+    # Fallback safely to English
+    return 'en'
+
+
+def generate_audio(text, slow=False, lang='en'):
     try:
         # gTTS (Google Text-to-Speech)
-        # lang='en' by default
-        tts = gTTS(text=text, lang='en', slow=slow)
+        tts = gTTS(text=text, lang=lang, slow=slow)
         
         # Save to a temporary file or stdout
         # For simplicity in this integration, we'll write to a temp file and print the filename
@@ -32,11 +46,12 @@ def generate_audio(text, slow=False):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        sys.stderr.write("Usage: python tts_gen.py <text> [slow=0/1]\n")
+        sys.stderr.write("Usage: python tts_gen.py <text> [speed] [lang]\n")
         sys.exit(1)
         
     text_input = sys.argv[1]
     is_slow = False
+    lang_input = 'en'
     
     if len(sys.argv) > 2:
         # If speed input (which comes as playbackRate 0.5 to 2.0) is low, we use slow mode
@@ -47,4 +62,7 @@ if __name__ == "__main__":
         except ValueError:
             pass
 
-    generate_audio(text_input, is_slow)
+    if len(sys.argv) > 3:
+        lang_input = resolve_lang(sys.argv[3])
+
+    generate_audio(text_input, is_slow, lang_input)

@@ -3,6 +3,15 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './Login.css';
 
+/**
+ * Login
+ * -----
+ * Minimal login form that delegates authentication to `AuthContext.login()`.
+ * `AuthContext` is responsible for:
+ * - calling the backend
+ * - storing the JWT/user
+ * - exposing `isAuthenticated` to the rest of the app
+ */
 const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -15,10 +24,12 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
+    // Controlled inputs: update only the changed field.
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+    // Clear any prior submit errors as the user edits the form.
     setError('');
   };
 
@@ -31,8 +42,10 @@ const Login = () => {
     const result = await login(formData);
 
     if (result.success) {
+      // Successful session start -> route into the learning dashboard.
       navigate('/dashboard');
     } else {
+      // Keep error messages user-friendly; fall back when backend doesn't provide one.
       setError(result.error || 'Login failed. Please try again.');
     }
 
