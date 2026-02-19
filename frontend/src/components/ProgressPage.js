@@ -251,20 +251,27 @@ const ProgressPage = () => {
           </h1>
         </div>
         <div className="nav-menu">
-          <span className="user-name">Hello, {user?.name}!</span>
-          <button type="button" onClick={() => navigate('/dashboard')} className="btn-settings" title="Back to learning">
-            Back
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="btn-settings"
+            title="Home"
+            aria-label="Home"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <BookOpen size={18} aria-hidden="true" />
+            <span>Home</span>
           </button>
         </div>
       </nav>
 
       <main className="main-content">
         <div className="welcome-section">
-          <h2>{uiText('Your Learning Progress', 'Your Learn-ing Pro-gress')}</h2>
+          <h2>{uiText('Progress', 'Pro-gress')}</h2>
           <p className="subtitle">
             {uiText(
-              'See completed lessons and continue where you left off.',
-              'See com-plet-ed les-sons and con-tin-ue where you left off.'
+              'See your finished lessons and keep learning.',
+              'See your finished lessons and keep learning.'
             )}
           </p>
         </div>

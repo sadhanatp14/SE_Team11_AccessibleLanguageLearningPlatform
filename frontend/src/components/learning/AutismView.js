@@ -1724,17 +1724,32 @@ const AutismView = ({ initialLessonId = null }) => {
         <div className="header-actions">
           <button
             type="button"
+            onClick={() => navigate('/dashboard')}
+            className="btn-settings"
+            title="Home"
+            aria-label="Home"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <BookOpen size={18} aria-hidden="true" />
+            <span>Home</span>
+          </button>
+          <button
+            type="button"
             onClick={() => navigate('/progress')}
             className="btn-settings"
-            title="View progress"
+            title="Progress"
+            aria-label="Progress"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
-            Progress
+            <Hash size={18} aria-hidden="true" />
+            <span>Progress</span>
           </button>
-          <button onClick={() => setShowSettings(true)} className="btn-settings" title="Settings">
+          <button onClick={() => setShowSettings(true)} className="btn-settings" title="Settings" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Settings size={18} aria-hidden="true" />
+            <span>Settings</span>
           </button>
-          <button onClick={logout} className="btn-exit">
-            Logout
+          <button onClick={logout} className="btn-exit" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>Logout</span>
           </button>
         </div>
       </header>
@@ -1792,7 +1807,7 @@ const AutismView = ({ initialLessonId = null }) => {
             <span className="help-icon" aria-hidden="true"><Info size={20} /></span>
             <div className="help-text">
               <h4>How it works</h4>
-              <p>Click "Start Lesson" to begin. Follow each step carefully. Use hints if you need help.</p>
+              <p>Click "Start Lesson" to begin. Follow each step. Use hints if you need help.</p>
             </div>
           </div>
         </div>

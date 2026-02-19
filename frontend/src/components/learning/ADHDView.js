@@ -143,17 +143,17 @@ const ADHDView = ({ initialLessonId = null }) => {
   }, [currentAudio]);
 
   const getInstructionsTextForStep = (step) => {
-    if (!step) return 'Follow the on-screen instructions. Use Listen to hear the text, and use Next to continue.';
+    if (!step) return 'Read and follow the steps. Use Listen to hear the text. Press Next to go on.';
     if (step.type === 'learn') {
-      return 'This is a learning step. Read the word and the explanation. Press Listen to hear it. Press Next when you are ready to continue.';
+      return 'Read the word. Press Listen to hear it. Press Next to continue.';
     }
     if (step.type === 'quiz') {
-      return 'This is a quiz step. Read the question and choose one option. Press Listen to hear the question again. If a hint is available, you can open it. Answer correctly to move on.';
+      return 'Read the question. Choose one answer. Press Listen to hear it again. Use Hint if you need help.';
     }
     if (step.type === 'story') {
-      return 'This is a story step. Press Play Story to listen. Use the speed slider to slow down or speed up. You can Pause and Resume. Press Replay to listen again, then press Next to continue.';
+      return 'Press Play Story to listen. Use the speed buttons to slow down or speed up. Press Next to continue.';
     }
-    return 'Follow the on-screen instructions. Use Listen to hear the text, and use Next to continue.';
+    return 'Read and follow the steps. Use Listen to hear the text. Press Next to go on.';
   };
 
   useEffect(() => {
@@ -1035,6 +1035,30 @@ const ADHDView = ({ initialLessonId = null }) => {
           <span>LinguaEase</span>
         </h1>
         <div className="header-actions">
+          {/* Icon-based navigation buttons (EPIC 5.4) */}
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="btn-minimal"
+            title="Home"
+            aria-label="Home"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <BookOpen size={18} aria-hidden="true" />
+            <span>Home</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/progress')}
+            className="btn-minimal"
+            title="Progress"
+            aria-label="Progress"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <Hash size={18} aria-hidden="true" />
+            <span>Progress</span>
+          </button>
+          {/* Existing controls below */}
           {isSessionActive && timeRemaining !== null && (
             <div className="timer-display">
               <span className="timer-icon" aria-hidden="true"><Timer size={16} /></span>
@@ -1068,19 +1092,12 @@ const ADHDView = ({ initialLessonId = null }) => {
               Back
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => navigate('/progress')}
-            className="btn-minimal"
-            title="View progress"
-          >
-            Progress
-          </button>
           <button onClick={() => setShowSettings(true)} className="btn-minimal" title="Settings">
             <Settings size={18} aria-hidden="true" />
+            <span>Settings</span>
           </button>
-          <button type="button" onClick={logout} className="btn-logout" title="Logout">
-            Logout
+          <button type="button" onClick={logout} className="btn-logout" title="Logout" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>Logout</span>
           </button>
         </div>
       </header>

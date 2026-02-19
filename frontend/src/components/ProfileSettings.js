@@ -106,7 +106,7 @@ const ProfileSettings = ({ onClose }) => {
 
         {activeTab === 'profile' && (
           <div className="settings-content">
-            <h3>Profile Information</h3>
+            <h3>Profile Info</h3>
             {!profileEditing ? (
               <div className="profile-info">
                 <div className="info-item">
@@ -184,7 +184,7 @@ const ProfileSettings = ({ onClose }) => {
 
         {activeTab === 'accessibility' && (
           <div className="settings-content">
-            <h3>Accessibility Preferences</h3>
+            <h3>Accessibility</h3>
             <div className="setting-group">
               <label>Text Size</label>
               <div className="button-group">
@@ -308,7 +308,7 @@ const ProfileSettings = ({ onClose }) => {
                   </span>
                   <span className="toggle-label">
                     {accessibilitySettings.distractionFreeMode
-                      ? 'Minimal distractions enabled'
+                      ? 'Fewer distractions'
                       : 'Normal mode'}
                   </span>
                 </button>

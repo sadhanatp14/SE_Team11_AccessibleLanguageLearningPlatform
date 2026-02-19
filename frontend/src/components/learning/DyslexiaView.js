@@ -88,45 +88,45 @@ const DyslexiaView = () => {
 
   // UI copy for dyslexia-friendly onboarding
   const copy = {
-    greeting: uiText('Hello', 'Hel-lo'),
-    welcomeTitle: uiText('Welcome to Your Learning Space', 'Wel-come to Your Learn-ing Space'),
+    greeting: uiText('Hi', 'Hi'),
+    welcomeTitle: uiText('Welcome!', 'Wel-come!'),
     welcomeBody: uiText(
-      'Dyslexia is about how the brain processes language sounds (not vision). Reading can take extra time, so try decoding words in parts (syllables) like: fantastic. This space supports you with clear fonts, proper spacing, and visual cues to make reading easier.',
-      'Dyslexia is about how the brain processes language sounds (not vision). Reading can take extra time, so try decoding words in parts (syllables) like: fan–tas–tic. This space supports you with clear fonts, proper spacing, and visual cues to make reading easier.'
+      'This space helps you read and learn. Try breaking words into parts. Use the tools to help you.',
+      'This space helps you read and learn. Try breaking words into parts. Use the tools to help you.'
     ),
-    guideTitle: uiText('Reading Guide', 'Read-ing Guide'),
-    lessonsTitle: uiText('Available Lessons', 'A-vail-a-ble Les-sons'),
-    tipsTitle: uiText('Learning Tips for You', 'Learn-ing Tips for You'),
+    guideTitle: uiText('Guide', 'Guide'),
+    lessonsTitle: uiText('Lessons', 'Les-sons'),
+    tipsTitle: uiText('Tips', 'Tips'),
 
     guideSoundsBody: uiText(
-      'Dyslexia is linked to phonological processing. Try saying the word out loud, then read it.',
-      'Dyslexia is linked to phon-o-log-i-cal pro-cess-ing. Try saying the word out loud, then read it.'
+      'Try saying the word out loud, then read it.',
+      'Try saying the word out loud, then read it.'
     ),
-    guideBreakBodyPrefix: uiText('Read by parts (syllables):', 'Read by parts (syl-la-bles):'),
+    guideBreakBodyPrefix: uiText('Read by parts:', 'Read by parts:'),
     guideBreakChip: uiText('fantastic', 'fan–tas–tic'),
     guideBreakBodySuffix: uiText('Take your time.', 'Take your time.'),
     guideSpellingBody: uiText(
-      "It's common to spell phonetically at first. Practice helps the brain build faster reading paths.",
-      "It’s common to spell pho-net-i-cal-ly at first. Practice helps the brain build faster reading paths."
+      "It is okay to spell by sound. Practice helps you get better.",
+      "It is okay to spell by sound. Practice helps you get better."
     ),
 
     tipBreakTitle: uiText('Break It Down', 'Break It Down'),
     tipBreakBody: uiText(
-      'Focus on one lesson at a time. Small steps lead to big progress!',
-      'Focus on one lesson at a time. Small steps lead to big pro-gress!'
+      'Do one lesson at a time. Small steps help you learn!',
+      'Do one lesson at a time. Small steps help you learn!'
     ),
     tipAudioTitle: uiText('Use Audio', 'Use Au-di-o'),
     tipAudioBody: uiText(
-      'Listen to pronunciations to reinforce learning through multiple senses.',
-      'Listen to pro-nun-ci-a-tions to re-in-force learn-ing through mul-ti-ple sen-ses.'
+      'Listen to words to help you learn.',
+      'Listen to words to help you learn.'
     ),
-    tipPracticeTitle: uiText('Practice Regularly', 'Prac-tice Reg-u-lar-ly'),
+    tipPracticeTitle: uiText('Practice Often', 'Prac-tice Of-ten'),
     tipPracticeBody: uiText(
-      'Short, frequent sessions work better than long study periods.',
-      'Short, fre-quent ses-sions work bet-ter than long stu-dy pe-ri-ods.'
+      'Short, regular practice is best.',
+      'Short, regular practice is best.'
     ),
 
-    lessonCta: uiText('Start Learning', 'Start Learn-ing'),
+    lessonCta: uiText('Start', 'Start'),
   };
 
   return (
@@ -140,29 +140,42 @@ const DyslexiaView = () => {
           </h1>
         </div>
         <div className="nav-menu">
-          <span className="user-name">{copy.greeting}, {user?.name}!</span>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="btn-settings"
+            title="Home"
+            aria-label="Home"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <BookOpen size={18} aria-hidden="true" />
+            <span>Home</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/progress')}
+            className="btn-settings"
+            title="Progress"
+            aria-label="Progress"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <Hash size={18} aria-hidden="true" />
+            <span>Progress</span>
+          </button>
           <button
             type="button"
             onClick={toggleSyllableMode}
             className="btn-settings btn-syllable-toggle"
             title="Toggle syllable-friendly text"
             aria-pressed={syllableMode}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
             {syllableMode ? (
               <ToggleRight size={18} aria-hidden="true" />
             ) : (
               <ToggleLeft size={18} aria-hidden="true" />
             )}
-            <span className="btn-syllable-toggle__label">Syllable Mode</span>
-            <span className="btn-syllable-toggle__state">{syllableMode ? 'On' : 'Off'}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/progress')}
-            className="btn-settings"
-            title="View progress"
-          >
-            Progress
+            <span>Syllable Mode</span>
           </button>
           <button
             type="button"
@@ -170,11 +183,13 @@ const DyslexiaView = () => {
             className="btn-settings"
             title="Settings"
             aria-label="Settings"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
             <Settings size={18} aria-hidden="true" />
+            <span>Settings</span>
           </button>
-          <button onClick={logout} className="btn-logout">
-            Logout
+          <button onClick={logout} className="btn-logout" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>Logout</span>
           </button>
         </div>
       </nav>
