@@ -169,6 +169,12 @@
   margin-bottom: 24px;
 }
 
+.setting-help {
+  margin: 10px 0 0;
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+}
+
 .setting-group label {
   display: block;
   font-weight: 600;
@@ -198,6 +204,16 @@
 
 .option-btn:hover {
   border-color: var(--accent-color);
+}
+
+.option-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  border-color: var(--border-color);
+}
+
+.option-btn:disabled:hover {
+  border-color: var(--border-color);
 }
 
 .option-btn.active {

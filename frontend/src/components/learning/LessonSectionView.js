@@ -4,6 +4,7 @@ import VisualLesson from './VisualLesson';
 import { useAuth } from '../../context/AuthContext';
 import { getLessonProgress, normalizeUserId, saveLessonProgress } from '../../services/dyslexiaProgressService';
 import { decorateDyslexiaText, useDyslexiaContext } from '../../utils/dyslexiaSyllableMode';
+import { speechSynthesisLangFor } from '../../utils/languagePrefs';
 import {
   Activity,
   Apple,
@@ -75,7 +76,7 @@ const getIllustration = (text) => {
   return defaultIllustration;
 };
 
-const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, onInteractionChange }) => {
+const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, onInteractionChange, uiLanguage = 'english', contentLanguage }) => {
   const { user } = useAuth();
   const condition = user?.learningCondition || '';
   const dyslexia = useDyslexiaContext({ condition, lessonId, defaultSyllableMode: true });
@@ -186,7 +187,7 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
     try {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = playbackRate;
-      utterance.lang = 'en-US';
+      utterance.lang = speechSynthesisLangFor(uiLanguage);
       utterance.volume = 0;
 
       utterance.onboundary = (event) => {
@@ -472,6 +473,7 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
               lessonId={lessonKey}
               condition={condition}
               interaction={displayedInteraction}
+              contentLanguage={contentLanguage}
               readOnly={isReplay}
               useLocalSubmission={useLocalSubmission}
               onContinue={handleContinue}

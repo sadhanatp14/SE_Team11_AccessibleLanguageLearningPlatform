@@ -8,6 +8,7 @@ import { getAllLessonProgress, normalizeUserId } from '../services/dyslexiaProgr
 import api from '../utils/api';
 import { BookOpen } from 'lucide-react';
 import { getDyslexiaLessonTitle, useDyslexiaSyllableMode } from '../utils/dyslexiaSyllableMode';
+import { useI18n } from '../utils/i18n';
 
 /**
  * ProgressPage
@@ -28,6 +29,7 @@ const ProgressPage = () => {
   const navigate = useNavigate();
   const containerRef = useRef(null);
   const [syllableMode] = useDyslexiaSyllableMode(true);
+  const { lang, t } = useI18n();
 
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
@@ -70,10 +72,15 @@ const ProgressPage = () => {
   }, [localProgress]);
 
   const condition = user?.learningCondition || '';
-  const applyDyslexiaSyllables = condition === 'dyslexia' && Boolean(syllableMode);
+  const applyDyslexiaSyllables = condition === 'dyslexia' && Boolean(syllableMode) && lang === 'english';
   const uiText = React.useCallback(
-    (normalText, syllableText) => (applyDyslexiaSyllables ? syllableText : normalText),
-    [applyDyslexiaSyllables]
+    (key, syllableText) => (applyDyslexiaSyllables ? syllableText : t(key)),
+    [applyDyslexiaSyllables, t]
+  );
+
+  const statusLabelFor = React.useCallback(
+    (status) => (status === 'Completed' ? t('progress.statusCompleted') : t('progress.statusNotStarted')),
+    [t]
   );
   const remoteLessonPrefix = condition === 'autism'
     ? 'autism-lesson-'
@@ -101,13 +108,15 @@ const ProgressPage = () => {
         const entry = localProgress?.[l.id] || { status: 'Not Started', correctCount: 0 };
         const correctCount = Number(entry.correctCount || 0);
         const percent = Math.min(100, Math.round((correctCount / 5) * 100));
+        const completed = (entry.status === 'Completed');
         return {
           id: l.id,
           title: l.title,
           status: entry.status || 'Not Started',
+          statusLabel: statusLabelFor(entry.status || 'Not Started'),
           percent,
           onOpen: () => navigate(l.route),
-          openLabel: (entry.status === 'Completed') ? 'Review Lesson' : 'Continue',
+          openLabel: completed ? t('progress.reviewLesson') : t('progress.continue'),
         };
       });
     }
@@ -127,12 +136,13 @@ const ProgressPage = () => {
         id: key,
         title: titles[lessonId] || `Lesson ${lessonId}`,
         status: completed ? 'Completed' : 'Not Started',
+        statusLabel: completed ? t('progress.statusCompleted') : t('progress.statusNotStarted'),
         percent: completed ? 100 : 0,
         onOpen: () => navigate('/dashboard', { state: { openLessonId: lessonId, openCondition: condition } }),
-        openLabel: completed ? 'Review in Learning Center' : 'Start in Learning Center',
+        openLabel: completed ? t('progress.reviewInCenter') : t('progress.startInCenter'),
       };
     });
-  }, [applyDyslexiaSyllables, condition, completedLessonKeys, localProgress, navigate, remoteLessonPrefix]);
+  }, [applyDyslexiaSyllables, completedLessonKeys, condition, localProgress, navigate, remoteLessonPrefix, statusLabelFor, t]);
 
   useEffect(() => {
     let mounted = true;
@@ -148,11 +158,11 @@ const ProgressPage = () => {
           // EPIC 6.6.1-6.6.3: Display simple performance insight (completed/total/percentage).
           setSummary(data);
         } else {
-          setSummaryError('Unable to load progress summary.');
+          setSummaryError(t('progress.summaryError'));
         }
       } catch (e) {
         if (!mounted) return;
-        setSummaryError('Unable to load progress summary.');
+        setSummaryError(t('progress.summaryError'));
       } finally {
         mounted && setSummaryLoading(false);
       }
@@ -181,7 +191,7 @@ const ProgressPage = () => {
       mounted = false;
       window.removeEventListener('progress:updated', onProgressUpdated);
     };
-  }, [refreshLocalProgress, refreshCompletedLessonKeys]);
+  }, [refreshLocalProgress, refreshCompletedLessonKeys, t]);
 
   useEffect(() => {
     if (!preferences || !containerRef.current) return;
@@ -247,23 +257,23 @@ const ProgressPage = () => {
         <div className="nav-brand">
           <h1 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <BookOpen size={22} aria-hidden="true" />
-            <span>Language Learning</span>
+            <span>{t('progress.brand')}</span>
           </h1>
         </div>
         <div className="nav-menu">
-          <span className="user-name">Hello, {user?.name}!</span>
-          <button type="button" onClick={() => navigate('/dashboard')} className="btn-settings" title="Back to learning">
-            Back
+          <span className="user-name">{t('progress.hello', { name: user?.name || '' })}</span>
+          <button type="button" onClick={() => navigate('/dashboard')} className="btn-settings" title={t('progress.backToLearning')}>
+            {t('app.back')}
           </button>
         </div>
       </nav>
 
       <main className="main-content">
         <div className="welcome-section">
-          <h2>{uiText('Your Learning Progress', 'Your Learn-ing Pro-gress')}</h2>
+          <h2>{uiText('progress.yourProgress', 'Your Learn-ing Pro-gress')}</h2>
           <p className="subtitle">
             {uiText(
-              'See completed lessons and continue where you left off.',
+              'progress.subtitle',
               'See com-plet-ed les-sons and con-tin-ue where you left off.'
             )}
           </p>
@@ -271,25 +281,25 @@ const ProgressPage = () => {
 
         <div className="progress-card">
           <div className="card-header">
-            <h3>Progress</h3>
+            <h3>{t('progress.cardTitle')}</h3>
           </div>
 
           <div className="card-body">
             {summaryLoading ? (
               // EPIC 6.5.2: Loading indicator during summary fetch.
-              <p>{uiText('Loading progress…', 'Load-ing pro-gress…')}</p>
+              <p>{uiText('progress.loading', 'Load-ing pro-gress…')}</p>
             ) : summaryError ? (
               <div>
                 <p className="is-error">{summaryError}</p>
                 {/* EPIC 6.5.4: Retry action on summary fetch failure. */}
-                <button type="button" onClick={() => window.location.reload()}>Retry</button>
+                <button type="button" onClick={() => window.location.reload()}>{t('app.retry')}</button>
               </div>
             ) : (
               <>
                 {/* EPIC 6.6.1-6.6.2: Simple progress metrics (completed, total, percent) without complex analytics. */}
                 <p className="dashboard-progress__headline">
                   <strong>{mergedCompletedCount}</strong> of <strong>{displayTotalLessons}</strong>{' '}
-                  {uiText('lessons completed', 'les-sons com-plet-ed')} ({mergedPercentage}%)
+                  {uiText('progress.lessonsCompleted', 'les-sons com-plet-ed')} ({mergedPercentage}%)
                 </p>
 
                 {/* EPIC 6.1.4: Keep progress display simple (bar + text). */}
@@ -298,14 +308,14 @@ const ProgressPage = () => {
                 </div>
 
                 <p className="dashboard-progress__meta">
-                  <strong>{uiText('Completed:', 'Com-plet-ed:')}</strong> {mergedCompletedCount} •{' '}
-                  <strong>{uiText('Remaining:', 'Re-main-ing:')}</strong> {Math.max(0, displayTotalLessons - mergedCompletedCount)}
+                  <strong>{uiText('progress.completed', 'Com-plet-ed:')}</strong> {mergedCompletedCount} •{' '}
+                  <strong>{uiText('progress.remaining', 'Re-main-ing:')}</strong> {Math.max(0, displayTotalLessons - mergedCompletedCount)}
                 </p>
 
                 {showLearningHistory && summary?.completedLessons && summary.completedLessons.length > 0 ? (
                   // EPIC 6.3.1-6.3.4: Read-only learning history list supports reopening/reviewing completed lessons.
                   <div className="completed-lessons">
-                    <p className="section-label">{uiText('Learning history', 'Learn-ing his-to-ry')}</p>
+                    <p className="section-label">{uiText('progress.learningHistory', 'Learn-ing his-to-ry')}</p>
                     <ol>
                       {summary.completedLessons.map((l) => (
                         <li key={l.lessonId}>
@@ -320,7 +330,7 @@ const ProgressPage = () => {
                 ) : showLearningHistory ? (
                   // EPIC 6.2.1-6.2.4: Encouraging message when no progress exists yet.
                   <p className="dashboard-progress__empty">
-                    {uiText('No lessons completed yet. Keep going!', 'No les-sons com-plet-ed yet. Keep go-ing!')}
+                    {uiText('progress.noneYet', 'No les-sons com-plet-ed yet. Keep go-ing!')}
                   </p>
                 ) : null}
               </>
@@ -330,7 +340,7 @@ const ProgressPage = () => {
 
         <div className="progress-card">
           <div className="card-header">
-            <h3>{uiText('Lesson status', 'Les-son sta-tus')}</h3>
+            <h3>{uiText('progress.lessonStatus', 'Les-son sta-tus')}</h3>
           </div>
           <div className="card-body">
             <div className="lessons-grid">
@@ -341,14 +351,14 @@ const ProgressPage = () => {
                     <div className="lesson-icon" aria-hidden="true"><BookOpen size={22} /></div>
                     <h4>{l.title}</h4>
                     <div className="lesson-meta">
-                      <span className={`status-pill status-${statusClass}`}>{l.status}</span>
+                      <span className={`status-pill status-${statusClass}`}>{l.statusLabel}</span>
                     </div>
                     <div className="lesson-progress">
                       <div className="progress-bar-container">
                         <div className="progress-bar-fill" style={{ width: `${l.percent}%` }} />
                       </div>
                       <span className="progress-text">
-                        {l.percent}% {uiText('Complete', 'Com-plete')}
+                        {l.percent}% {uiText('progress.complete', 'Com-plete')}
                       </span>
                     </div>
                     <button type="button" className="btn btn-primary btn-block" onClick={l.onOpen}>

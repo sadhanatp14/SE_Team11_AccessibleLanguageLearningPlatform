@@ -4,13 +4,16 @@
 // Shows lesson content using LessonReplay and applies user preferences.
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getLessonById } from '../../services/lessonService';
+import { getLessonById, getLessonByIdWithContentLang } from '../../services/lessonService';
 import { useAuth } from '../../context/AuthContext';
 import { usePreferences } from '../../context/PreferencesContext';
 import LessonReplay from './LessonReplay';
 import lessonSamples from './lessonSamples';
 import './LessonPage.css';
 import { getDyslexiaLessonTitle, useDyslexiaContext } from '../../utils/dyslexiaSyllableMode';
+import { useI18n } from '../../utils/i18n';
+import { resolveUiLanguageFromPreferences } from '../../utils/languagePrefs';
+import { localizeLessonPayload } from '../../utils/lessonI18n';
 
 
 // Helper to estimate reading time for a lesson based on word count
@@ -27,6 +30,13 @@ const LessonPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { preferences, applyPreferences } = usePreferences();
+  const { t } = useI18n();
+  const uiLanguage = resolveUiLanguageFromPreferences(preferences);
+  const contentLanguage = useMemo(() => {
+    const condition = String(user?.learningCondition || '').toLowerCase();
+    if (condition === 'dyslexia' || condition === 'adhd') return 'english';
+    return uiLanguage;
+  }, [uiLanguage, user?.learningCondition]);
   // Lesson state
   const [lesson, setLesson] = useState(null); // Loaded lesson object
   const [isLoading, setIsLoading] = useState(true); // Loading state
@@ -56,7 +66,7 @@ const LessonPage = () => {
         // If local/sample lesson, use local data
         if (isLocalLessonId && lessonSamples[lessonId]) {
           if (isMounted) {
-            setLesson(lessonSamples[lessonId]);
+            setLesson(localizeLessonPayload(lessonSamples[lessonId], uiLanguage, contentLanguage));
             setIsLoading(false);
           }
           return;
@@ -64,7 +74,9 @@ const LessonPage = () => {
 
         // Otherwise, load lesson from backend
         // EPIC 6.5.1: Load lesson content from backend correctly.
-        const data = await getLessonById(lessonId);
+        const data = contentLanguage && contentLanguage !== uiLanguage
+          ? await getLessonByIdWithContentLang(lessonId, uiLanguage, contentLanguage)
+          : await getLessonById(lessonId, uiLanguage);
         if (isMounted) {
           setLesson(data);
         }
@@ -72,11 +84,11 @@ const LessonPage = () => {
         if (isMounted) {
           // If backend fails, fallback to sample if available
           if (lessonSamples[lessonId]) {
-            setLesson(lessonSamples[lessonId]);
-            setError('Live lesson data is unavailable. Showing a sample lesson instead.');
+            setLesson(localizeLessonPayload(lessonSamples[lessonId], uiLanguage, contentLanguage));
+            setError(t('lessons.liveUnavailableSample'));
           } else {
             // EPIC 6.5.3: Friendly error message when lesson fails to load.
-            setError('Unable to load this lesson. Please try again.');
+            setError(t('lessons.unableToLoad'));
           }
         }
       } finally {
@@ -91,7 +103,7 @@ const LessonPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [lessonId, isLocalLessonId, retryKey]);
+  }, [lessonId, isLocalLessonId, retryKey, t, uiLanguage, contentLanguage]);
 
   // EPIC 6.5.4: Provide a retry action to re-attempt loading.
   const retryLoadLesson = () => setRetryKey((k) => k + 1);
@@ -120,10 +132,10 @@ const LessonPage = () => {
   const interactionCount = lesson?.interactions?.length || 0;
   const condition = user?.learningCondition || '';
   const dyslexia = useDyslexiaContext({ condition, lessonId, defaultSyllableMode: true });
-  const baseTitle = lesson?.title || (isLoading ? 'Loading lesson…' : 'Lesson');
+  const baseTitle = lesson?.title || (isLoading ? t('lessons.loadingLesson') : t('lessons.lesson'));
   const resolvedTitle = dyslexia.applySyllables ? getDyslexiaLessonTitle(lessonId, baseTitle) : baseTitle;
   const resolvedSubtitle = isLoading
-    ? 'Preparing your lesson steps…'
+    ? t('lessons.preparingSteps')
     : `About ${readingTime} min • ${interactionCount} interactions`;
 
   return (

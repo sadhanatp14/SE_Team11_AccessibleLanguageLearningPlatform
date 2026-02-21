@@ -45,12 +45,21 @@ let mockPreferences = {
     learningPace: 1,
 };
 
-jest.mock('../../../context/PreferencesContext', () => ({
-    usePreferences: () => ({
-        preferences: mockPreferences,
-        updatePreferences: mockUpdatePreferences,
-    }),
-}));
+jest.mock('../../../context/PreferencesContext', () => {
+    const React = require('react');
+    const defaultValue = {};
+    Object.defineProperty(defaultValue, 'preferences', { get: () => mockPreferences });
+    Object.defineProperty(defaultValue, 'updatePreferences', { get: () => mockUpdatePreferences });
+    const PreferencesContext = React.createContext(defaultValue);
+
+    return {
+        PreferencesContext,
+        usePreferences: () => ({
+            preferences: mockPreferences,
+            updatePreferences: mockUpdatePreferences,
+        }),
+    };
+});
 
 // Mock Web Speech API
 const mockSpeechSynthesis = {
@@ -59,7 +68,15 @@ const mockSpeechSynthesis = {
     getVoices: jest.fn(() => []),
 };
 global.speechSynthesis = mockSpeechSynthesis;
-global.SpeechSynthesisUtterance = jest.fn();
+global.SpeechSynthesisUtterance = jest.fn().mockImplementation((text) => ({
+    text,
+    rate: 1,
+    lang: 'en-US',
+    volume: 1,
+    onboundary: null,
+    onstart: null,
+    onend: null,
+}));
 
 // Mock Audio API
 global.Audio = jest.fn().mockImplementation(() => ({
@@ -87,6 +104,28 @@ const renderWithRouter = (component) => {
             {component}
         </BrowserRouter>
     );
+};
+
+const startLessonAndSkipCountdown = async ({ lessonTitle } = {}) => {
+    // ADHDView now shows an intro screen + countdown before the lesson becomes active.
+    // Tests should click "I'm Ready!" and fast-forward timers so navigation buttons appear.
+    if (lessonTitle) {
+        await waitFor(() => expect(screen.getByText(lessonTitle)).toBeInTheDocument());
+    }
+
+    const readyBtn = await screen.findByText("I'm Ready!");
+    fireEvent.click(readyBtn);
+
+    // Countdown starts at 5 and decrements once per second.
+    for (let i = 0; i < 5; i++) {
+        await act(async () => {
+            jest.advanceTimersByTime(1000);
+        });
+    }
+
+    await waitFor(() => {
+        expect(screen.queryByText('Starting in...')).not.toBeInTheDocument();
+    });
 };
 
 describe('ADHDView Component - ADHD Learning Features', () => {
@@ -162,28 +201,40 @@ describe('ADHDView Component - ADHD Learning Features', () => {
         });
 
         test('should enter lesson view when a lesson is started', async () => {
+            jest.useFakeTimers();
+
+            await waitFor(() => expect(screen.getByText('Choose One Lesson')).toBeInTheDocument());
             const lessonBtn = screen.getAllByText('Start')[0]; // Greetings lesson
             fireEvent.click(lessonBtn);
+
+            await startLessonAndSkipCountdown({ lessonTitle: 'Greetings' });
 
             await waitFor(() => {
                 // Should show lesson content
                 expect(screen.getByText('Hello')).toBeInTheDocument();
                 // Should show navigation buttons
-                expect(screen.getByText('Next')).toBeInTheDocument();
-                expect(screen.getByText('Back')).toBeInTheDocument();
+                expect(screen.getByRole('button', { name: /next/i })).toBeInTheDocument();
+                expect(screen.getByRole('button', { name: /prev/i })).toBeInTheDocument();
             });
+
+            jest.useRealTimers();
         });
 
         test('should navigate between steps', async () => {
+            jest.useFakeTimers();
+
+            await waitFor(() => expect(screen.getByText('Choose One Lesson')).toBeInTheDocument());
             const lessonBtn = screen.getAllByText('Start')[0];
             fireEvent.click(lessonBtn);
+
+            await startLessonAndSkipCountdown({ lessonTitle: 'Greetings' });
 
             await waitFor(() => {
                 expect(screen.getByText('Hello')).toBeInTheDocument();
             });
 
             // Next step
-            const nextBtn = screen.getByText('Next');
+            const nextBtn = screen.getByRole('button', { name: /next/i });
             fireEvent.click(nextBtn);
 
             await waitFor(() => {
@@ -191,12 +242,14 @@ describe('ADHDView Component - ADHD Learning Features', () => {
             });
 
             // Previous step
-            const backBtn = screen.getByText('Back');
-            fireEvent.click(backBtn);
+            const prevBtn = screen.getByRole('button', { name: /prev/i });
+            fireEvent.click(prevBtn);
 
             await waitFor(() => {
                 expect(screen.getByText('Hello')).toBeInTheDocument(); // Back to Step 1
             });
+
+            jest.useRealTimers();
         });
     });
 
@@ -205,19 +258,27 @@ describe('ADHDView Component - ADHD Learning Features', () => {
     // ===================================================================
     describe('3. Interactive Quizzes & Feedback', () => {
         beforeEach(async () => {
+            jest.useFakeTimers();
             renderWithRouter(<ADHDView />);
             fireEvent.click(screen.getByText('Start Session'));
+            await waitFor(() => expect(screen.getByText('Choose One Lesson')).toBeInTheDocument());
             const lessonBtn = screen.getAllByText('Start')[0]; // Greetings
             fireEvent.click(lessonBtn);
 
+            await startLessonAndSkipCountdown({ lessonTitle: 'Greetings' });
+
             // Navigate to Quiz (Step 3 is quiz for Greetings: "Which word means 'Hello'?")
-            fireEvent.click(screen.getByText('Next')); // Step 2
-            fireEvent.click(screen.getByText('Next')); // Step 3
+            fireEvent.click(screen.getByRole('button', { name: /next/i })); // Step 2
+            fireEvent.click(screen.getByRole('button', { name: /next/i })); // Step 3
+        });
+
+        afterEach(() => {
+            jest.useRealTimers();
         });
 
         test('should display quiz question and options', async () => {
             await waitFor(() => {
-                expect(screen.getByText('Which word means "Hello"?')).toBeInTheDocument();
+                expect(screen.getByRole('heading', { name: /Which word means "Hello"\?/ })).toBeInTheDocument();
                 expect(screen.getByText('Hello')).toBeInTheDocument();
                 expect(screen.getByText('Goodbye')).toBeInTheDocument();
                 expect(screen.getByText('Thanks')).toBeInTheDocument();
@@ -230,8 +291,8 @@ describe('ADHDView Component - ADHD Learning Features', () => {
 
             await waitFor(() => {
                 expect(screen.getByText(/Correct! Great job!/)).toBeInTheDocument();
-                // Points should update
-                expect(screen.getByText('10')).toBeInTheDocument(); // Score
+                // Success enables navigation to proceed
+                expect(screen.getByRole('button', { name: /next/i })).toBeInTheDocument();
             });
         });
 
@@ -245,7 +306,11 @@ describe('ADHDView Component - ADHD Learning Features', () => {
         });
 
         test('should show hint when requested', async () => {
-            const hintBtn = screen.getByText('Help / Hint');
+            // Hint button only appears after at least one attempt.
+            const wrongOption = screen.getByText('Goodbye');
+            fireEvent.click(wrongOption);
+
+            const hintBtn = await screen.findByRole('button', { name: /hint/i });
             fireEvent.click(hintBtn);
 
             await waitFor(() => {
@@ -259,33 +324,41 @@ describe('ADHDView Component - ADHD Learning Features', () => {
     // ===================================================================
     describe('4. Audio Stories & Playback', () => {
         beforeEach(async () => {
+            jest.useFakeTimers();
             renderWithRouter(<ADHDView />);
             fireEvent.click(screen.getByText('Start Session'));
+            await waitFor(() => expect(screen.getByText('Choose One Lesson')).toBeInTheDocument());
             // Find 'Audio Stories' lesson
             const storyLessonStart = screen.getAllByText('Start')[3]; // index 3 is Audio Stories
             fireEvent.click(storyLessonStart);
+
+            await startLessonAndSkipCountdown({ lessonTitle: 'Audio Stories' });
+        });
+
+        afterEach(() => {
+            jest.useRealTimers();
         });
 
         test('should display story lesson content', async () => {
             await waitFor(() => {
-                expect(screen.getByText('The Friendly Rabbit')).toBeInTheDocument();
-                expect(screen.getByText(/Once upon a time/)).toBeInTheDocument();
+                expect(screen.getByRole('heading', { name: 'The Friendly Rabbit' })).toBeInTheDocument();
+
+                // Story content is rendered as word-level spans, so match via container textContent.
+                const storyParagraph = screen.getByText((_, node) => {
+                    return node?.classList?.contains('story-text') &&
+                        (node.textContent || '').includes('Once upon a time');
+                });
+                expect(storyParagraph).toBeInTheDocument();
             });
         });
 
         test('should trigger audio playback when requested', async () => {
-            const playBtn = screen.getByText('Listen / Replay');
+            const playBtn = screen.getByRole('button', { name: /play story/i });
             fireEvent.click(playBtn);
 
             await waitFor(() => {
-                // We can verify that our mock was called
-                // Since we mock window.fetch for TTS in component, or fallback to speechSynthesis
-                // The component uses fetch('/api/tts/speak')
-                // We didn't mock fetch yet in global setup, let's fix that or rely on fallback catch
+                expect(mockSpeechSynthesis.speak).toHaveBeenCalled();
             });
-
-            // Verify fallback to speech synthesis if fetch fails (which it will without mock)
-            // Or better, let's mock fetch in the test
         });
     });
 

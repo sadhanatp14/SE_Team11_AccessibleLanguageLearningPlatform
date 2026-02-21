@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useI18n } from '../utils/i18n';
 import './Register.css';
 
 /**
@@ -17,6 +18,7 @@ import './Register.css';
 const Register = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
+  const { t } = useI18n();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -98,10 +100,10 @@ const Register = () => {
     const result = await register(registrationData);
 
     if (result.success) {
-      // EPIC 1.3.1: After registration, route learner into accessibility setup wizard
-      navigate('/accessibility-setup');
+      // EPIC 5.1: Let the learner pick a preferred UI language before setup.
+      navigate('/language', { state: { next: '/accessibility-setup' } });
     } else {
-      setError(result.error || 'Registration failed. Please try again.');
+      setError(result.error || t('auth.registerFailed'));
     }
 
     setLoading(false);
@@ -116,14 +118,14 @@ const Register = () => {
 
       <div className="register-content">
         <div className="brand-header">
-          <h1 className="app-name">LinguaEase</h1>
-          <p className="app-tagline">Language and Learning made easy for every mind</p>
+          <h1 className="app-name">{t('app.name')}</h1>
+          <p className="app-tagline">{t('app.tagline')}</p>
         </div>
 
         <div className="register-card">
-          <h2 className="register-title">Create Your Account</h2>
+          <h2 className="register-title">{t('auth.createAccount')}</h2>
           <p className="register-subtitle">
-            Join our accessible learning community
+            {t('auth.registerSubtitle')}
           </p>
 
           {error && (
@@ -134,7 +136,7 @@ const Register = () => {
 
           <form onSubmit={handleSubmit} className="register-form">
             <div className="form-group">
-              <label htmlFor="name">Full Name *</label>
+              <label htmlFor="name">{t('auth.fullName')} *</label>
               <input
                 type="text"
                 id="name"
@@ -144,12 +146,12 @@ const Register = () => {
                 required
                 aria-required="true"
                 autoComplete="name"
-                placeholder="Enter your full name"
+                placeholder={t('auth.namePlaceholder')}
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="email">Email Address *</label>
+              <label htmlFor="email">{t('auth.emailAddress')} *</label>
               <input
                 type="email"
                 id="email"
@@ -159,13 +161,13 @@ const Register = () => {
                 required
                 aria-required="true"
                 autoComplete="email"
-                placeholder="Enter your email"
+                placeholder={t('auth.emailPlaceholder')}
               />
             </div>
 
             <div className="form-group">
               <label htmlFor="password">
-                Password * <span className="help-text">(Minimum 6 characters)</span>
+                {t('auth.password')} * <span className="help-text">(Minimum 6 characters)</span>
               </label>
               <input
                 type="password"
@@ -177,12 +179,12 @@ const Register = () => {
                 aria-required="true"
                 minLength={6}
                 autoComplete="new-password"
-                placeholder="Create a password"
+                placeholder={t('auth.passwordPlaceholder')}
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="confirmPassword">Confirm Password *</label>
+              <label htmlFor="confirmPassword">{t('auth.confirmPassword')} *</label>
               <input
                 type="password"
                 id="confirmPassword"
@@ -193,13 +195,13 @@ const Register = () => {
                 aria-required="true"
                 minLength={6}
                 autoComplete="new-password"
-                placeholder="Confirm your password"
+                placeholder={t('auth.confirmPasswordPlaceholder')}
               />
             </div>
 
             <div className="form-group">
               <label htmlFor="learningCondition">
-                Learning Condition * <span className="help-text">(This helps us customize your experience)</span>
+                {t('auth.learningCondition')} * <span className="help-text">{t('auth.learningConditionHelp')}</span>
               </label>
               <select
                 id="learningCondition"
@@ -209,7 +211,7 @@ const Register = () => {
                 required
                 aria-required="true"
               >
-                <option value="none">Select your learning condition</option>
+                <option value="none">{t('auth.selectLearningCondition')}</option>
                 <option value="dyslexia">Dyslexia</option>
                 <option value="adhd">ADHD</option>
                 <option value="autism">Autism Spectrum</option>
@@ -217,7 +219,7 @@ const Register = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="age">Age (optional)</label>
+              <label htmlFor="age">{t('auth.ageOptional')}</label>
               <input
                 type="number"
                 id="age"
@@ -238,13 +240,13 @@ const Register = () => {
                   checked={formData.isMinor}
                   onChange={handleChange}
                 />
-                <span>I am under 13 years old (requires parental approval)</span>
+                <span>{t('auth.under13')}</span>
               </label>
             </div>
 
             {formData.isMinor && (
               <div className="form-group">
-                <label htmlFor="parentEmail">Parent/Guardian Email *</label>
+                <label htmlFor="parentEmail">{t('auth.parentEmail')} *</label>
                 <input
                   type="email"
                   id="parentEmail"
@@ -253,7 +255,7 @@ const Register = () => {
                   onChange={handleChange}
                   required={formData.isMinor}
                   autoComplete="email"
-                  placeholder="Parent's email"
+                  placeholder={t('auth.parentEmailPlaceholder')}
                 />
               </div>
             )}
@@ -263,7 +265,7 @@ const Register = () => {
               className="btn btn-primary btn-block btn-animate"
               disabled={loading}
             >
-              {loading ? <span className="spinner"></span> : 'Create Account'}
+              {loading ? <span className="spinner"></span> : t('auth.createAccount')}
             </button>
           </form>
 
@@ -271,7 +273,7 @@ const Register = () => {
             <p>
               Already have an account?{' '}
               <Link to="/login" className="link-primary">
-                Log in
+                {t('auth.logIn')}
               </Link>
             </p>
           </div>

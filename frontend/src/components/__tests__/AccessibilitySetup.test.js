@@ -11,10 +11,19 @@ jest.mock('../../context/AuthContext', () => ({
     useAuth: () => mockUseAuth(),
 }));
 
-const mockUpdatePreferences = jest.fn();
-jest.mock('../../context/PreferencesContext', () => ({
-    usePreferences: () => ({ updatePreferences: mockUpdatePreferences }),
-}));
+global.__accessibilitySetupUpdatePreferencesMock = global.__accessibilitySetupUpdatePreferencesMock || jest.fn();
+const mockUpdatePreferences = global.__accessibilitySetupUpdatePreferencesMock;
+jest.mock('../../context/PreferencesContext', () => {
+    const React = require('react');
+    const defaultValue = {
+        preferences: { preferredLanguage: 'english' },
+    };
+    const PreferencesContext = React.createContext(defaultValue);
+    return {
+        PreferencesContext,
+        usePreferences: () => ({ updatePreferences: mockUpdatePreferences }),
+    };
+});
 
 // Mock useNavigate
 const mockNavigate = jest.fn();
@@ -182,8 +191,8 @@ describe('AccessibilitySetup Component', () => {
         await user.click(screen.getByRole('button', { name: /^large$/i }));
 
         // Complete setup
-        const saveButton = screen.getByRole('button', { name: /save & continue/i });
-        await user.click(saveButton);
+        const continueButton = screen.getByRole('button', { name: /continue/i });
+        await user.click(continueButton);
 
         await waitFor(() => {
             expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
@@ -194,7 +203,7 @@ describe('AccessibilitySetup Component', () => {
         const user = userEvent.setup();
         renderAccessibilitySetup();
 
-        const skipButton = screen.getByRole('button', { name: /skip for now/i });
+        const skipButton = screen.getByRole('button', { name: /skip setup/i });
         await user.click(skipButton);
 
         expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
@@ -223,7 +232,7 @@ describe('AccessibilitySetup Component', () => {
         // Navigate to final step
         await user.click(screen.getByRole('button', { name: /next/i }));
 
-        expect(screen.getByRole('button', { name: /save & continue/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /continue/i })).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /next/i })).not.toBeInTheDocument();
     });
 

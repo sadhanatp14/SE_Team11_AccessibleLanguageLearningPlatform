@@ -7,15 +7,18 @@ import { PreferencesProvider } from './context/PreferencesContext'; // Provides 
 import Login from './components/Login'; // Login page
 import Register from './components/Register'; // Registration page
 import AccessibilitySetup from './components/AccessibilitySetup'; // Accessibility setup wizard
+import LanguageSelection from './components/LanguageSelection'; // Language selection screen (EPIC 5.1)
 import Dashboard from './components/Dashboard'; // Main dashboard after login
 import ProtectedRoute from './components/ProtectedRoute'; // Wrapper for protected routes
 import LessonPage from './components/learning/LessonPage'; // Individual lesson view
 import ProgressPage from './components/ProgressPage'; // Progress tracking page
+import { useI18n } from './utils/i18n';
 
 // Diagnostic Component: Shows system warnings for missing browser features (TTS, voice recognition)
 const SystemCheck = () => {
   const [visible, setVisible] = React.useState(true);
   const [warnings, setWarnings] = React.useState([]);
+  const { t } = useI18n();
 
   React.useEffect(() => {
     const updateWarnings = () => {
@@ -23,17 +26,17 @@ const SystemCheck = () => {
 
       // Check for browser support of TTS and voice recognition
       if (!('speechSynthesis' in window)) {
-        currentWarnings.push("Text-to-Speech not supported.");
+        currentWarnings.push(t('app.ttsNotSupported'));
       }
       if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-        currentWarnings.push("Voice recognition not supported.");
+        currentWarnings.push(t('app.voiceNotSupported'));
       }
 
       // Check if any TTS voices are available
       if (window.speechSynthesis) {
         const voices = window.speechSynthesis.getVoices();
         if (voices.length === 0) {
-          currentWarnings.push("Warning: No TTS voices found. Audio may be silent.");
+          currentWarnings.push(t('app.noVoicesWarning'));
         }
       }
 
@@ -54,7 +57,7 @@ const SystemCheck = () => {
         window.speechSynthesis.onvoiceschanged = null;
       }
     };
-  }, []);
+  }, [t]);
 
   if (warnings.length === 0 || !visible) return null;
 
@@ -67,7 +70,7 @@ const SystemCheck = () => {
       fontFamily: 'system-ui, -apple-system, sans-serif'
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-        <h4 style={{ margin: 0, color: '#856404', fontSize: '14px', fontWeight: '600' }}>System Warnings</h4>
+        <h4 style={{ margin: 0, color: '#856404', fontSize: '14px', fontWeight: '600' }}>{t('app.systemWarnings')}</h4>
         <button
           onClick={() => setVisible(false)}
           style={{
@@ -105,6 +108,15 @@ function App() {
             <Route path="/register" element={<Register />} />
 
             {/* Protected Routes (require authentication) */}
+            {/* Language selection screen (EPIC 5.1) */}
+            <Route
+              path="/language"
+              element={
+                <ProtectedRoute>
+                  <LanguageSelection />
+                </ProtectedRoute>
+              }
+            />
             {/* Accessibility setup wizard (EPIC 1.3) */}
             <Route
               path="/accessibility-setup"
