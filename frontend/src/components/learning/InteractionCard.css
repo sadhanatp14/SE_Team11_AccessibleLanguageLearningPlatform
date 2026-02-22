@@ -149,7 +149,7 @@
   outline-offset: 3px;
 }
 
-.interaction-option span {
+.interaction-option > span {
   padding: 6px 10px;
   border-radius: 10px;
   border: 1px solid transparent;

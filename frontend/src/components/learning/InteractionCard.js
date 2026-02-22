@@ -14,6 +14,7 @@ import {
 } from '../../utils/languagePrefs';
 import { pickI18nString } from '../../utils/lessonI18n';
 import { Mic } from 'lucide-react';
+import BilingualText from './BilingualText';
 import './InteractionCard.css';
 
 const normalizeAnswer = (value) => {
@@ -109,14 +110,46 @@ const InteractionCard = ({
 
   const options =
     interaction.type === 'true_false'
-      ? pickByLanguage(resolvedContentLanguage, {
-          english: ['True', 'False'],
-          tamil: ['சரி', 'தவறு'],
-          hindi: ['सही', 'गलत'],
-        })
+      ? ['true', 'false']
       : interaction.options || [];
 
+  const optionItems = useMemo(() => {
+    if (interaction.type === 'true_false') {
+      return [
+        {
+          value: 'true',
+          baseText: 'True',
+          i18n: { english: 'True', tamil: 'சரி', hindi: 'सही' },
+        },
+        {
+          value: 'false',
+          baseText: 'False',
+          i18n: { english: 'False', tamil: 'தவறு', hindi: 'गलत' },
+        },
+      ];
+    }
+
+    const rawOptions = Array.isArray(interaction?.options) ? interaction.options : [];
+    const rawI18n = Array.isArray(interaction?.optionsI18n) ? interaction.optionsI18n : [];
+    return rawOptions
+      .map((opt, idx) => {
+        const optI18n = rawI18n[idx];
+        return {
+          value: opt,
+          baseText: (optI18n && typeof optI18n.english === 'string' && optI18n.english.trim()) ? optI18n.english : opt,
+          i18n: optI18n,
+        };
+      })
+      .filter((item) => typeof item.value === 'string' && item.value.trim());
+  }, [interaction?.options, interaction?.optionsI18n, interaction?.type]);
+
   const isShortAnswer = interaction.type === 'short_answer';
+
+  const questionBaseText = useMemo(() => {
+    const fromI18n = interaction?.questionI18n?.english;
+    if (typeof fromI18n === 'string' && fromI18n.trim()) return fromI18n;
+    return interaction?.question || '';
+  }, [interaction?.question, interaction?.questionI18n?.english]);
 
   const instructionStepDicts = useMemo(() => {
     // EPIC 3.7.1-3.7.4: Spoken instructions for activities that are short, replayable, and match on-screen actions.
@@ -814,7 +847,16 @@ const InteractionCard = ({
       </div>
 
       <fieldset disabled={isLocked || readOnly}>
-        <legend className="interaction-question">{interaction.question}</legend>
+        <legend className="interaction-question">
+          <BilingualText
+            bilingualTextMode={bilingualTextMode}
+            contentLanguage={resolvedContentLanguage}
+            baseText={questionBaseText}
+            i18n={interaction?.questionI18n}
+            showLabels={true}
+            compact={false}
+          />
+        </legend>
 
         {/* Visual aid image for the question (Task 2.5.2, 2.5.4) */}
         {interaction.questionImageUrl && (
@@ -830,15 +872,22 @@ const InteractionCard = ({
 
         {interaction.type === 'click' ? (
           <div className="interaction-click-group" role="list">
-            {options.map((option) => (
+            {optionItems.map((item, idx) => (
               <button
-                key={option}
+                key={`${interaction.id || 'interaction'}-click-${idx}-${String(item.value)}`}
                 type="button"
-                className={`interaction-click fx-pressable fx-focus ${selectedAnswer === option ? 'selected' : ''}`}
-                onClick={() => handleSelect(option)}
-                aria-pressed={selectedAnswer === option}
+                className={`interaction-click fx-pressable fx-focus ${selectedAnswer === item.value ? 'selected' : ''}`}
+                onClick={() => handleSelect(item.value)}
+                aria-pressed={selectedAnswer === item.value}
               >
-                {option}
+                <BilingualText
+                  bilingualTextMode={bilingualTextMode}
+                  contentLanguage={resolvedContentLanguage}
+                  baseText={item.baseText}
+                  i18n={item.i18n}
+                  showLabels={false}
+                  compact={true}
+                />
               </button>
             ))}
           </div>
@@ -859,16 +908,25 @@ const InteractionCard = ({
           </div>
         ) : (
           <div className="interaction-options" role="radiogroup" aria-label={interaction.question}>
-            {options.map((option) => (
-              <label key={option} className="interaction-option">
+            {optionItems.map((item, idx) => (
+              <label key={`${interaction.id || 'interaction'}-opt-${idx}-${String(item.value)}`} className="interaction-option">
                 <input
                   type="radio"
                   name={interaction.id}
-                  value={option}
-                  checked={selectedAnswer === option}
-                  onChange={() => handleSelect(option)}
+                  value={item.value}
+                  checked={selectedAnswer === item.value}
+                  onChange={() => handleSelect(item.value)}
                 />
-                <span>{option}</span>
+                <span>
+                  <BilingualText
+                    bilingualTextMode={bilingualTextMode}
+                    contentLanguage={resolvedContentLanguage}
+                    baseText={item.baseText}
+                    i18n={item.i18n}
+                    showLabels={false}
+                    compact={true}
+                  />
+                </span>
               </label>
             ))}
           </div>
