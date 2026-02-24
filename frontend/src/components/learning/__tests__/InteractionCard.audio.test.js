@@ -3,6 +3,24 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import InteractionCard from '../InteractionCard';
 
+jest.mock('../../../context/PreferencesContext', () => {
+  const React = require('react');
+  const defaultValue = {
+    preferences: { preferredLanguage: 'english' },
+    loading: false,
+    updatePreferences: jest.fn(),
+  };
+  const PreferencesContext = React.createContext(defaultValue);
+  return {
+    PreferencesContext,
+    usePreferences: () => ({
+      preferences: { preferredLanguage: 'english' },
+      loading: false,
+      updatePreferences: jest.fn(),
+    }),
+  };
+});
+
 const baseInteraction = {
   id: 'interaction-1',
   type: 'true_false',

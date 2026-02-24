@@ -2,8 +2,17 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import InteractionCard from './InteractionCard';
 import VisualLesson from './VisualLesson';
 import { useAuth } from '../../context/AuthContext';
+import { usePreferences } from '../../context/PreferencesContext';
 import { getLessonProgress, normalizeUserId, saveLessonProgress } from '../../services/dyslexiaProgressService';
 import { decorateDyslexiaText, useDyslexiaContext } from '../../utils/dyslexiaSyllableMode';
+import {
+  bilingualPrimaryLanguageForMode,
+  isBilingualTextMode,
+  resolveBilingualTextModeFromPreferences,
+  speechSynthesisLangFor,
+} from '../../utils/languagePrefs';
+import { pickI18nString } from '../../utils/lessonI18n';
+import BilingualText from './BilingualText';
 import {
   Activity,
   Apple,
@@ -36,6 +45,26 @@ const formatTime = (seconds) => {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
+const splitParagraphs = (text, { decorateEnglish = false } = {}) => {
+  const rawText = typeof text === 'string' ? text : String(text ?? '');
+  if (!rawText.trim()) return [];
+  const results = [];
+  const regex = /[^\n]+/g;
+  let match;
+  while ((match = regex.exec(rawText)) !== null) {
+    const raw = match[0];
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+    const leadingWhitespace = raw.search(/\S/);
+    const startIndex = (match.index || 0) + (leadingWhitespace >= 0 ? leadingWhitespace : 0);
+    results.push({
+      text: decorateEnglish ? decorateDyslexiaText(trimmed) : trimmed,
+      startIndex,
+    });
+  }
+  return results;
 };
 
 /* Map keywords in questions/section titles to icon illustrations */
@@ -75,8 +104,9 @@ const getIllustration = (text) => {
   return defaultIllustration;
 };
 
-const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, onInteractionChange, onSectionComplete, onInteractionResult, totalInteractions: totalInteractionsProp }) => {
+const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, onInteractionChange, onSectionComplete, onInteractionResult, totalInteractions: totalInteractionsProp, uiLanguage = 'english', contentLanguage }) => {
   const { user } = useAuth();
+  const { preferences } = usePreferences();
   const condition = user?.learningCondition || '';
   const dyslexia = useDyslexiaContext({ condition, lessonId, defaultSyllableMode: true });
   const audioRef = useRef(null);
@@ -96,22 +126,43 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
   const lessonKey = useMemo(() => section?.lessonId ?? section?._id ?? section?.id ?? null, [section?.lessonId, section?._id, section?.id]);
   const userKey = useMemo(() => normalizeUserId(user), [user]);
 
+  const bilingualTextMode = resolveBilingualTextModeFromPreferences(preferences);
+  const bilingualEnabled = isBilingualTextMode(bilingualTextMode);
+  const bilingualPrimaryLang = bilingualEnabled ? bilingualPrimaryLanguageForMode(bilingualTextMode) : null;
+
+  const baseTextContent = useMemo(() => {
+    const english = section?.textContentI18n?.english;
+    if (typeof english === 'string' && english.trim()) return english;
+    return section?.textContent || '';
+  }, [section?.textContent, section?.textContentI18n?.english]);
+
+  const bilingualPrimaryText = useMemo(() => {
+    if (!bilingualEnabled || !bilingualPrimaryLang) return '';
+    return pickI18nString(bilingualPrimaryLang, baseTextContent, section?.textContentI18n);
+  }, [baseTextContent, bilingualEnabled, bilingualPrimaryLang, section?.textContentI18n]);
+
+  const bilingualEnglishText = useMemo(() => {
+    if (!bilingualEnabled) return '';
+    return pickI18nString('english', baseTextContent, section?.textContentI18n);
+  }, [baseTextContent, bilingualEnabled, section?.textContentI18n]);
+
+  const bilingualPrimaryParagraphs = useMemo(() => {
+    if (!bilingualEnabled) return [];
+    return splitParagraphs(bilingualPrimaryText, { decorateEnglish: false });
+  }, [bilingualEnabled, bilingualPrimaryText]);
+
+  const bilingualEnglishParagraphs = useMemo(() => {
+    if (!bilingualEnabled) return [];
+    const decorateEnglish = Boolean(dyslexia.applySyllables && String(contentLanguage || uiLanguage).toLowerCase() === 'english');
+    return splitParagraphs(bilingualEnglishText, { decorateEnglish });
+  }, [bilingualEnabled, bilingualEnglishText, contentLanguage, dyslexia.applySyllables, uiLanguage]);
+
   const paragraphs = useMemo(() => {
     // EPIC 2.1.1: Display lesson content clearly in text format.
     if (!section?.textContent) return [];
-    const results = [];
-    const regex = /[^\n]+/g;
-    let match;
-    while ((match = regex.exec(section.textContent)) !== null) {
-      const raw = match[0];
-      const trimmed = raw.trim();
-      if (!trimmed) continue;
-      const leadingWhitespace = raw.search(/\S/);
-      const startIndex = match.index + (leadingWhitespace >= 0 ? leadingWhitespace : 0);
-      results.push({ text: dyslexia.applySyllables ? decorateDyslexiaText(trimmed) : trimmed, startIndex });
-    }
-    return results;
-  }, [dyslexia.applySyllables, section?.textContent]);
+    const decorateEnglish = Boolean(dyslexia.applySyllables && String(contentLanguage || uiLanguage).toLowerCase() === 'english');
+    return splitParagraphs(section.textContent, { decorateEnglish });
+  }, [contentLanguage, dyslexia.applySyllables, section?.textContent, uiLanguage]);
 
   const interactions = useMemo(() => {
     // EPIC 2.3.2, 2.3.4: Ask short questions during the flow and keep interactions non-overwhelming (ordered + capped).
@@ -194,7 +245,7 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
     try {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = playbackRate;
-      utterance.lang = 'en-US';
+      utterance.lang = speechSynthesisLangFor(uiLanguage);
       utterance.volume = 0;
 
       utterance.onboundary = (event) => {
@@ -456,22 +507,72 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
   }, [lessonKey, userKey, onInteractionResult, isReplay, totalInteractionsProp]);
 
   if (!section) return null;
-
-  const displaySectionTitle = dyslexia.applySyllables ? decorateDyslexiaText(section.title) : section.title;
+  const sectionTitleBaseText =
+    typeof section?.titleI18n?.english === 'string' && section.titleI18n.english.trim()
+      ? section.titleI18n.english
+      : section?.title || '';
 
   return (
     <div className="lesson-section">
       <header className="lesson-section-header">
         <div>
           <p className="lesson-section-label">Section</p>
-          <h2>{displaySectionTitle}</h2>
+          <h2>
+            <BilingualText
+              bilingualTextMode={bilingualTextMode}
+              contentLanguage={contentLanguage || uiLanguage}
+              baseText={sectionTitleBaseText}
+              i18n={section?.titleI18n}
+              showLabels={false}
+              compact={true}
+            />
+          </h2>
         </div>
         {isReplay && <span className="replay-pill">Replaying</span>}
       </header>
 
       <div className="lesson-section-body">
         <div className="lesson-section-text">
-          {paragraphs.length > 0 ? (
+          {bilingualEnabled ? (
+            <div className="fx-card" style={{ padding: 14 }} aria-label="Bilingual lesson text">
+              {bilingualPrimaryParagraphs.length > 0 ? (
+                <div style={{ display: 'grid', gap: 12 }}>
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    <p style={{ margin: '0 0 2px', fontSize: '0.85rem', fontWeight: 700, opacity: 0.75 }}>
+                      {String(bilingualPrimaryLang || '').toLowerCase() === 'hindi' ? 'Hindi' : 'Tamil'}
+                    </p>
+                    {bilingualPrimaryParagraphs.map((p) => (
+                      <p key={`primary-${p.startIndex}`} style={{ margin: 0, fontWeight: 800, fontSize: '1.05rem' }}>
+                        {p.text}
+                      </p>
+                    ))}
+                  </div>
+
+                  {bilingualEnglishParagraphs.length > 0 ? (
+                    <div style={{ opacity: 0.98 }}>
+                      <p style={{ margin: '0 0 8px', fontSize: '0.85rem', fontWeight: 700, opacity: 0.75 }}>English</p>
+                      <VisualLesson
+                        // Keep visuals/highlights aligned with English content to avoid clutter.
+                        paragraphs={bilingualEnglishParagraphs}
+                        highlights={section.highlights || []}
+                        visualAids={section.visualAids || section.visuals || []}
+                        activeWord={activeWord}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              ) : bilingualEnglishParagraphs.length > 0 ? (
+                <VisualLesson
+                  paragraphs={bilingualEnglishParagraphs}
+                  highlights={section.highlights || []}
+                  visualAids={section.visualAids || section.visuals || []}
+                  activeWord={activeWord}
+                />
+              ) : (
+                <p>No text content available.</p>
+              )}
+            </div>
+          ) : paragraphs.length > 0 ? (
             <VisualLesson
               // EPIC 2.5.1-2.5.4: Highlights + simple, content-matched visuals.
               paragraphs={paragraphs}
@@ -490,6 +591,7 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
               lessonId={lessonKey}
               condition={condition}
               interaction={displayedInteraction}
+              contentLanguage={contentLanguage}
               readOnly={isReplay}
               useLocalSubmission={useLocalSubmission}
               onContinue={handleContinue}

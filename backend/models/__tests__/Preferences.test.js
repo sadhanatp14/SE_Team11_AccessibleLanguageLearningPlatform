@@ -290,6 +290,22 @@ describe('Preferences Model', () => {
             expect(prefs.preferredLanguage).toBe('english');
         });
 
+        it('should set default uiLanguage to english', async () => {
+            const prefs = await Preferences.create({
+                user: testUser._id,
+            });
+
+            expect(prefs.uiLanguage).toBe('english');
+        });
+
+        it('should set default bilingualTextMode to off', async () => {
+            const prefs = await Preferences.create({
+                user: testUser._id,
+            });
+
+            expect(prefs.bilingualTextMode).toBe('off');
+        });
+
         it('should set default showProgressBar to true', async () => {
             const prefs = await Preferences.create({
                 user: testUser._id,

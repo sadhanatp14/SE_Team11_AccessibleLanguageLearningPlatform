@@ -49,7 +49,7 @@ describe('Register Component', () => {
         expect(screen.getByLabelText(/^password/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/learning condition/i)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /create.*account/i })).toBeInTheDocument();
     });
 
     it('should show parent email field when minor checkbox is checked', async () => {
@@ -87,7 +87,7 @@ describe('Register Component', () => {
 
         await user.type(screen.getByLabelText(/^password/i), 'password123');
         await user.type(screen.getByLabelText(/confirm password/i), 'differentpassword');
-        await user.click(screen.getByRole('button', { name: /create account/i }));
+        await user.click(screen.getByRole('button', { name: /create.*account/i }));
 
         await waitFor(() => {
             expect(screen.getByText(/passwords do not match/i)).toBeInTheDocument();
@@ -104,7 +104,7 @@ describe('Register Component', () => {
         await user.type(screen.getByLabelText(/^password/i), '123');
         await user.type(screen.getByLabelText(/confirm password/i), '123');
         await user.selectOptions(screen.getByLabelText(/learning condition/i), 'dyslexia');
-        await user.click(screen.getByRole('button', { name: /create account/i }));
+        await user.click(screen.getByRole('button', { name: /create.*account/i }));
 
         await waitFor(() => {
             expect(
@@ -126,7 +126,7 @@ describe('Register Component', () => {
         await user.click(
             screen.getByRole('checkbox', { name: /i am under 13 years old/i })
         );
-        await user.click(screen.getByRole('button', { name: /create account/i }));
+        await user.click(screen.getByRole('button', { name: /create.*account/i }));
 
         await waitFor(() => {
             expect(
@@ -145,10 +145,10 @@ describe('Register Component', () => {
         await user.type(screen.getByLabelText(/^password/i), 'password123');
         await user.type(screen.getByLabelText(/confirm password/i), 'password123');
         await user.selectOptions(screen.getByLabelText(/learning condition/i), 'dyslexia');
-        await user.click(screen.getByRole('button', { name: /create account/i }));
+        await user.click(screen.getByRole('button', { name: /create.*account/i }));
 
         await waitFor(() => {
-            expect(mockNavigate).toHaveBeenCalledWith('/accessibility-setup');
+            expect(mockNavigate).toHaveBeenCalledWith('/language', { state: { next: '/accessibility-setup' } });
         });
 
         expect(mockRegister).toHaveBeenCalled();
@@ -167,7 +167,7 @@ describe('Register Component', () => {
         await user.type(screen.getByLabelText(/^password/i), 'password123');
         await user.type(screen.getByLabelText(/confirm password/i), 'password123');
         await user.selectOptions(screen.getByLabelText(/learning condition/i), 'dyslexia');
-        await user.click(screen.getByRole('button', { name: /create account/i }));
+        await user.click(screen.getByRole('button', { name: /create.*account/i }));
 
         await waitFor(() => {
             expect(
@@ -188,7 +188,7 @@ describe('Register Component', () => {
         await user.type(screen.getByLabelText(/confirm password/i), 'password123');
         await user.selectOptions(screen.getByLabelText(/learning condition/i), 'dyslexia');
 
-        const submitButton = screen.getByRole('button', { name: /create account/i });
+        const submitButton = screen.getByRole('button', { name: /create.*account/i });
         await user.click(submitButton);
 
         // Button should be disabled while the registration promise is pending
@@ -204,7 +204,7 @@ describe('Register Component', () => {
         // Trigger validation error
         await user.type(screen.getByLabelText(/^password/i), 'password123');
         await user.type(screen.getByLabelText(/confirm password/i), 'different');
-        await user.click(screen.getByRole('button', { name: /create account/i }));
+        await user.click(screen.getByRole('button', { name: /create.*account/i }));
 
         await waitFor(() => {
             expect(screen.getByText(/passwords do not match/i)).toBeInTheDocument();
@@ -229,7 +229,7 @@ describe('Register Component', () => {
         await user.type(screen.getByLabelText(/confirm password/i), 'password123');
         await user.selectOptions(screen.getByLabelText(/learning condition/i), 'dyslexia');
         await user.type(screen.getByLabelText(/age/i), '150');
-        await user.click(screen.getByRole('button', { name: /create account/i }));
+        await user.click(screen.getByRole('button', { name: /create.*account/i }));
 
         await waitFor(() => {
             expect(screen.getByText(/please enter a valid age/i)).toBeInTheDocument();
@@ -247,7 +247,7 @@ describe('Register Component', () => {
         await user.type(screen.getByLabelText(/confirm password/i), 'password123');
         await user.selectOptions(screen.getByLabelText(/learning condition/i), 'dyslexia');
         await user.type(screen.getByLabelText(/age/i), '11');
-        await user.click(screen.getByRole('button', { name: /create account/i }));
+        await user.click(screen.getByRole('button', { name: /create.*account/i }));
 
         await waitFor(() => {
             expect(

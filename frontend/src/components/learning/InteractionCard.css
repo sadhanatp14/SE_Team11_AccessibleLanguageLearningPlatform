@@ -149,7 +149,7 @@
   outline-offset: 3px;
 }
 
-.interaction-option span {
+.interaction-option > span {
   padding: 6px 10px;
   border-radius: 10px;
   border: 1px solid transparent;
@@ -520,6 +520,25 @@
   margin: 0 0 10px;
   font-size: 14px;
   color: var(--theme-text, var(--text-primary));
+
+.instructions-text--secondary {
+  margin-top: -6px;
+  color: var(--text-secondary, rgba(0, 0, 0, 0.7));
+  font-size: 0.95em;
+}
+
+.instructions-step-primary {
+  font-weight: 600;
+}
+
+.instructions-step-secondary {
+  margin-top: 6px;
+  padding-left: 10px;
+  border-left: 3px solid var(--border-color, rgba(0, 0, 0, 0.12));
+  color: var(--text-secondary, rgba(0, 0, 0, 0.7));
+  font-size: 0.95em;
+  line-height: 1.5;
+}
   line-height: 1.6;
 }
 
@@ -541,12 +560,6 @@
   margin: 0;
   padding-left: 18px;
   color: var(--theme-text, var(--text-primary));
-  font-size: 14px;
-  display: grid;
-  gap: 6px;
-}
-
-.instructions-actions {
   display: flex;
   gap: 10px;
   margin-top: 12px;

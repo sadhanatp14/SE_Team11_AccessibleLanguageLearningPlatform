@@ -3,16 +3,28 @@ import LessonLayout from './LessonLayout';
 import LessonNav from './LessonNav';
 import LessonSectionView from './LessonSectionView';
 import PronunciationPractice from './PronunciationPractice';
-import { getLessonSections } from '../../services/lessonSectionService';
+import { getLessonSections, getLessonSectionsWithContentLang } from '../../services/lessonSectionService';
 import { getProgress, updateProgress, getSummary } from '../../services/progressService';
 import { recordLessonScore, adjustDifficulty } from '../../services/difficultyAdjustmentService';
 import lessonSectionSamples from './lessonSectionSamples';
 import { useAuth } from '../../context/AuthContext';
+import { usePreferences } from '../../context/PreferencesContext';
 import { decorateDyslexiaText, useDyslexiaContext } from '../../utils/dyslexiaSyllableMode';
+import { useI18n } from '../../utils/i18n';
 import './LessonReplay.css';
+import { resolveUiLanguageFromPreferences } from '../../utils/languagePrefs';
+import { localizeLessonSectionsPayload } from '../../utils/lessonI18n';
 
 const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice, onRetry, onExit, onComplete }) => {
   const { user } = useAuth();
+  const { preferences } = usePreferences();
+  const { t } = useI18n();
+  const uiLanguage = resolveUiLanguageFromPreferences(preferences);
+  const contentLanguage = useMemo(() => {
+    const condition = String(user?.learningCondition || '').toLowerCase();
+    if (condition === 'dyslexia' || condition === 'adhd') return 'english';
+    return uiLanguage;
+  }, [uiLanguage, user?.learningCondition]);
   const [sections, setSections] = useState([]);
   const [progress, setProgress] = useState(null);
   const [activeSectionId, setActiveSectionId] = useState('');
@@ -48,7 +60,11 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
       setError('');
       try {
         if (isSample && lessonSectionSamples[lessonId]) {
-          const sampleSections = lessonSectionSamples[lessonId].sort((a, b) => a.order - b.order);
+          const sampleSections = localizeLessonSectionsPayload(
+            lessonSectionSamples[lessonId].sort((a, b) => a.order - b.order),
+            uiLanguage,
+            contentLanguage
+          );
           if (isMounted) {
             setSections(sampleSections);
             setActiveSectionId(sampleSections[0]?.id || '');
@@ -62,7 +78,9 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
 
         const [sectionsData, progressData] = await Promise.all([
           // EPIC 6.5.1: Load lesson content from backend correctly.
-          getLessonSections(lessonId),
+          contentLanguage && contentLanguage !== uiLanguage
+            ? getLessonSectionsWithContentLang(lessonId, uiLanguage, contentLanguage)
+            : getLessonSections(lessonId, uiLanguage),
           // EPIC 6.4.2: Restore saved progress when a user resumes a lesson.
           getProgress(lessonId),
         ]);
@@ -79,21 +97,21 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
             (Array.isArray(progressData?.completedSections) && progressData.completedSections.length > 0)
           );
           if (resumeDetected && !progressData?.completed) {
-            setSuccessMessage('Progress loaded. Continue where you left off.');
+            setSuccessMessage(t('lessons.progressLoaded'));
             setTimeout(() => isMounted && setSuccessMessage(''), 2200);
           }
 
           // If lesson already completed, show a friendly note
           if (progressData?.completed) {
             // EPIC 6.2.1-6.2.4: Encouraging feedback when a learner has completed a lesson.
-            setSuccessMessage('Good job! Lesson completed! Keep going!');
+            setSuccessMessage(t('lessons.completedCongrats'));
             setTimeout(() => isMounted && setSuccessMessage(''), 4000);
           }
         }
       } catch (loadError) {
         if (isMounted) {
           // EPIC 6.5.3: Show friendly error message if lesson load fails.
-          setError('Unable to load lesson sections.');
+          setError(t('lessons.unableToLoadSections'));
         }
       } finally {
         if (isMounted) {
@@ -107,7 +125,7 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
     return () => {
       isMounted = false;
     };
-  }, [lessonId, isSample, reloadKey]);
+  }, [lessonId, isSample, reloadKey, t, uiLanguage, contentLanguage]);
 
   const handleRetryLoad = () => {
     setReloadKey((n) => n + 1);
@@ -203,17 +221,15 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
 
           // Check if difficulty should be adjusted
           const difficultyResult = adjustDifficulty(user);
-          
-          const msgs = ['Good job!', 'Lesson completed!', 'Keep going!'];
-          let msg = `${msgs[Math.floor(Math.random() * msgs.length)]} You completed this lesson. Try the next lesson!`;
-          
+
+          let msg = t('lessons.completedCongrats');
+
           // Add difficulty adjustment feedback if it changed
           if (difficultyResult.adjusted) {
             msg += ` Your difficulty level has been adjusted to ${difficultyResult.newDifficulty} based on your performance!`;
           }
-          
+
           setSuccessMessage(msg);
-          
           try {
             let summary = null;
             try { summary = await getSummary(); } catch (e) { /* ignore */ }
@@ -232,7 +248,7 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
           }, 3000);
         }
       } catch (e) {
-        setError('Unable to save progress. Please try again.');
+        setError(t('lessons.unableToSaveProgress'));
       }
       return;
     }
@@ -255,12 +271,12 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
 
     // Check if difficulty should be adjusted
     const difficultyResult = adjustDifficulty(user);
-    
-    let msg = 'Good job! Lesson completed! Keep going!';
+
+    let msg = t('lessons.completedCongrats');
     if (difficultyResult.adjusted) {
       msg += ` Your difficulty level has been adjusted to ${difficultyResult.newDifficulty}!`;
     }
-    
+
     setSuccessMessage(msg);
 
     try {
@@ -288,7 +304,7 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
       setSuccessMessage('');
       onComplete?.();
     }, 3000);
-  }, [isSample, lessonId, sections, interactionResults, user, onComplete]);
+  }, [isSample, lessonId, sections, interactionResults, user, onComplete, t]);
 
   const displayedSectionId = replaySectionId || activeSectionId;
   const displayedSection = displayedSectionId ? sectionMap.get(displayedSectionId) : null;
@@ -451,7 +467,7 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
           }, 3000);
         }
       } catch (e) {
-        setError('Unable to save progress. Please try again.');
+        setError(t('lessons.unableToSaveProgress'));
       }
     } else {
       setProgress((prev) => ({
@@ -508,10 +524,10 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
         : notice
           ? notice
           : isReplay
-            ? 'Replaying a completed section. Your progress remains saved.'
-            : 'Select a completed section to replay at any time.';
+            ? t('lessons.replayingNotice')
+            : t('lessons.replayHint');
 
-  const resolvedTitle = lessonTitle || 'Lesson';
+  const resolvedTitle = lessonTitle || t('lessons.lesson');
   const resolvedSubtitle = lessonSubtitle || 'Move through one section at a time for steady progress.';
 
   return (
@@ -520,14 +536,14 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
       title={resolvedTitle}
       subtitle={resolvedSubtitle}
       onBack={onExit}
-      backLabel="Go back"
+      backLabel={t('lessons.back')}
       guidance={(
         <div className="lesson-guidance">
-          <p className="lesson-guidance__label">Guidance</p>
+          <p className="lesson-guidance__label">{t('lessons.guidance')}</p>
           <p className={`lesson-guidance__text${error ? ' is-error' : ''}${incompleteWarning ? ' is-warning' : ''}${successMessage ? ' is-success' : ''}`}>{guidanceText}</p>
           {notice && onRetry && !isSample && (
             <div style={{ marginTop: 8 }}>
-              <button type="button" onClick={onRetry}>Retry</button>
+              <button type="button" onClick={onRetry}>{t('lessons.retry')}</button>
             </div>
           )}
         </div>
@@ -542,14 +558,14 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
           canGoNext={canGoNext}
           canReplay={canReplay}
           isReplay={isReplay}
-          nextLabel={isLastSection ? 'Finish' : 'Next'}
+          nextLabel={isLastSection ? t('lessons.finish') : t('lessons.next')}
         />
       )}
     >
       {showPronunciationPractice ? (
         <PronunciationPractice
-          title="Pronunciation Practice"
-          subtitle="Practice the key words from this lesson. Complete all to finish."
+          title={t('lessons.pronunciationTitle')}
+          subtitle={t('lessons.pronunciationSubtitle')}
           items={pronunciationItems}
           recognitionLang="en-US"
           ttsLang="en-US"
@@ -575,18 +591,18 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
         <div className="lesson-replay-grid">
           <div className="lesson-replay-panel fx-card">
             <div className="lesson-replay-panel__header">
-              <h2>Lesson timeline</h2>
-              <p>Select a completed section to replay.</p>
+              <h2>{t('lessons.timelineTitle')}</h2>
+              <p>{t('lessons.timelineSubtitle')}</p>
             </div>
             {isLoading ? (
               // EPIC 6.5.2: Show “Loading…” while lesson loads.
-              <p className="lesson-replay-loading">Loading sections…</p>
+              <p className="lesson-replay-loading">{t('lessons.loadingSections')}</p>
             ) : error ? (
               <div className="fx-card">
                 {/* EPIC 6.5.3: Friendly error message if lesson fails to load. */}
                 <p className="is-error">{error}</p>
                 {/* EPIC 6.5.4: Provide a retry button. */}
-                {!isSample && <button type="button" onClick={handleRetryLoad}>Retry</button>}
+                {!isSample && <button type="button" onClick={handleRetryLoad}>{t('lessons.retry')}</button>}
               </div>
             ) : (
               // EPIC 2.6.1, 2.6.3: Timeline provides easy access to previous completed steps for replay.
@@ -606,8 +622,8 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
                     >
                       <span className="timeline-index">{index + 1}</span>
                       <span className="timeline-title">{section.title}</span>
-                      {isCompleted && <span className="timeline-tag">Completed</span>}
-                      {isCurrent && <span className="timeline-tag accent">Current</span>}
+                      {isCompleted && <span className="timeline-tag">{t('lessons.tagCompleted')}</span>}
+                      {isCurrent && <span className="timeline-tag accent">{t('lessons.tagCurrent')}</span>}
                     </button>
                   );
                 })}
@@ -617,10 +633,10 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
 
           <div className="lesson-section-panel">
             {isLoading ? (
-              <div className="lesson-replay-loading fx-card">Preparing the lesson section…</div>
+              <div className="lesson-replay-loading fx-card">{t('lessons.preparingSection')}</div>
             ) : displayedSection ? (
               <div className="lesson-content-fade" key={displayedSectionId}>
-                {isReplay && <div className="replay-banner">Replaying a completed section</div>}
+                {isReplay && <div className="replay-banner">{t('lessons.replayBanner')}</div>}
                 {/* EPIC 2.1.1-2.1.4, 2.3.1-2.3.4, 2.4.1-2.4.4, 2.5.1-2.5.4: Section delivers text/audio/visuals with interactions + guidance + highlights. */}
                 <LessonSectionView 
                   section={displayedSection} 
@@ -628,13 +644,15 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
                   useLocalSubmission={isSample}
                   lessonId={lessonId}
                   totalInteractions={totalInteractions}
+                  uiLanguage={uiLanguage}
+                  contentLanguage={contentLanguage}
                   onInteractionChange={handleInteractionChange}
                   onSectionComplete={handleSectionComplete}
                   onInteractionResult={handleInteractionResult}
                 />
               </div>
             ) : (
-              <div className="lesson-replay-empty fx-card">Select a section to begin.</div>
+              <div className="lesson-replay-empty fx-card">{t('lessons.selectSectionToBegin')}</div>
             )}
           </div>
         </div>

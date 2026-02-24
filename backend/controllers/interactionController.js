@@ -1,5 +1,6 @@
 const Lesson = require('../models/Lesson');
 const UserInteraction = require('../models/UserInteraction');
+const { normalizeUiLanguage, pickI18nString } = require('../utils/i18n');
 
 /**
  * Interaction Controller
@@ -25,6 +26,50 @@ const normalizeAnswer = (value) => {
   if (typeof value === 'boolean') return value ? 'true' : 'false';
   if (typeof value === 'number') return value.toString();
   return String(value ?? '').trim().toLowerCase();
+};
+
+/**
+ * Coerces selected/correct answer into comparable representations.
+ * This makes grading resilient when clients submit option index but DB stores option text (or vice versa).
+ */
+const coerceForComparison = (interaction, selectedAnswer) => {
+  const options = Array.isArray(interaction?.options) ? interaction.options : null;
+  const correctAnswer = interaction?.correctAnswer;
+
+  // Multiple-choice often has options array.
+  if (!options || options.length === 0) {
+    return { selected: selectedAnswer, correct: correctAnswer };
+  }
+
+  // If DB stores correct answer as string but client sends index, map index -> option text.
+  if (typeof correctAnswer === 'string' && typeof selectedAnswer === 'number') {
+    const mapped = options[selectedAnswer];
+    return { selected: typeof mapped === 'string' ? mapped : selectedAnswer, correct: correctAnswer };
+  }
+
+  // If DB stores correct answer as index but client sends text, map text -> index.
+  if (typeof correctAnswer === 'number' && typeof selectedAnswer === 'string') {
+    const idx = options.findIndex(
+      (opt) => normalizeAnswer(opt) === normalizeAnswer(selectedAnswer)
+    );
+    return { selected: idx >= 0 ? idx : selectedAnswer, correct: correctAnswer };
+  }
+
+  return { selected: selectedAnswer, correct: correctAnswer };
+};
+
+const localizeInteractionText = (interaction, uiLanguage) => {
+  const feedback = interaction?.feedback;
+  return {
+    feedback: feedback
+      ? {
+          correct: pickI18nString(uiLanguage, feedback.correct, interaction?.feedbackI18n?.correct),
+          incorrect: pickI18nString(uiLanguage, feedback.incorrect, interaction?.feedbackI18n?.incorrect),
+        }
+      : undefined,
+    hint: pickI18nString(uiLanguage, interaction?.hint || '', interaction?.hintI18n),
+    explanation: pickI18nString(uiLanguage, interaction?.explanation || '', interaction?.explanationI18n),
+  };
 };
 
 const encouragementMessages = [
@@ -64,7 +109,8 @@ const getHintTriggerAttempts = () => {
  * Response: { isCorrect, feedback, hint?, explanation?, encouragement? }
  */
 exports.submitInteraction = async (req, res) => {
-  const { lessonId, interactionId, selectedAnswer } = req.body;
+  const { lessonId, interactionId, selectedAnswer, uiLanguage: uiLanguageRaw } = req.body;
+  const uiLanguage = normalizeUiLanguage(uiLanguageRaw);
 
   try {
     const lesson = await Lesson.findById(lessonId);
@@ -87,13 +133,14 @@ exports.submitInteraction = async (req, res) => {
       });
     }
 
+    const coerced = coerceForComparison(interaction, selectedAnswer);
     // Compare after normalization so type differences (e.g. true vs "true") don't break grading.
     const isCorrect =
-      normalizeAnswer(selectedAnswer) ===
-      normalizeAnswer(interaction.correctAnswer);
-    const feedback = isCorrect
-      ? interaction.feedback.correct
-      : interaction.feedback.incorrect;
+      normalizeAnswer(coerced.selected) ===
+      normalizeAnswer(coerced.correct);
+
+    const localized = localizeInteractionText(interaction, uiLanguage);
+    const feedback = isCorrect ? localized.feedback?.correct : localized.feedback?.incorrect;
 
     const existing = await UserInteraction.findOne({
       userId: req.user.id,
@@ -122,14 +169,10 @@ exports.submitInteraction = async (req, res) => {
     };
 
     if (!isCorrect) {
-      if (interaction.explanation) {
-        response.explanation = interaction.explanation;
-      }
+      if (localized.explanation) response.explanation = localized.explanation;
 
       const hintTriggerAttempts = getHintTriggerAttempts();
-      if (interaction.hint && nextAttempts >= hintTriggerAttempts) {
-        response.hint = interaction.hint;
-      }
+      if (localized.hint && nextAttempts >= hintTriggerAttempts) response.hint = localized.hint;
 
       response.encouragement = pickEncouragement();
     }
@@ -155,7 +198,8 @@ exports.submitInteraction = async (req, res) => {
  * - Otherwise return explanation when available
  */
 exports.requestHelp = async (req, res) => {
-  const { lessonId, interactionId } = req.body;
+  const { lessonId, interactionId, uiLanguage: uiLanguageRaw } = req.body;
+  const uiLanguage = normalizeUiLanguage(uiLanguageRaw);
 
   try {
     const lesson = await Lesson.findById(lessonId);
@@ -189,12 +233,14 @@ exports.requestHelp = async (req, res) => {
 
     const response = {};
 
-    if (interaction.hint && attempts >= hintTriggerAttempts) {
-      response.hint = interaction.hint;
-    } else if (interaction.explanation) {
-      response.explanation = interaction.explanation;
-    } else if (interaction.hint) {
-      response.hint = interaction.hint;
+    const localized = localizeInteractionText(interaction, uiLanguage);
+
+    if (localized.hint && attempts >= hintTriggerAttempts) {
+      response.hint = localized.hint;
+    } else if (localized.explanation) {
+      response.explanation = localized.explanation;
+    } else if (localized.hint) {
+      response.hint = localized.hint;
     }
 
     response.encouragement = pickEncouragement();

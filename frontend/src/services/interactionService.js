@@ -7,11 +7,12 @@ import api from '../utils/api';
  * @param {{ lessonId: string, interactionId: string, selectedAnswer: any }} params
  * @returns {Promise<any>} API response payload (typically {isCorrect, feedback, ...})
  */
-export const submitInteraction = async ({ lessonId, interactionId, selectedAnswer }) => {
+export const submitInteraction = async ({ lessonId, interactionId, selectedAnswer, uiLanguage }) => {
   const response = await api.post('/interactions/submit', {
     lessonId,
     interactionId,
     selectedAnswer,
+    uiLanguage,
   });
   return response.data;
 };
@@ -21,10 +22,11 @@ export const submitInteraction = async ({ lessonId, interactionId, selectedAnswe
  * @param {{ lessonId: string, interactionId: string }} params
  * @returns {Promise<any>} API response payload
  */
-export const requestInteractionHelp = async ({ lessonId, interactionId }) => {
+export const requestInteractionHelp = async ({ lessonId, interactionId, uiLanguage }) => {
   const response = await api.post('/interactions/help', {
     lessonId,
     interactionId,
+    uiLanguage,
   });
   return response.data;
 };

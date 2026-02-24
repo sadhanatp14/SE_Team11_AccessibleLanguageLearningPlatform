@@ -5,8 +5,17 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { usePreferences } from '../../context/PreferencesContext';
 import ProfileSettings from '../ProfileSettings';
 import api from '../../utils/api';
+import {
+  backendTtsLangFor,
+  normalizePreferredLanguage,
+  pickByLanguage,
+  resolveUiLanguageFromPreferences,
+  speechSynthesisLangFor,
+} from '../../utils/languagePrefs';
+import { useI18n } from '../../utils/i18n';
 // Icon imports for UI elements
 import {
   BookOpen,
@@ -30,6 +39,9 @@ import './AutismView.css';
 const AutismView = ({ initialLessonId = null }) => {
   // Auth context
   const { user, logout } = useAuth();
+  const { preferences } = usePreferences();
+  const uiLanguage = resolveUiLanguageFromPreferences(preferences);
+  const { t } = useI18n();
   const navigate = useNavigate();
   // UI state for settings panel
   const [showSettings, setShowSettings] = useState(false);
@@ -103,7 +115,6 @@ const AutismView = ({ initialLessonId = null }) => {
             question: 'What does வணக்கம் mean?',
             options: ['Hello', 'Goodbye', 'Thank you'],
             correct: 0,
-            difficulty: 'easy'
           }
         },
         {
@@ -111,7 +122,6 @@ const AutismView = ({ initialLessonId = null }) => {
           title: 'Thank You in Tamil',
           Icon: BookOpen,
           content: 'நன்றி (Nandri)',
-          translation: 'A polite word in Tamil',
           highlight: 'நன்றி',
           image: '/images/autism-tamil-thanks.svg',
           audio: '/audio/autism-tamil-thanks.mp3',
@@ -593,10 +603,20 @@ const AutismView = ({ initialLessonId = null }) => {
     }
   ]), []);
 
+  // Autism lessons have a fixed teaching language per lesson (Tamil/English/Hindi).
+  // UI language should not hide lessons; it only controls scaffolding/chrome text.
+  const displayedLessons = lessons;
+
   // Get current step data
-  const currentLesson = lessons.find(l => l.id === selectedLesson);
+  const currentLesson = displayedLessons.find(l => l.id === selectedLesson) || lessons.find(l => l.id === selectedLesson);
   const currentStep = currentLesson?.steps[currentStepIndex];
   const totalSteps = currentLesson?.steps.length || 0;
+
+  const teachingLanguage = useMemo(() => {
+    return normalizePreferredLanguage(currentLesson?.language || 'english');
+  }, [currentLesson?.language]);
+
+  // No lesson visibility filtering; keep selection stable.
 
   const resolveLessonLang = useCallback((lessonLanguage) => {
     const raw = String(lessonLanguage || '').toLowerCase();
@@ -731,7 +751,7 @@ const AutismView = ({ initialLessonId = null }) => {
       audioRef.current.play().catch((error) => {
         console.log('Audio file not available, using text-to-speech fallback');
         // Fallback to browser's text-to-speech if audio file not found
-        speakText(currentStep.content, { trackWords: true });
+        speakText(currentStep.content, { trackWords: true, preferredLanguage: teachingLanguage });
       });
 
       // Keep active-word highlighting roughly in sync even when using file audio
@@ -743,7 +763,7 @@ const AutismView = ({ initialLessonId = null }) => {
       setTimeout(() => setFeedback(''), 2000);
     } else if (currentStep?.content) {
       // If no audio ref, use text-to-speech directly
-      speakText(currentStep.content, { trackWords: true });
+      speakText(currentStep.content, { trackWords: true, preferredLanguage: teachingLanguage });
       setFeedback('Playing audio...');
       setTimeout(() => setFeedback(''), 2000);
     }
@@ -765,12 +785,54 @@ const AutismView = ({ initialLessonId = null }) => {
       .replace(/[.,!?;:()"'{}\u005B\u005D\u201C\u201D\u2018\u2019\u2013\u2014]/g, '');
   }, []);
 
-  const initAnswerSpeechRecognition = useCallback(() => {
+  // EPIC 2.3.1-2.3.4: Interactive engagement with immediate feedback
+  const handleInteraction = useCallback(
+    (optionIndex) => {
+      if (currentStep?.interaction && !questionAnswered) {
+        setQuestionAnswered(true);
+        setTimerActive(false);
+        if (timerIntervalRef.current) {
+          clearInterval(timerIntervalRef.current);
+        }
+
+        const stepKey = `${selectedLesson}-${currentStepIndex}`;
+        if (optionIndex === currentStep.interaction.correct) {
+          setFeedback('Good job! That\'s correct!');
+          setStepAnsweredCorrectly((prev) => ({
+            ...prev,
+            [stepKey]: true,
+          }));
+          setWrongAnswerCount((prev) => ({
+            ...prev,
+            [stepKey]: 0,
+          }));
+        } else {
+          const currentWrongCount = wrongAnswerCount[stepKey] || 0;
+          const newWrongCount = currentWrongCount + 1;
+
+          setWrongAnswerCount((prev) => ({
+            ...prev,
+            [stepKey]: newWrongCount,
+          }));
+
+          if (newWrongCount >= 2) {
+            setFeedback('Try again. Use the hint if you need help, then press Retry to attempt again.');
+            setShowHint(true);
+          } else {
+            setFeedback('Try again! Press Retry to attempt again, or view the hint.');
+          }
+        }
+      }
+    },
+    [currentStep, currentStepIndex, questionAnswered, selectedLesson, wrongAnswerCount]
+  );
+
+  const initAnswerSpeechRecognition = useCallback((preferredLanguage) => {
     if (typeof window === 'undefined') return null;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return null;
     const recognition = new SpeechRecognition();
-    recognition.lang = 'en-IN';
+    recognition.lang = speechSynthesisLangFor(preferredLanguage || 'english');
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
     return recognition;
@@ -789,8 +851,9 @@ const AutismView = ({ initialLessonId = null }) => {
     if (questionAnswered) return;
     setAnswerVoiceError('');
 
-    if (!answerRecognitionRef.current) {
-      answerRecognitionRef.current = initAnswerSpeechRecognition();
+    const desiredLang = speechSynthesisLangFor(teachingLanguage || 'english');
+    if (!answerRecognitionRef.current || answerRecognitionRef.current.lang !== desiredLang) {
+      answerRecognitionRef.current = initAnswerSpeechRecognition(teachingLanguage);
     }
 
     const recognition = answerRecognitionRef.current;
@@ -852,24 +915,51 @@ const AutismView = ({ initialLessonId = null }) => {
     } catch (e) {
       setIsAnswerListening(false);
     }
-  }, [currentStep?.interaction?.options, handleInteraction, initAnswerSpeechRecognition, normalizeVoice, questionAnswered]);
+  }, [currentStep?.interaction?.options, handleInteraction, initAnswerSpeechRecognition, normalizeVoice, questionAnswered, teachingLanguage]);
 
-  const getInstructionsTextForStep = useCallback((step) => {
-    if (!step) return 'Follow the on-screen instructions. Use Play Audio to listen, and use Next to continue.';
-    const hasOptions = Boolean(step?.interaction?.options?.length);
-    const hasTyping = Boolean(step?.interaction?.type === 'typing');
-    const base = 'Take your time. Focus on one step at a time.';
+  const getInstructionsTextForStep = useCallback(
+    (step) => {
+      if (!step) {
+        return pickByLanguage(uiLanguage, {
+          english: 'Follow the on-screen instructions. Use Play Audio to listen, and use Next to continue.',
+          tamil: 'திரையில் உள்ள வழிமுறைகளை பின்பற்றுங்கள். கேட்க “Play Audio” ஐ அழுத்துங்கள். தொடர “Next” ஐ அழுத்துங்கள்.',
+          hindi: 'स्क्रीन पर दिए निर्देशों का पालन करें। सुनने के लिए “Play Audio” दबाएँ और आगे बढ़ने के लिए “Next” दबाएँ।',
+        });
+      }
 
-    if (hasOptions) {
-      return `${base} Read the sentence. Press Play Audio to hear it. Then choose one option. If you need help, press Hint. Answer correctly to go to the next step.`;
-    }
+      const hasOptions = Boolean(step?.interaction?.options?.length);
+      const hasTyping = Boolean(step?.interaction?.type === 'typing');
 
-    if (hasTyping) {
-      return `${base} Read the prompt. Press Play Audio to hear it. Type your answer and submit. If you need help, press Hint. You can replay audio anytime.`;
-    }
+      const base = pickByLanguage(uiLanguage, {
+        english: 'Take your time. Focus on one step at a time.',
+        tamil: 'அவசரம் வேண்டாம். ஒவ்வொரு படியிலும் கவனம் செலுத்துங்கள்.',
+        hindi: 'धीरे करें। एक समय में एक चरण पर ध्यान दें।',
+      });
 
-    return `${base} Read the sentence and translation. Press Play Audio to hear it. Use Hint if needed. Continue when you are ready.`;
-  }, []);
+      if (hasOptions) {
+        return pickByLanguage(uiLanguage, {
+          english: `${base} Read the sentence. Press Play Audio to hear it. Then choose one option. If you need help, press Hint. Answer correctly to go to the next step.`,
+          tamil: `${base} வாக்கியத்தை வாசியுங்கள். கேட்க “Play Audio” ஐ அழுத்துங்கள். பிறகு ஒரு விருப்பத்தைத் தேர்வு செய்யுங்கள். உதவி தேவைப்பட்டால் “Hint” ஐ அழுத்துங்கள். சரியாக பதிலளித்தால் அடுத்த படிக்கு செல்லலாம்.`,
+          hindi: `${base} वाक्य पढ़ें। सुनने के लिए “Play Audio” दबाएँ। फिर एक विकल्प चुनें। मदद चाहिए तो “Hint” दबाएँ। सही उत्तर देकर अगले चरण पर जाएँ।`,
+        });
+      }
+
+      if (hasTyping) {
+        return pickByLanguage(uiLanguage, {
+          english: `${base} Read the prompt. Press Play Audio to hear it. Type your answer and submit. If you need help, press Hint. You can replay audio anytime.`,
+          tamil: `${base} கேள்வியை வாசியுங்கள். கேட்க “Play Audio” ஐ அழுத்துங்கள். உங்கள் பதிலை টাইப் செய்து submit செய்யுங்கள். உதவி தேவைப்பட்டால் “Hint” ஐ அழுத்துங்கள். ஆடியோவை எப்போது வேண்டுமானாலும் மீண்டும் கேட்கலாம்.`,
+          hindi: `${base} संकेत/प्रॉम्प्ट पढ़ें। सुनने के लिए “Play Audio” दबाएँ। अपना जवाब टाइप करें और submit करें। मदद चाहिए तो “Hint” दबाएँ। आप कभी भी ऑडियो फिर से सुन सकते हैं।`,
+        });
+      }
+
+      return pickByLanguage(uiLanguage, {
+        english: `${base} Read the sentence and translation. Press Play Audio to hear it. Use Hint if needed. Continue when you are ready.`,
+        tamil: `${base} வாக்கியமும் மொழிபெயர்ப்பும் வாசியுங்கள். கேட்க “Play Audio” ஐ அழுத்துங்கள். தேவைப்பட்டால் “Hint” பயன்படுத்துங்கள். தயாரானதும் தொடருங்கள்.`,
+        hindi: `${base} वाक्य और अनुवाद पढ़ें। सुनने के लिए “Play Audio” दबाएँ। जरूरत हो तो “Hint” इस्तेमाल करें। तैयार होने पर आगे बढ़ें।`,
+      });
+    },
+    [uiLanguage]
+  );
 
   const stopAllAudio = useCallback(() => {
     window.speechSynthesis.cancel();
@@ -966,7 +1056,7 @@ const AutismView = ({ initialLessonId = null }) => {
   // Audio Handling with Backend Support
 
   const speakText = async (text, options = {}) => {
-    const { trackWords = true } = options;
+    const { trackWords = true, preferredLanguage = uiLanguage } = options;
     // Cancel any existing
     window.speechSynthesis.cancel();
     if (audioRef.current) {
@@ -983,7 +1073,7 @@ const AutismView = ({ initialLessonId = null }) => {
       const response = await fetch('/api/tts/speak', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, speed: playbackSpeed })
+        body: JSON.stringify({ text, speed: playbackSpeed, lang: backendTtsLangFor(preferredLanguage) })
       });
 
       if (!response.ok) throw new Error('Backend failed');
@@ -1019,6 +1109,7 @@ const AutismView = ({ initialLessonId = null }) => {
       if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = playbackSpeed;
+        utterance.lang = speechSynthesisLangFor(preferredLanguage);
 
         if (trackWords) {
           utterance.onboundary = (event) => {
@@ -1158,48 +1249,6 @@ const AutismView = ({ initialLessonId = null }) => {
     // Stop listening when moving to a new step or after answering.
     if (questionAnswered) stopAnswerListening();
   }, [questionAnswered, stopAnswerListening, currentStepIndex, selectedLesson]);
-
-  // EPIC 2.3.1-2.3.4: Interactive engagement with immediate feedback
-  function handleInteraction(optionIndex) {
-    if (currentStep?.interaction && !questionAnswered) {
-      setQuestionAnswered(true);
-      setTimerActive(false);
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-      }
-
-      const stepKey = `${selectedLesson}-${currentStepIndex}`;
-      if (optionIndex === currentStep.interaction.correct) {
-        setFeedback('Good job! That\'s correct!');
-        // Mark this step as answered correctly
-        setStepAnsweredCorrectly(prev => ({
-          ...prev,
-          [stepKey]: true
-        }));
-        // Reset wrong answer count on correct answer
-        setWrongAnswerCount(prev => ({
-          ...prev,
-          [stepKey]: 0
-        }));
-      } else {
-        // Increment wrong answer count
-        const currentWrongCount = wrongAnswerCount[stepKey] || 0;
-        const newWrongCount = currentWrongCount + 1;
-
-        setWrongAnswerCount(prev => ({
-          ...prev,
-          [stepKey]: newWrongCount
-        }));
-
-        if (newWrongCount >= 2) {
-          setFeedback('Try again. Use the hint if you need help, then press Retry to attempt again.');
-          setShowHint(true);
-        } else {
-          setFeedback('Try again! Press Retry to attempt again, or view the hint.');
-        }
-      }
-    }
-  }
 
   const renderDifficultyLabel = (difficulty) => {
     const normalized = difficulty || 'medium';
@@ -1523,7 +1572,11 @@ const AutismView = ({ initialLessonId = null }) => {
                       type="button"
                       onClick={() => setShowInstructions(true)}
                       className="btn-instructions"
-                      title="Instructions"
+                      title={pickByLanguage(uiLanguage, {
+                        english: 'Instructions',
+                        tamil: 'வழிமுறைகள்',
+                        hindi: 'निर्देश',
+                      })}
                     >
                       <Info size={18} aria-hidden="true" />
                       <span>Instructions</span>
@@ -1664,7 +1717,13 @@ const AutismView = ({ initialLessonId = null }) => {
           >
             <div className="autism-instructions-modal">
               <div className="autism-instructions-header">
-                <h3>Instructions</h3>
+                <h3>
+                  {pickByLanguage(uiLanguage, {
+                    english: 'Instructions',
+                    tamil: 'வழிமுறைகள்',
+                    hindi: 'निर्देश',
+                  })}
+                </h3>
                 <button
                   type="button"
                   className="autism-instructions-close"
@@ -1685,7 +1744,7 @@ const AutismView = ({ initialLessonId = null }) => {
                   onClick={() => speakText(getInstructionsTextForStep(currentStep), { trackWords: true })}
                 >
                   <Volume2 size={18} aria-hidden="true" />
-                  <span>Play</span>
+                  <span>{t('learning.common.play')}</span>
                 </button>
                 <button
                   type="button"
@@ -1693,7 +1752,7 @@ const AutismView = ({ initialLessonId = null }) => {
                   onClick={() => speakText(getInstructionsTextForStep(currentStep), { trackWords: true })}
                 >
                   <RotateCcw size={18} aria-hidden="true" />
-                  <span>Replay</span>
+                  <span>{t('learning.common.replay')}</span>
                 </button>
                 <button
                   type="button"
@@ -1701,10 +1760,16 @@ const AutismView = ({ initialLessonId = null }) => {
                   onClick={stopAllAudio}
                 >
                   <Pause size={18} aria-hidden="true" />
-                  <span>Stop</span>
+                  <span>{t('learning.common.stop')}</span>
                 </button>
               </div>
-              <p className="autism-instructions-hint">Tip: Press Esc to close.</p>
+              <p className="autism-instructions-hint">
+                {pickByLanguage(uiLanguage, {
+                  english: 'Tip: Press Esc to close.',
+                  tamil: 'குறிப்பு: மூட Esc ஐ அழுத்துங்கள்.',
+                  hindi: 'टिप: बंद करने के लिए Esc दबाएँ।',
+                })}
+              </p>
             </div>
           </div>
         )}
@@ -1718,23 +1783,23 @@ const AutismView = ({ initialLessonId = null }) => {
       {/* Simple Header */}
       <header className="simple-header">
         <div className="header-left">
-          <h1>LinguaEase Learning Center</h1>
-          <p className="header-subtitle">Choose your lesson</p>
+          <h1>{t('learning.autism.learningCenterTitle')}</h1>
+          <p className="header-subtitle">{t('learning.autism.chooseYourLesson')}</p>
         </div>
         <div className="header-actions">
           <button
             type="button"
             onClick={() => navigate('/progress')}
             className="btn-settings"
-            title="View progress"
+            title={t('learning.common.progress')}
           >
-            Progress
+            {t('learning.common.progress')}
           </button>
-          <button onClick={() => setShowSettings(true)} className="btn-settings" title="Settings">
+          <button onClick={() => setShowSettings(true)} className="btn-settings" title={t('learning.common.settings')}>
             <Settings size={18} aria-hidden="true" />
           </button>
           <button onClick={logout} className="btn-exit">
-            Logout
+            {t('learning.common.logout')}
           </button>
         </div>
       </header>
@@ -1748,16 +1813,16 @@ const AutismView = ({ initialLessonId = null }) => {
         {/* Welcome Card */}
         <div className="welcome-card">
           <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span>Hello, {user?.name}</span>
+            <span>{t('learning.autism.hello', { name: user?.name || '' })}</span>
             <Hand size={18} aria-hidden="true" />
           </h2>
-          <p>Select a lesson below to begin learning</p>
+          <p>{t('learning.autism.selectLessonToBegin')}</p>
         </div>
 
         {/* Lessons - Simple Grid */}
         <div className="lessons-container">
           <div className="lessons-simple-grid">
-            {lessons.map((lesson) => (
+            {displayedLessons.map((lesson) => (
               <div key={lesson.id} className={`lesson-simple-card ${completedLessons.includes(lesson.id) ? 'completed' : ''}`}>
                 <div className="lesson-top">
                   <span className="lesson-large-icon" aria-hidden="true"><lesson.Icon size={40} /></span>
@@ -1769,9 +1834,9 @@ const AutismView = ({ initialLessonId = null }) => {
                   <h4>{lesson.title}</h4>
                   <p>{lesson.description}</p>
                   <div className="lesson-meta">
-                    <span className="lesson-steps-count">{lesson.steps.length} steps</span>
+                    <span className="lesson-steps-count">{t('learning.common.stepsCount', { count: lesson.steps.length })}</span>
                     {completedLessons.includes(lesson.id) && (
-                      <span className="completion-badge"><Check size={14} aria-hidden="true" /> <span>Completed</span></span>
+                      <span className="completion-badge"><Check size={14} aria-hidden="true" /> <span>{t('learning.common.statusCompleted')}</span></span>
                     )}
                   </div>
                 </div>
@@ -1779,7 +1844,7 @@ const AutismView = ({ initialLessonId = null }) => {
                   onClick={() => handleStartLesson(lesson.id)}
                   className="btn-lesson-start"
                 >
-                  {completedLessons.includes(lesson.id) ? 'Review Lesson' : 'Start Lesson'}
+                  {completedLessons.includes(lesson.id) ? t('learning.common.reviewLesson') : t('learning.common.startLesson')}
                 </button>
               </div>
             ))}
@@ -1791,8 +1856,8 @@ const AutismView = ({ initialLessonId = null }) => {
           <div className="help-card">
             <span className="help-icon" aria-hidden="true"><Info size={20} /></span>
             <div className="help-text">
-              <h4>How it works</h4>
-              <p>Click "Start Lesson" to begin. Follow each step carefully. Use hints if you need help.</p>
+              <h4>{t('learning.autism.howItWorks')}</h4>
+              <p>{t('learning.autism.howItWorksBody')}</p>
             </div>
           </div>
         </div>

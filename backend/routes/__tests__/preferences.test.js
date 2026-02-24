@@ -211,6 +211,9 @@ describe('Preferences Routes', () => {
                 fontSize: 'extra-large',
                 contrastTheme: 'yellow-black',
                 learningPace: 'fast',
+                // uiLanguage changes are ignored while bilingual mode is enabled.
+                uiLanguage: 'tamil',
+                bilingualTextMode: 'english_tamil',
             };
 
             const response = await request(app)
@@ -224,6 +227,27 @@ describe('Preferences Routes', () => {
             expect(response.body.preferences.fontSize).toBe('extra-large');
             expect(response.body.preferences.contrastTheme).toBe('yellow-black');
             expect(response.body.preferences.learningPace).toBe('fast');
+            expect(response.body.preferences.uiLanguage).toBe('english');
+            expect(response.body.preferences.bilingualTextMode).toBe('english_tamil');
+        });
+
+        it('should allow updating uiLanguage when bilingual text is off', async () => {
+            // First ensure bilingual is off
+            await request(app)
+                .patch('/api/preferences/accessibility')
+                .set('Authorization', `Bearer ${authToken}`)
+                .send({ bilingualTextMode: 'off' })
+                .expect(200);
+
+            const response = await request(app)
+                .patch('/api/preferences/accessibility')
+                .set('Authorization', `Bearer ${authToken}`)
+                .send({ uiLanguage: 'tamil' })
+                .expect(200);
+
+            expect(response.body.success).toBe(true);
+            expect(response.body.preferences.bilingualTextMode).toBe('off');
+            expect(response.body.preferences.uiLanguage).toBe('tamil');
         });
 
         it('should only update provided fields', async () => {

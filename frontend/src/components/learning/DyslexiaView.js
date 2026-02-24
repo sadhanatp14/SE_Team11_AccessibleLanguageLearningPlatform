@@ -43,6 +43,7 @@ import ProfileSettings from '../ProfileSettings';
 import { BookOpen, Hash, Info, MessageCircle, Settings, ToggleLeft, ToggleRight, Volume2, TrendingUp } from 'lucide-react';
 // Custom hook that persists the syllable-mode preference in localStorage
 import { useDyslexiaSyllableMode } from '../../utils/dyslexiaSyllableMode';
+import { useI18n } from '../../utils/i18n';
 // Component-specific styles
 import './DyslexiaView.css';
 
@@ -72,6 +73,8 @@ const DyslexiaView = () => {
   // Syllable mode: when true, all UI text is rendered with syllable-split variants.
   // The custom hook persists the preference to localStorage so it survives page reloads.
   const [syllableMode, setSyllableMode] = useDyslexiaSyllableMode(true);
+  const { t, lang } = useI18n();
+  const isEnglish = lang === 'english';
 
   // React Router hook for programmatic navigation
   const navigate = useNavigate();
@@ -94,12 +97,14 @@ const DyslexiaView = () => {
   const lessons = [
     {
       id: 1,
+      titleKey: 'learning.dyslexia.lessonGreetingsTitle',
       title: 'Greetings',
       titleSyllables: 'Greet-ings',
       level: 'Beginner',
       apiId: 'lesson-greetings',
       Icon: MessageCircle,
       color: '#ffd700',
+      descriptionKey: 'learning.dyslexia.lessonGreetingsDesc',
       description: 'Learn "Hello", "Hi", and friendly phrases',
       descriptionSyllables: 'Learn "Hello" (Hel-lo), "Hi", and friend-ly phrases',
       totalSections: 2,
@@ -107,12 +112,14 @@ const DyslexiaView = () => {
     },
     {
       id: 2,
+      titleKey: 'learning.dyslexia.lessonBasicWordsTitle',
       title: 'Basic Words',
       titleSyllables: 'Ba-sic Words',
       level: 'Beginner',
       apiId: 'lesson-vocabulary',
       Icon: BookOpen,
       color: '#90caf9',
+      descriptionKey: 'learning.dyslexia.lessonBasicWordsDesc',
       description: 'Everyday objects, people, and actions',
       descriptionSyllables: 'E-ve-ry-day words like ap-ple, chair, book',
       totalSections: 3,
@@ -120,12 +127,14 @@ const DyslexiaView = () => {
     },
     {
       id: 3,
+      titleKey: 'learning.dyslexia.lessonNumbersTitle',
       title: 'Numbers',
       titleSyllables: 'Num-bers',
       level: 'Beginner',
       apiId: 'lesson-numbers',
       Icon: Hash,
       color: '#a5d6a7',
+      descriptionKey: 'learning.dyslexia.lessonNumbersDesc',
       description: 'Count, match, and order numbers',
       descriptionSyllables: 'Count, match, and or-der num-bers',
       totalSections: 3,
@@ -214,7 +223,23 @@ const DyslexiaView = () => {
    * Memoised helper that returns syllable-friendly text when syllableMode is on,
    * or the standard text otherwise. Used to build the `copy` object below.
    */
-  const uiText = React.useCallback((normalText, syllableText) => (syllableMode ? syllableText : normalText), [syllableMode]);
+  const uiText = React.useCallback(
+    (normalText, syllableText) => (syllableMode && isEnglish ? syllableText : normalText),
+    [syllableMode, isEnglish]
+  );
+
+  const displayStatus = React.useCallback(
+    (status) => {
+      const value = status || 'Not Started';
+      if (isEnglish) return value;
+      const normalized = String(value).toLowerCase();
+      if (normalized.includes('complete')) return t('learning.common.statusCompleted');
+      if (normalized.includes('progress')) return t('learning.common.statusInProgress');
+      if (normalized.includes('not started') || normalized.includes('not-started')) return t('learning.common.statusNotStarted');
+      return value;
+    },
+    [isEnglish, t]
+  );
 
   /**
    * UI copy dictionary – every user-facing string has a normal and a
@@ -222,45 +247,45 @@ const DyslexiaView = () => {
    * based on the current syllableMode state.
    */
   const copy = {
-    greeting: uiText('Hello', 'Hel-lo'),
-    welcomeTitle: uiText('Welcome to Your Learning Space', 'Wel-come to Your Learn-ing Space'),
+    greeting: uiText(t('learning.dyslexia.greeting'), 'Hel-lo'),
+    welcomeTitle: uiText(t('learning.dyslexia.welcomeTitle'), 'Wel-come to Your Learn-ing Space'),
     welcomeBody: uiText(
-      'Dyslexia is about how the brain processes language sounds (not vision). Reading can take extra time, so try decoding words in parts (syllables) like: fantastic. This space supports you with clear fonts, proper spacing, and visual cues to make reading easier.',
+      t('learning.dyslexia.welcomeBody'),
       'Dyslexia is about how the brain processes language sounds (not vision). Reading can take extra time, so try decoding words in parts (syllables) like: fan–tas–tic. This space supports you with clear fonts, proper spacing, and visual cues to make reading easier.'
     ),
-    guideTitle: uiText('Reading Guide', 'Read-ing Guide'),
-    lessonsTitle: uiText('Available Lessons', 'A-vail-a-ble Les-sons'),
-    tipsTitle: uiText('Learning Tips for You', 'Learn-ing Tips for You'),
+    guideTitle: uiText(t('learning.dyslexia.guideTitle'), 'Read-ing Guide'),
+    lessonsTitle: uiText(t('learning.dyslexia.lessonsTitle'), 'A-vail-a-ble Les-sons'),
+    tipsTitle: uiText(t('learning.dyslexia.tipsTitle'), 'Learn-ing Tips for You'),
 
     guideSoundsBody: uiText(
-      'Dyslexia is linked to phonological processing. Try saying the word out loud, then read it.',
+      t('learning.dyslexia.guideSoundsBody'),
       'Dyslexia is linked to phon-o-log-i-cal pro-cess-ing. Try saying the word out loud, then read it.'
     ),
-    guideBreakBodyPrefix: uiText('Read by parts (syllables):', 'Read by parts (syl-la-bles):'),
-    guideBreakChip: uiText('fantastic', 'fan–tas–tic'),
-    guideBreakBodySuffix: uiText('Take your time.', 'Take your time.'),
+    guideBreakBodyPrefix: uiText(t('learning.dyslexia.guideBreakBodyPrefix'), 'Read by parts (syl-la-bles):'),
+    guideBreakChip: uiText(t('learning.dyslexia.guideBreakChip'), 'fan–tas–tic'),
+    guideBreakBodySuffix: uiText(t('learning.dyslexia.guideBreakBodySuffix'), 'Take your time.'),
     guideSpellingBody: uiText(
-      "It's common to spell phonetically at first. Practice helps the brain build faster reading paths.",
+      t('learning.dyslexia.guideSpellingBody'),
       "It’s common to spell pho-net-i-cal-ly at first. Practice helps the brain build faster reading paths."
     ),
 
-    tipBreakTitle: uiText('Break It Down', 'Break It Down'),
+    tipBreakTitle: uiText(t('learning.dyslexia.tipBreakTitle'), 'Break It Down'),
     tipBreakBody: uiText(
-      'Focus on one lesson at a time. Small steps lead to big progress!',
+      t('learning.dyslexia.tipBreakBody'),
       'Focus on one lesson at a time. Small steps lead to big pro-gress!'
     ),
-    tipAudioTitle: uiText('Use Audio', 'Use Au-di-o'),
+    tipAudioTitle: uiText(t('learning.dyslexia.tipAudioTitle'), 'Use Au-di-o'),
     tipAudioBody: uiText(
-      'Listen to pronunciations to reinforce learning through multiple senses.',
+      t('learning.dyslexia.tipAudioBody'),
       'Listen to pro-nun-ci-a-tions to re-in-force learn-ing through mul-ti-ple sen-ses.'
     ),
-    tipPracticeTitle: uiText('Practice Regularly', 'Prac-tice Reg-u-lar-ly'),
+    tipPracticeTitle: uiText(t('learning.dyslexia.tipPracticeTitle'), 'Prac-tice Reg-u-lar-ly'),
     tipPracticeBody: uiText(
-      'Short, frequent sessions work better than long study periods.',
+      t('learning.dyslexia.tipPracticeBody'),
       'Short, fre-quent ses-sions work bet-ter than long stu-dy pe-ri-ods.'
     ),
 
-    lessonCta: uiText('Start Learning', 'Start Learn-ing'),
+    lessonCta: uiText(t('learning.dyslexia.lessonCta'), 'Start Learn-ing'),
   };
 
   return (
@@ -270,7 +295,7 @@ const DyslexiaView = () => {
         <div className="nav-brand">
           <h1 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <BookOpen size={22} aria-hidden="true" />
-            <span>LinguaEase Learning</span>
+            <span>{t('learning.common.brandLearning')}</span>
           </h1>
         </div>
         <div className="nav-menu">
@@ -279,7 +304,7 @@ const DyslexiaView = () => {
             type="button"
             onClick={toggleSyllableMode}
             className="btn-settings btn-syllable-toggle"
-            title="Toggle syllable-friendly text"
+            title={t('learning.dyslexia.toggleSyllableTitle')}
             aria-pressed={syllableMode}
           >
             {syllableMode ? (
@@ -287,28 +312,28 @@ const DyslexiaView = () => {
             ) : (
               <ToggleLeft size={18} aria-hidden="true" />
             )}
-            <span className="btn-syllable-toggle__label">Syllable Mode</span>
-            <span className="btn-syllable-toggle__state">{syllableMode ? 'On' : 'Off'}</span>
+            <span className="btn-syllable-toggle__label">{t('learning.dyslexia.syllableMode')}</span>
+            <span className="btn-syllable-toggle__state">{syllableMode ? t('learning.common.on') : t('learning.common.off')}</span>
           </button>
           <button
             type="button"
             onClick={() => navigate('/progress')}
             className="btn-settings"
-            title="View progress"
+            title={t('learning.dyslexia.viewProgressTitle')}
           >
-            Progress
+            {t('learning.common.progress')}
           </button>
           <button
             type="button"
             onClick={() => setShowSettings(true)}
             className="btn-settings"
-            title="Settings"
-            aria-label="Settings"
+            title={t('learning.common.settings')}
+            aria-label={t('learning.common.settings')}
           >
             <Settings size={18} aria-hidden="true" />
           </button>
           <button onClick={logout} className="btn-logout">
-            Logout
+            {t('learning.common.logout')}
           </button>
         </div>
       </nav>
@@ -328,13 +353,13 @@ const DyslexiaView = () => {
         </div>
 
         {/* Reading Guide */}
-        <section className="guide-section" aria-label="Reading guide">
+        <section className="guide-section" aria-label={t('learning.dyslexia.guideTitle')}>
           <h3>{copy.guideTitle}</h3>
           <div className="guide-grid">
             <div className="guide-card">
               <div className="guide-card__title">
                 <Volume2 size={18} aria-hidden="true" />
-                <span>Sounds First</span>
+                <span>{t('learning.dyslexia.guideSoundsFirstTitle')}</span>
               </div>
               <p>
                 {copy.guideSoundsBody}
@@ -343,7 +368,7 @@ const DyslexiaView = () => {
             <div className="guide-card">
               <div className="guide-card__title">
                 <BookOpen size={18} aria-hidden="true" />
-                <span>Break It Down</span>
+                <span>{t('learning.dyslexia.guideBreakItDownTitle')}</span>
               </div>
               <p>
                 {copy.guideBreakBodyPrefix}{' '}
@@ -354,7 +379,7 @@ const DyslexiaView = () => {
             <div className="guide-card">
               <div className="guide-card__title">
                 <Info size={18} aria-hidden="true" />
-                <span>Spelling is Sound-Based</span>
+                <span>{t('learning.dyslexia.guideSpellingSoundBasedTitle')}</span>
               </div>
               <p>
                 {copy.guideSpellingBody}
@@ -426,26 +451,31 @@ const DyslexiaView = () => {
               const percent = Math.min(100, Math.round(((progress.correctCount || 0) / total) * 100));
               // Convert status text to a CSS-safe class name (e.g. "Not Started" → "not-started")
               const statusClass = (progress.status || 'Not Started').replace(/\s+/g, '-').toLowerCase();
-              
               // Use adaptive difficulty level instead of hardcoded "Beginner"
               const difficultyLevel = currentDifficulty || lesson.level;
-              
+              const lessonTitle = isEnglish
+                ? (syllableMode ? lesson.titleSyllables : lesson.title)
+                : t(lesson.titleKey);
+              const lessonDescription = isEnglish
+                ? (syllableMode ? lesson.descriptionSyllables : lesson.description)
+                : t(lesson.descriptionKey);
+              const lessonLevel = isEnglish ? difficultyLevel : t('learning.common.beginner');
               return (
                 <div key={lesson.id} className="lesson-card">
                   <div className="lesson-icon" style={{ background: `linear-gradient(135deg, ${lesson.color}88, ${lesson.color})` }}>
                     <lesson.Icon size={28} aria-hidden="true" />
                   </div>
-                  <h4>{syllableMode ? lesson.titleSyllables : lesson.title}</h4>
-                  <p className="lesson-description">{syllableMode ? lesson.descriptionSyllables : lesson.description}</p>
+                  <h4>{lessonTitle}</h4>
+                  <p className="lesson-description">{lessonDescription}</p>
                   <div className="lesson-meta">
-                    <span className="badge">{difficultyLevel}</span>
-                    <span className={`status-pill status-${statusClass}`}>{progress.status}</span>
+                    <span className="badge">{lessonLevel}</span>
+                    <span className={`status-pill status-${statusClass}`}>{displayStatus(progress.status)}</span>
                   </div>
                   <div className="lesson-progress">
                     <div className="progress-bar-container">
                       <div className="progress-bar-fill" style={{ width: `${percent}%` }} />
                     </div>
-                    <span className="progress-text">{percent}% Complete</span>
+                    <span className="progress-text">{t('learning.common.percentComplete', { percent })}</span>
                   </div>
                   <button className="btn btn-primary btn-block" onClick={() => handleStartLesson(lesson)}>
                     {copy.lessonCta}

@@ -26,8 +26,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 // useParams extracts the :lessonId from the URL; useNavigate for programmatic routing
 import { useNavigate, useParams } from 'react-router-dom';
 // Service function that calls the backend GET /api/lessons/:id endpoint
-import { getLessonById } from '../../services/lessonService';
-// Auth context – provides the current user object (name, learningCondition, etc.)
+import { getLessonById, getLessonByIdWithContentLang } from '../../services/lessonService';
 import { useAuth } from '../../context/AuthContext';
 // Preferences context – provides user preferences and a function to apply them to the DOM
 import { usePreferences } from '../../context/PreferencesContext';
@@ -39,6 +38,9 @@ import lessonSamples from './lessonSamples';
 import './LessonPage.css';
 // Dyslexia utilities: get syllable-split lesson title and context hook
 import { getDyslexiaLessonTitle, useDyslexiaContext } from '../../utils/dyslexiaSyllableMode';
+import { useI18n } from '../../utils/i18n';
+import { resolveUiLanguageFromPreferences } from '../../utils/languagePrefs';
+import { localizeLessonPayload } from '../../utils/lessonI18n';
 
 /**
  * Estimate reading time (in minutes) from raw text content.
@@ -70,7 +72,13 @@ const LessonPage = () => {
 
   // User display/accessibility preferences and the function to apply them to the DOM
   const { preferences, applyPreferences } = usePreferences();
-
+  const { t } = useI18n();
+  const uiLanguage = resolveUiLanguageFromPreferences(preferences);
+  const contentLanguage = useMemo(() => {
+    const condition = String(user?.learningCondition || '').toLowerCase();
+    if (condition === 'dyslexia' || condition === 'adhd') return 'english';
+    return uiLanguage;
+  }, [uiLanguage, user?.learningCondition]);
   // ----- Component State -----
   // The fully loaded lesson object (from API or local samples)
   const [lesson, setLesson] = useState(null);
@@ -78,7 +86,7 @@ const LessonPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   // Holds a user-facing error/notice string when loading fails
   const [error, setError] = useState('');
-  // Incrementing this value forces the loadLesson effect to re-run (retry mechanism)
+  // Used to trigger reloads
   const [retryKey, setRetryKey] = useState(0);
 
   /**
@@ -118,7 +126,7 @@ const LessonPage = () => {
         // --- Path A: Local/sample lesson (no network required) ---
         if (isLocalLessonId && lessonSamples[lessonId]) {
           if (isMounted) {
-            setLesson(lessonSamples[lessonId]);
+            setLesson(localizeLessonPayload(lessonSamples[lessonId], uiLanguage, contentLanguage));
             setIsLoading(false);
           }
           return;
@@ -126,7 +134,9 @@ const LessonPage = () => {
 
         // --- Path B: Fetch lesson from backend API ---
         // EPIC 6.5.1: Load lesson content from backend correctly.
-        const data = await getLessonById(lessonId);
+        const data = contentLanguage && contentLanguage !== uiLanguage
+          ? await getLessonByIdWithContentLang(lessonId, uiLanguage, contentLanguage)
+          : await getLessonById(lessonId, uiLanguage);
         if (isMounted) {
           setLesson(data);
         }
@@ -134,11 +144,11 @@ const LessonPage = () => {
         if (isMounted) {
           // Graceful degradation: fall back to a sample if available
           if (lessonSamples[lessonId]) {
-            setLesson(lessonSamples[lessonId]);
-            setError('Live lesson data is unavailable. Showing a sample lesson instead.');
+            setLesson(localizeLessonPayload(lessonSamples[lessonId], uiLanguage, contentLanguage));
+            setError(t('lessons.liveUnavailableSample'));
           } else {
             // EPIC 6.5.3: Friendly, non-technical error message for the user.
-            setError('Unable to load this lesson. Please try again.');
+            setError(t('lessons.unableToLoad'));
           }
         }
       } finally {
@@ -154,7 +164,7 @@ const LessonPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [lessonId, isLocalLessonId, retryKey]);
+  }, [lessonId, isLocalLessonId, retryKey, t, uiLanguage, contentLanguage]);
 
   /**
    * EPIC 6.5.4: Retry handler – increments retryKey which is listed as a
@@ -199,11 +209,11 @@ const LessonPage = () => {
   // Dyslexia context hook – determines whether syllable mode should be applied
   const dyslexia = useDyslexiaContext({ condition, lessonId, defaultSyllableMode: true });
   // Resolve the lesson title – use syllable-split version for dyslexic users
-  const baseTitle = lesson?.title || (isLoading ? 'Loading lesson…' : 'Lesson');
+  const baseTitle = lesson?.title || (isLoading ? t('lessons.loadingLesson') : t('lessons.lesson'));
   const resolvedTitle = dyslexia.applySyllables ? getDyslexiaLessonTitle(lessonId, baseTitle) : baseTitle;
   // Build a human-readable subtitle with reading time and interaction count
   const resolvedSubtitle = isLoading
-    ? 'Preparing your lesson steps…'
+    ? t('lessons.preparingSteps')
     : `About ${readingTime} min • ${interactionCount} interactions`;
 
   /**
