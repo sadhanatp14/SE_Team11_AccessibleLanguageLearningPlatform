@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import InteractionCard from './InteractionCard';
 import VisualLesson from './VisualLesson';
 import { useAuth } from '../../context/AuthContext';
@@ -75,7 +75,7 @@ const getIllustration = (text) => {
   return defaultIllustration;
 };
 
-const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, onInteractionChange, onSectionComplete, totalInteractions: totalInteractionsProp }) => {
+const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, onInteractionChange, onSectionComplete, onInteractionResult, totalInteractions: totalInteractionsProp }) => {
   const { user } = useAuth();
   const condition = user?.learningCondition || '';
   const dyslexia = useDyslexiaContext({ condition, lessonId, defaultSyllableMode: true });
@@ -408,7 +408,7 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
     setCurrentTime(nextTime);
   };
 
-  const handleContinue = () => {
+  const handleContinue = useCallback(() => {
     setActiveInteractionIndex((prev) => {
       const nextIndex = Math.min(prev + 1, interactions.length);
       if (onInteractionChange && section) {
@@ -416,10 +416,16 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
       }
       return nextIndex;
     });
-  };
+  }, [interactions.length, onInteractionChange, section]);
 
-  const handleAnswered = ({ isCorrect, interactionId }) => {
+  const handleAnswered = useCallback(({ isCorrect, interactionId }) => {
     if (!lessonKey || !interactionId) return;
+    
+    // Propagate interaction result to parent for performance tracking
+    if (onInteractionResult && !isReplay) {
+      onInteractionResult({ interactionId, isCorrect });
+    }
+    
     if (isReplay) return;
 
     const existing = getLessonProgress(userKey, lessonKey);
@@ -447,7 +453,7 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
     } catch (e) {
       // ignore
     }
-  };
+  }, [lessonKey, userKey, onInteractionResult, isReplay, totalInteractionsProp]);
 
   if (!section) return null;
 
@@ -479,6 +485,7 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
 
           {displayedInteraction && (
             <InteractionCard
+              key={displayedInteraction.id || displayedInteraction._id || activeInteractionIndex}
               // EPIC 2.3.1-2.3.4, 2.4.1-2.4.4: Simple interactions + immediate feedback + hints/explanations/encouragement.
               lessonId={lessonKey}
               condition={condition}

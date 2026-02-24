@@ -26,10 +26,21 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 // Service for reading/writing per-user lesson progress from localStorage
 import { getAllLessonProgress, normalizeUserId } from '../../services/dyslexiaProgressService';
+// Performance-based difficulty adjustment service
+import { getCurrentDifficulty, getPerformanceSummary } from '../../services/difficultyAdjustmentService';
+// Next-lesson recommendation service
+import {
+  getNextLessonRecommendation,
+  skipRecommendation,
+  isRecommendationSkipped,
+  clearSkipState,
+} from '../../services/nextLessonService';
+// Next-lesson recommendation card component
+import NextLessonCard from './NextLessonCard';
 // Reusable profile/settings modal component
 import ProfileSettings from '../ProfileSettings';
 // Icon components from lucide-react used in the UI
-import { BookOpen, Hash, Info, MessageCircle, Settings, ToggleLeft, ToggleRight, Volume2 } from 'lucide-react';
+import { BookOpen, Hash, Info, MessageCircle, Settings, ToggleLeft, ToggleRight, Volume2, TrendingUp } from 'lucide-react';
 // Custom hook that persists the syllable-mode preference in localStorage
 import { useDyslexiaSyllableMode } from '../../utils/dyslexiaSyllableMode';
 // Component-specific styles
@@ -48,6 +59,15 @@ const DyslexiaView = () => {
 
   // Stores a mapping of lessonApiId → { status, correctCount } loaded from localStorage
   const [lessonProgress, setLessonProgress] = useState({});
+
+  // Current difficulty level based on performance (adaptive learning)
+  const [currentDifficulty, setCurrentDifficulty] = useState('Beginner');
+
+  // Performance summary for the user
+  const [performanceSummary, setPerformanceSummary] = useState(null);
+
+  // Next-lesson recommendation state
+  const [recommendation, setRecommendation] = useState(null);
 
   // Syllable mode: when true, all UI text is rendered with syllable-split variants.
   // The custom hook persists the preference to localStorage so it survives page reloads.
@@ -133,19 +153,61 @@ const DyslexiaView = () => {
   };
 
   /**
-   * Load lesson progress from localStorage whenever the user changes.
+   * Accept the recommended next lesson — navigate directly to that lesson page.
+   */
+  const handleAcceptRecommendation = (lesson) => {
+    navigate(`/lessons/${lesson.apiId}`);
+  };
+
+  /**
+   * Skip the recommendation — hide the card for this session.
+   * The learner can still manually pick any lesson from the grid below.
+   * Skipping does NOT affect progress in any way.
+   */
+  const handleSkipRecommendation = (lesson) => {
+    skipRecommendation(lesson.apiId);
+    // Force a re-render by updating the recommendation state with skip applied
+    setRecommendation((prev) => ({ ...prev, _skipped: true }));
+  };
+
+  /**
+   * Load lesson progress and difficulty level from localStorage whenever the user changes.
    * normalizeUserId extracts a stable key (e.g. ObjectId or email)
    * from the user object so progress is scoped per-user.
    * If no valid key exists (logged-out state), reset progress to empty.
+   * 
+   * Also loads current difficulty level and performance summary for adaptive learning.
    */
   useEffect(() => {
     const key = normalizeUserId(user);
     if (!key) {
       setLessonProgress({});
+      setCurrentDifficulty('Beginner');
+      setPerformanceSummary(null);
       return;
     }
+    
+    // Load lesson progress
     const progress = getAllLessonProgress(key);
     setLessonProgress(progress || {});
+    
+    // Load current difficulty level
+    const difficulty = getCurrentDifficulty(user);
+    setCurrentDifficulty(difficulty);
+    
+    // Load performance summary
+    const summary = getPerformanceSummary(user);
+    setPerformanceSummary(summary);
+    
+    // Compute next-lesson recommendation
+    const rec = getNextLessonRecommendation(user);
+    setRecommendation(rec);
+    
+    // Clear skip state if the recommended lesson has changed
+    // (e.g. user completed the previously skipped lesson)
+    if (rec.recommendation && !isRecommendationSkipped(rec.recommendation.apiId)) {
+      clearSkipState();
+    }
   }, [user]);
 
   /**
@@ -301,9 +363,59 @@ const DyslexiaView = () => {
           </div>
         </section>
 
+        {/* Next-Lesson Recommendation — shown prominently above the lessons grid */}
+        {recommendation && (
+          <section className="lessons-section" aria-label="Recommended next lesson">
+            {recommendation.allCompleted ? (
+              <NextLessonCard
+                allCompleted
+                completionMsg={recommendation.reason}
+                totalLessons={recommendation.totalLessons}
+                syllableMode={syllableMode}
+              />
+            ) : (
+              recommendation.recommendation &&
+              !isRecommendationSkipped(recommendation.recommendation.apiId) &&
+              !recommendation._skipped && (
+                <NextLessonCard
+                  recommendation={recommendation.recommendation}
+                  reason={recommendation.reason}
+                  completedCount={recommendation.completedCount}
+                  totalLessons={recommendation.totalLessons}
+                  syllableMode={syllableMode}
+                  onAccept={handleAcceptRecommendation}
+                  onSkip={handleSkipRecommendation}
+                />
+              )
+            )}
+          </section>
+        )}
+
         {/* Lessons Grid – renders a card for each lesson with icon, description, progress bar, and start button */}
         <div className="lessons-section">
-          <h3>{copy.lessonsTitle}</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3>{copy.lessonsTitle}</h3>
+            {performanceSummary && performanceSummary.totalLessons > 0 && (
+              <div className="performance-indicator" style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px', 
+                padding: '8px 16px', 
+                background: 'linear-gradient(135deg, #e8f5e9, #c8e6c9)',
+                borderRadius: '20px',
+                fontSize: '14px',
+                fontWeight: '600'
+              }}>
+                <TrendingUp size={18} aria-hidden="true" />
+                <span>Current Level: {currentDifficulty}</span>
+                {performanceSummary.recentAverage > 0 && (
+                  <span style={{ marginLeft: '8px', opacity: 0.8 }}>
+                    ({performanceSummary.recentAverage.toFixed(0)}% avg)
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
           <div className="lessons-grid">
             {lessons.map((lesson) => {
               // Look up stored progress for this lesson; default to 'Not Started' / 0 correct
@@ -314,6 +426,10 @@ const DyslexiaView = () => {
               const percent = Math.min(100, Math.round(((progress.correctCount || 0) / total) * 100));
               // Convert status text to a CSS-safe class name (e.g. "Not Started" → "not-started")
               const statusClass = (progress.status || 'Not Started').replace(/\s+/g, '-').toLowerCase();
+              
+              // Use adaptive difficulty level instead of hardcoded "Beginner"
+              const difficultyLevel = currentDifficulty || lesson.level;
+              
               return (
                 <div key={lesson.id} className="lesson-card">
                   <div className="lesson-icon" style={{ background: `linear-gradient(135deg, ${lesson.color}88, ${lesson.color})` }}>
@@ -322,7 +438,7 @@ const DyslexiaView = () => {
                   <h4>{syllableMode ? lesson.titleSyllables : lesson.title}</h4>
                   <p className="lesson-description">{syllableMode ? lesson.descriptionSyllables : lesson.description}</p>
                   <div className="lesson-meta">
-                    <span className="badge">{lesson.level}</span>
+                    <span className="badge">{difficultyLevel}</span>
                     <span className={`status-pill status-${statusClass}`}>{progress.status}</span>
                   </div>
                   <div className="lesson-progress">

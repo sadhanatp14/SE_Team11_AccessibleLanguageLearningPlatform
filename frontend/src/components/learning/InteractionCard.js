@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import { requestInteractionHelp, submitInteraction } from '../../services/interactionService';
 import GuidedSupport from './GuidedSupport';
 import { decorateDyslexiaText, useDyslexiaContext } from '../../utils/dyslexiaSyllableMode';
@@ -858,7 +859,7 @@ const InteractionCard = ({
         )}
       </div>
 
-      {isInstructionsOpen && (
+      {isInstructionsOpen && ReactDOM.createPortal(
         <div
           className="instructions-overlay"
           role="dialog"
@@ -918,7 +919,8 @@ const InteractionCard = ({
 
             <p className="instructions-muted">Tip: You can press Esc to close.</p>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </form>
   );
