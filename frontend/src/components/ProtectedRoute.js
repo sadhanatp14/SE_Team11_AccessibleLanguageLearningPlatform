@@ -10,25 +10,33 @@ import { useAuth } from '../context/AuthContext';
  * - If authenticated, render children.
  * - Otherwise redirect to `/login`.
  */
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+const ProtectedRoute = ({ children, roles }) => {
+  const { isAuthenticated, loading, user } = useAuth();
 
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '100vh' 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh'
       }}>
         <div className="loading"></div>
       </div>
     );
   }
 
-  // EPIC 1.2.3: Frontend route protection (redirect unauthenticated users to login)
-  // `replace` avoids leaving a protected URL in browser history.
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // If specific roles were provided, ensure the user's role matches
+  if (roles && (!user || !roles.includes(user.role))) {
+    // redirect to dashboard or show a 403-style placeholder
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
 };
 
 export default ProtectedRoute;

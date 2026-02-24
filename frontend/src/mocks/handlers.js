@@ -41,6 +41,7 @@ const handlers = [
                     email,
                     learningCondition: req.body.learningCondition,
                     requiresParentalApproval: req.body.isMinor || false,
+                    role: req.body.role || 'learner',
                 },
             })
         );

@@ -33,6 +33,7 @@ describe('Authentication Routes', () => {
                 name: userData.name,
                 email: userData.email,
                 learningCondition: userData.learningCondition,
+                role: 'learner',
             });
             expect(response.body.user.id).toBeDefined();
 
@@ -177,6 +178,33 @@ describe('Authentication Routes', () => {
                 .expect(400);
 
             expect(response.body.success).toBe(false);
+        });
+
+        it('should allow specifying an admin role on registration', async () => {
+            const adminData = {
+                name: 'Admin User',
+                email: 'adminrole@example.com',
+                password: 'password123',
+                learningCondition: 'none',
+                role: 'admin',
+            };
+
+            const response = await request(app)
+                .post('/api/auth/register')
+                .send(adminData)
+                .expect(201);
+
+            expect(response.body.user.role).toBe('admin');
+
+            // also ensure learner default still works
+            const learnerData = {
+                name: 'Learner 2',
+                email: 'learner2@example.com',
+                password: 'password123',
+                learningCondition: 'none',
+            };
+            const resp2 = await request(app).post('/api/auth/register').send(learnerData).expect(201);
+            expect(resp2.body.user.role).toBe('learner');
         });
 
         it('should handle minor registration with parent email', async () => {

@@ -272,7 +272,7 @@ const ADHDView = ({ initialLessonId = null }) => {
       const response = await fetch('/api/tts/speak', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, speed: rate, lang: backendTtsLangFor(uiLanguage) })
+        body: JSON.stringify({ text, speed: rate, lang: backendTtsLangFor(uiLanguage) })
       });
 
       if (!response.ok) throw new Error('Audio generation failed');
@@ -308,7 +308,7 @@ const ADHDView = ({ initialLessonId = null }) => {
       console.error("Server TTS failed, falling back to browser:", error);
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = rate;
-        utterance.lang = speechSynthesisLangFor(uiLanguage);
+      utterance.lang = speechSynthesisLangFor(uiLanguage);
       if (trackWords) {
         utterance.onboundary = (event) => {
           if (event.name === 'word') {
@@ -825,10 +825,10 @@ const ADHDView = ({ initialLessonId = null }) => {
 
     // EPIC 3.1.1: Provide a “Play Audio”/Listen control for lesson text.
     // EPIC 3.1.4: Keep audio speed slow and easy to understand (playbackRate).
-      playAudio(text, playbackRate, { trackWords: true, lang: uiLanguage });
+    playAudio(text, playbackRate, { trackWords: true, lang: uiLanguage });
   };
 
-  const handleAnswer = (option) => {
+  const handleAnswer = React.useCallback((option) => {
     if (isTransitioning) return;
 
     const step = steps[currentStepIndex];
@@ -857,7 +857,13 @@ const ADHDView = ({ initialLessonId = null }) => {
         // Removed audio feedback
       }
     }
-  };
+  }, [
+    isTransitioning,
+    steps,
+    currentStepIndex,
+    attempts,
+    handleNextStep,
+  ]);
 
   // EPIC 3.2: Voice-based answer input (STT) for quiz steps
   const answerRecognitionRef = React.useRef(null);

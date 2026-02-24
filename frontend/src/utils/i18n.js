@@ -44,6 +44,10 @@ const TRANSLATIONS = {
       parentEmail: 'Parent/Guardian Email',
       parentEmailPlaceholder: "Parent's email",
       registerFailed: 'Registration failed. Please try again.',
+      registerRole: 'Role',
+      adminUsersTitle: 'Registered Users',
+      adminBack: '\u2190 Back',
+      adminNoQuizAttempts: 'No quiz attempts yet.',
     },
     language: {
       chooseTitle: 'Choose your language',
@@ -320,6 +324,10 @@ const TRANSLATIONS = {
       parentEmail: 'பெற்றோர்/பாதுகாவலர் மின்னஞ்சல்',
       parentEmailPlaceholder: 'பெற்றோர் மின்னஞ்சல்',
       registerFailed: 'பதிவு தோல்வி. மீண்டும் முயற்சிக்கவும்.',
+      registerRole: 'பங்கு',
+      adminUsersTitle: 'பதிவுப் பயனர்கள்',
+      adminBack: '\u2190 திரும்ப',
+      adminNoQuizAttempts: 'வினாடி வினா முயற்சிகள் இல்லை.',
     },
     language: {
       chooseTitle: 'உங்கள் மொழியை தேர்ந்தெடுக்கவும்',

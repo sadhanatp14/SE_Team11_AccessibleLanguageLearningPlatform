@@ -26,6 +26,7 @@ const Register = () => {
     password: '',
     confirmPassword: '',
     learningCondition: 'none',
+    role: 'learner', // added role for admin support
     age: '',
     isMinor: false,
     parentEmail: '',
@@ -89,6 +90,9 @@ const Register = () => {
 
     // Remove fields that the backend doesn't need.
     const { confirmPassword, ...registrationData } = formData;
+
+    // Ensure role is sent (defaults to learner)
+    registrationData.role = registrationData.role || 'learner';
     // Normalize age to number or omit it entirely.
     registrationData.age = parseInt(registrationData.age) || undefined;
 
@@ -197,6 +201,19 @@ const Register = () => {
                 autoComplete="new-password"
                 placeholder={t('auth.confirmPasswordPlaceholder')}
               />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="role">{t('auth.registerRole')}</label>
+              <select
+                id="role"
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+              >
+                <option value="learner">Learner</option>
+                <option value="admin">Admin</option>
+              </select>
             </div>
 
             <div className="form-group">

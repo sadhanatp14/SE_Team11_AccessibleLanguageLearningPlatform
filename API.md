@@ -68,6 +68,16 @@ Notes:
 
 ### POST /api/auth/login
 
+
+### Admin Routes
+
+#### GET /api/admin/users
+List all users. Requires admin authentication.
+
+#### GET /api/admin/users/:id
+Return detailed information about a user, including progress summary and interaction records. Admin-only.
+
+
 Logs in a user.
 
 Request body:

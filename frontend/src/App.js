@@ -12,6 +12,8 @@ import Dashboard from './components/Dashboard'; // Main dashboard after login
 import ProtectedRoute from './components/ProtectedRoute'; // Wrapper for protected routes
 import LessonPage from './components/learning/LessonPage'; // Individual lesson view
 import ProgressPage from './components/ProgressPage'; // Progress tracking page
+import AdminUsersList from './components/admin/AdminUsersList';
+import AdminUserDetail from './components/admin/AdminUserDetail';
 import { useI18n } from './utils/i18n';
 
 // Diagnostic Component: Shows system warnings for missing browser features (TTS, voice recognition)
@@ -150,6 +152,23 @@ function App() {
               element={
                 <ProtectedRoute>
                   <LessonPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* Admin area */}
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute roles={["admin"]}>
+                  <AdminUsersList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/users/:id"
+              element={
+                <ProtectedRoute roles={["admin"]}>
+                  <AdminUserDetail />
                 </ProtectedRoute>
               }
             />
