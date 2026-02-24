@@ -35,6 +35,25 @@ describe('Authentication Routes', () => {
                 learningCondition: userData.learningCondition,
                 role: 'learner',
             });
+
+            // admin key tests
+            const adminData = {
+                name: 'AdminUser',
+                email: 'adminkey@example.com',
+                password: 'password123',
+                learningCondition: 'none',
+                role: 'admin',
+                adminKey: 'wrong',
+            };
+            // attempt with wrong key
+            const badRes = await request(app).post('/api/auth/register').send(adminData).expect(403);
+            expect(badRes.body.success).toBe(false);
+
+            // now set secret and try again
+            process.env.ADMIN_REG_SECRET = 'secret123';
+            adminData.adminKey = 'secret123';
+            const goodRes = await request(app).post('/api/auth/register').send(adminData).expect(201);
+            expect(goodRes.body.user.role).toBe('admin');
             expect(response.body.user.id).toBeDefined();
 
             // Verify user was created in database

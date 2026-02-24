@@ -8,7 +8,7 @@ import { AuthProvider } from '../../../context/AuthContext';
 // Simple smoke test for the registration form including role selector
 
 describe('Register component', () => {
-    it('renders role dropdown and allows selection', () => {
+    it('renders role dropdown and allows selection, showing/hiding dependent fields', () => {
         render(
             <BrowserRouter>
                 <AuthProvider>
@@ -19,11 +19,19 @@ describe('Register component', () => {
 
         const roleSelect = screen.getByLabelText(/role/i);
         expect(roleSelect).toBeInTheDocument();
-
-        // default value should be learner
         expect(roleSelect.value).toBe('learner');
+
+        // when learner, learning condition field should exist
+        expect(screen.getByLabelText(/learning condition/i)).toBeInTheDocument();
+        expect(screen.queryByLabelText(/admin key/i)).toBeNull();
 
         fireEvent.change(roleSelect, { target: { value: 'admin' } });
         expect(roleSelect.value).toBe('admin');
+
+        // admin key field should appear; learning condition should disappear
+        expect(screen.getByLabelText(/admin key/i)).toBeInTheDocument();
+        expect(screen.queryByLabelText(/learning condition/i)).toBeNull();
+        // under-13 checkbox should also be hidden
+        expect(screen.queryByLabelText(/under 13/i)).toBeNull();
     });
 });

@@ -40,6 +40,14 @@ router.post(
       .optional()
       .isIn(['learner', 'parent', 'admin'])
       .withMessage('Invalid role'),
+    body('adminKey')
+      .optional()
+      .custom((val, { req }) => {
+        if (req.body.role === 'admin' && !val) {
+          throw new Error('Admin key is required');
+        }
+        return true;
+      }),
   ],
   async (req, res) => {
     console.log('Registration endpoint hit with:', {
@@ -73,101 +81,111 @@ router.post(
       name,
       email,
       password,
-      learningCondition,
+      learningCondition: lc,
       age,
       parentEmail,
       isMinor,
       role,
-      message: 'User already exists with this email',
-    });
+      adminKey,
+    } = req.body;
+
+    // Admin registration requires a secret key
+    if (role === 'admin') {
+      if (!process.env.ADMIN_REG_SECRET) {
+        console.warn('Admin registration attempted but no secret configured');
+        return res.status(500).json({ success: false, message: 'Admin registration not configured' });
       }
+      if (adminKey !== process.env.ADMIN_REG_SECRET) {
+        return res.status(403).json({ success: false, message: 'Invalid admin key' });
+      }
+    }
 
-// EPIC 1.1.4: Parental control support for minors (age/isMinor + parentEmail)
-// Determine if parental approval is required
-const requiresParentalApproval = isMinor || (age && age < 13);
+    // EPIC 1.1.4: Parental control support for minors (age/isMinor + parentEmail)
+    // Determine if parental approval is required (only for non-admins)
+    const requiresParentalApproval = (role !== 'admin') && (isMinor || (age && age < 13));
 
-// Enforce consent checkbox when age indicates under 13
-if (age && age < 13 && !isMinor) {
-  return res.status(400).json({
-    success: false,
-    message: 'Under 13 requires parental approval. Please check the under 13 box.',
-  });
-}
+    // Enforce consent checkbox when age indicates under 13
+    if (role !== 'admin' && age && age < 13 && !isMinor) {
+      return res.status(400).json({
+        success: false,
+        message: 'Under 13 requires parental approval. Please check the under 13 box.',
+      });
+    }
 
-if (requiresParentalApproval && !parentEmail) {
-  return res.status(400).json({
-    success: false,
-    message: 'Parent email is required for minor accounts',
-  });
-}
+    if (role !== 'admin' && requiresParentalApproval && !parentEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'Parent email is required for minor accounts',
+      });
+    }
 
-// Create user
-// EPIC 1.1.3: Secure password hashing occurs in User model pre-save hook
-user = await User.create({
-  name,
-  email,
-  password,
-  learningCondition,
-  age,
-  parentEmail,
-  isMinor: requiresParentalApproval,
-  requiresParentalApproval,
-  role: role || 'learner', // allow explicit role, default learner
-});
+    // Create user
+    // EPIC 1.1.3: Secure password hashing occurs in User model pre-save hook
+    user = await User.create({
+      name,
+      email,
+      password,
+      learningCondition: role === 'admin' ? 'none' : lc,
+      age: role === 'admin' ? undefined : age,
+      parentEmail: role === 'admin' ? undefined : parentEmail,
+      isMinor: role === 'admin' ? false : requiresParentalApproval,
+      requiresParentalApproval,
+      role: role || 'learner', // allow explicit role, default learner
+    });
 
-// EPIC 1.3.3 / 1.4 / 1.5 / 1.6: Condition-specific default preferences on registration
-const defaultPreferences = await Preferences.create({
-  user: user._id,
-  // Set defaults based on condition
-  ...(learningCondition === 'dyslexia' && {
-    fontFamily: 'opendyslexic',
-    letterSpacing: 'wide',
-    lineHeight: 'relaxed',
-  }),
-  ...(learningCondition === 'adhd' && {
-    distractionFreeMode: true,
-    learningPace: 'normal',
-    breakReminders: true,
-  }),
-  ...(learningCondition === 'autism' && {
-    distractionFreeMode: true,
-    simplifiedLayout: true,
-    reduceAnimations: true,
-  }),
-});
+    // EPIC 1.3.3 / 1.4 / 1.5 / 1.6: Condition-specific default preferences on registration
+    const defaultPreferences = await Preferences.create({
+      user: user._id,
+      // Set defaults based on condition
+      ...(learningCondition === 'dyslexia' && {
+        fontFamily: 'opendyslexic',
+        letterSpacing: 'wide',
+        lineHeight: 'relaxed',
+      }),
+      ...(learningCondition === 'adhd' && {
+        distractionFreeMode: true,
+        learningPace: 'normal',
+        breakReminders: true,
+      }),
+      ...(learningCondition === 'autism' && {
+        distractionFreeMode: true,
+        simplifiedLayout: true,
+        reduceAnimations: true,
+      }),
+    });
 
-// Link preferences to user
-user.preferences = defaultPreferences._id;
-await user.save();
+    // Link preferences to user
+    user.preferences = defaultPreferences._id;
+    await user.save();
 
-// Generate token
-const token = generateToken(user._id);
+    // Generate token
+    const token = generateToken(user._id);
 
-res.status(201).json({
-  success: true,
-  message: 'Registration successful',
-  token,
-  user: {
-    id: user._id,
-    name: user.name,
-    email: user.email,
-    learningCondition: user.learningCondition,
-    requiresParentalApproval: user.requiresParentalApproval,
-    role: user.role,
-  },
-});
-    } catch (error) {
-  console.error('Registration error:', error);
-  // Handle duplicate key (race condition) with 409
-  if (error && error.code === 11000) {
-    return res.status(409).json({ success: false, message: 'Email already in use' });
+    res.status(201).json({
+      success: true,
+      message: 'Registration successful',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        learningCondition: user.learningCondition,
+        requiresParentalApproval: user.requiresParentalApproval,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    // Handle duplicate key (race condition) with 409
+    if (error && error.code === 11000) {
+      return res.status(409).json({ success: false, message: 'Email already in use' });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Server error during registration',
+      error: error.message,
+    });
   }
-  res.status(500).json({
-    success: false,
-    message: 'Server error during registration',
-    error: error.message,
-  });
-}
   }
 );
 

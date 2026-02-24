@@ -15,7 +15,7 @@ const TestComponent = () => {
             <div data-testid="loading">{loading ? 'Loading' : 'Not Loading'}</div>
             <div data-testid="authenticated">{isAuthenticated ? 'Yes' : 'No'}</div>
             <div data-testid="user">{user ? user.email : 'No User'}</div>
-            <button onClick={() => register({ name: 'Test', email: 'test@example.com', password: 'password123', learningCondition: 'none', role: 'admin' })}>
+            <button onClick={() => register({ name: 'Test', email: 'test@example.com', password: 'password123', learningCondition: 'none', role: 'admin', adminKey: 'mock-secret' })}>
                 Register
             </button>
             <button onClick={() => login({ email: 'test@example.com', password: 'password123' })}>
@@ -72,6 +72,15 @@ describe('AuthContext', () => {
         const saved = JSON.parse(localStorage.setItem.mock.calls.find(c => c[0] === 'user')[1]);
         expect(saved.role).toBe('admin');
     });
+
+    it('should fail to register admin without key', async () => {
+        const user = userEvent.setup();
+        renderWithAuth();
+        const { register } = useAuth();
+        const result = await register({ name: 'Test2', email: 'test2@example.com', password: 'password123', learningCondition: 'none', role: 'admin', adminKey: 'wrong' });
+        expect(result.success).toBe(false);
+    });
+
 
     it('should login user and store token', async () => {
         const user = userEvent.setup();
