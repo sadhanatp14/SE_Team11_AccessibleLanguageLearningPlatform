@@ -119,73 +119,75 @@ router.post(
       });
     }
 
-    // Create user
-    // EPIC 1.1.3: Secure password hashing occurs in User model pre-save hook
-    user = await User.create({
-      name,
-      email,
-      password,
-      learningCondition: role === 'admin' ? 'none' : lc,
-      age: role === 'admin' ? undefined : age,
-      parentEmail: role === 'admin' ? undefined : parentEmail,
-      isMinor: role === 'admin' ? false : requiresParentalApproval,
-      requiresParentalApproval,
-      role: role || 'learner', // allow explicit role, default learner
-    });
+    try {
+      const learningCondition = role === 'admin' ? 'none' : lc;
 
-    // EPIC 1.3.3 / 1.4 / 1.5 / 1.6: Condition-specific default preferences on registration
-    const defaultPreferences = await Preferences.create({
-      user: user._id,
-      // Set defaults based on condition
-      ...(learningCondition === 'dyslexia' && {
-        fontFamily: 'opendyslexic',
-        letterSpacing: 'wide',
-        lineHeight: 'relaxed',
-      }),
-      ...(learningCondition === 'adhd' && {
-        distractionFreeMode: true,
-        learningPace: 'normal',
-        breakReminders: true,
-      }),
-      ...(learningCondition === 'autism' && {
-        distractionFreeMode: true,
-        simplifiedLayout: true,
-        reduceAnimations: true,
-      }),
-    });
+      // Create user
+      // EPIC 1.1.3: Secure password hashing occurs in User model pre-save hook
+      const user = await User.create({
+        name,
+        email,
+        password,
+        learningCondition,
+        age: role === 'admin' ? undefined : age,
+        parentEmail: role === 'admin' ? undefined : parentEmail,
+        isMinor: role === 'admin' ? false : requiresParentalApproval,
+        requiresParentalApproval,
+        role: role || 'learner',
+      });
 
-    // Link preferences to user
-    user.preferences = defaultPreferences._id;
-    await user.save();
+      // EPIC 1.3.3 / 1.4 / 1.5 / 1.6: Condition-specific default preferences on registration
+      const defaultPreferences = await Preferences.create({
+        user: user._id,
+        ...(learningCondition === 'dyslexia' && {
+          fontFamily: 'opendyslexic',
+          letterSpacing: 'wide',
+          lineHeight: 'relaxed',
+        }),
+        ...(learningCondition === 'adhd' && {
+          distractionFreeMode: true,
+          learningPace: 'normal',
+          breakReminders: true,
+        }),
+        ...(learningCondition === 'autism' && {
+          distractionFreeMode: true,
+          simplifiedLayout: true,
+          reduceAnimations: true,
+        }),
+      });
 
-    // Generate token
-    const token = generateToken(user._id);
+      // Link preferences to user
+      user.preferences = defaultPreferences._id;
+      await user.save();
 
-    res.status(201).json({
-      success: true,
-      message: 'Registration successful',
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        learningCondition: user.learningCondition,
-        requiresParentalApproval: user.requiresParentalApproval,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    console.error('Registration error:', error);
-    // Handle duplicate key (race condition) with 409
-    if (error && error.code === 11000) {
-      return res.status(409).json({ success: false, message: 'Email already in use' });
+      // Generate token
+      const token = generateToken(user._id);
+
+      res.status(201).json({
+        success: true,
+        message: 'Registration successful',
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          learningCondition: user.learningCondition,
+          requiresParentalApproval: user.requiresParentalApproval,
+          role: user.role,
+        },
+      });
+    } catch (error) {
+      console.error('Registration error:', error);
+      // Handle duplicate key (race condition) with 409
+      if (error && error.code === 11000) {
+        return res.status(409).json({ success: false, message: 'Email already in use' });
+      }
+      res.status(500).json({
+        success: false,
+        message: 'Server error during registration',
+        error: error.message,
+      });
     }
-    res.status(500).json({
-      success: false,
-      message: 'Server error during registration',
-      error: error.message,
-    });
-  }
   }
 );
 

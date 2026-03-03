@@ -3,10 +3,9 @@ import { requestInteractionHelp, submitInteraction } from '../../services/intera
 import GuidedSupport from './GuidedSupport';
 import { decorateDyslexiaText, useDyslexiaContext } from '../../utils/dyslexiaSyllableMode';
 import { usePreferences } from '../../context/PreferencesContext';
+import { useI18n } from '../../utils/i18n';
 import {
   backendTtsLangFor,
-  bilingualPrimaryLanguageForMode,
-  isBilingualTextMode,
   pickByLanguage,
   resolveBilingualTextModeFromPreferences,
   resolveUiLanguageFromPreferences,
@@ -56,11 +55,9 @@ const InteractionCard = ({
   onAnswered,
 }) => {
   const { preferences } = usePreferences();
+  const { t } = useI18n();
   const uiLanguage = resolveUiLanguageFromPreferences(preferences);
   const bilingualTextMode = resolveBilingualTextModeFromPreferences(preferences);
-  const primaryLessonLanguage = isBilingualTextMode(bilingualTextMode)
-    ? (bilingualPrimaryLanguageForMode(bilingualTextMode) || uiLanguage)
-    : uiLanguage;
   const resolvedContentLanguage = String(contentLanguage || '').trim() ? contentLanguage : uiLanguage;
   const [selectedAnswer, setSelectedAnswer] = useState('');
   const [selectedOptionIndex, setSelectedOptionIndex] = useState(null);
@@ -215,12 +212,9 @@ const InteractionCard = ({
   }, [enableTts, enableTimer, interaction?.type, readOnly]);
 
   const instructionSteps = useMemo(() => {
-    return instructionStepDicts.map((step) => pickByLanguage(primaryLessonLanguage, step));
-  }, [instructionStepDicts, primaryLessonLanguage]);
-
-  const instructionStepsEnglish = useMemo(() => {
-    return instructionStepDicts.map((step) => step.english);
-  }, [instructionStepDicts]);
+    // 5.2: Instructions should display only in selected UI language.
+    return instructionStepDicts.map((step) => pickByLanguage(uiLanguage, step));
+  }, [instructionStepDicts, uiLanguage]);
 
   const instructionHeaderDict = useMemo(
     () => ({
@@ -232,22 +226,22 @@ const InteractionCard = ({
   );
 
   const instructionText = useMemo(() => {
-    const header = pickByLanguage(primaryLessonLanguage, instructionHeaderDict);
+    const header = pickByLanguage(uiLanguage, instructionHeaderDict);
     return [header, ...instructionSteps].join(' ');
-  }, [instructionHeaderDict, instructionSteps, primaryLessonLanguage]);
+  }, [instructionHeaderDict, instructionSteps, uiLanguage]);
 
 
   const displayedInstructionText = useMemo(() => {
     if (!dyslexia.applySyllables) return instructionText;
-    if (String(primaryLessonLanguage).toLowerCase() !== 'english') return instructionText;
+    if (String(uiLanguage).toLowerCase() !== 'english') return instructionText;
     return decorateDyslexiaText(instructionText);
-  }, [dyslexia.applySyllables, instructionText, primaryLessonLanguage]);
+  }, [dyslexia.applySyllables, instructionText, uiLanguage]);
 
   const displayedInstructionSteps = useMemo(() => {
     if (!dyslexia.applySyllables) return instructionSteps;
-    if (String(primaryLessonLanguage).toLowerCase() !== 'english') return instructionSteps;
+    if (String(uiLanguage).toLowerCase() !== 'english') return instructionSteps;
     return instructionSteps.map((step) => decorateDyslexiaText(step));
-  }, [dyslexia.applySyllables, instructionSteps, primaryLessonLanguage]);
+  }, [dyslexia.applySyllables, instructionSteps, uiLanguage]);
 
   const stripWordPunctuation = useCallback((value) => {
     // Remove common ASCII + Unicode punctuation so word highlighting matches
@@ -360,10 +354,16 @@ const InteractionCard = ({
       const audio = new Audio(url);
       audioRef.current = audio;
       audio.playbackRate = overrides.rate ?? 0.85;
-      audio.play().catch(e => console.warn("Backend Play error", e));
+      const cleanupUrl = () => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (e) {
+          // ignore
+        }
+      };
 
       audio.onended = () => {
-        URL.revokeObjectURL(url);
+        cleanupUrl();
         if (overrides.trackWords) {
           instructionBoundaryRef.current = null;
           setInstructionsActiveWord('');
@@ -374,6 +374,22 @@ const InteractionCard = ({
           }
         }
       };
+
+      // NOTE: audio.play() can fail due to autoplay/user-gesture policies if the
+      // fetch took long enough that the click activation expired. If it fails,
+      // fall back to browser speechSynthesis in the catch block.
+      try {
+        await audio.play();
+      } catch (playError) {
+        try {
+          audio.pause();
+        } catch (e) {
+          // ignore
+        }
+        audioRef.current = null;
+        cleanupUrl();
+        throw playError;
+      }
 
       if (overrides.trackWords) {
         startInstructionBoundaryTracking(text, overrides.rate ?? 0.85);
@@ -602,9 +618,11 @@ const InteractionCard = ({
         if (!isCorrect) {
           if (interaction.explanation) {
             payload.explanation = interaction.explanation;
+            if (interaction.explanationI18n) payload.explanationI18n = interaction.explanationI18n;
           }
           if (interaction.hint && nextAttempts >= hintTriggerAttempts) {
             payload.hint = interaction.hint;
+            if (interaction.hintI18n) payload.hintI18n = interaction.hintI18n;
           }
           payload.encouragement = pickEncouragement();
         }
@@ -665,10 +683,13 @@ const InteractionCard = ({
         const payload = {};
         if (interaction.hint && attempts >= hintTriggerAttempts) {
           payload.hint = interaction.hint;
+          if (interaction.hintI18n) payload.hintI18n = interaction.hintI18n;
         } else if (interaction.explanation) {
           payload.explanation = interaction.explanation;
+          if (interaction.explanationI18n) payload.explanationI18n = interaction.explanationI18n;
         } else if (interaction.hint) {
           payload.hint = interaction.hint;
+          if (interaction.hintI18n) payload.hintI18n = interaction.hintI18n;
         }
         payload.encouragement = pickEncouragement();
         setGuidance(resolveGuidance(payload));
@@ -707,10 +728,13 @@ const InteractionCard = ({
   }, [result, autoAdvanceOnCorrect, onContinue, speak, disableAutoSpeak]);
 
   const guidanceMessage = guidance?.message || '';
+  const guidanceMessageI18n = guidance?.i18n || null;
   const guidanceTone = guidance?.tone || '';
 
   const handleReplayNarration = () => {
-    speak(interaction?.question);
+    speak(interaction?.question, {
+      languageKey: resolvedContentLanguage,
+    });
   };
 
   const handlePlayInstructions = () => {
@@ -816,33 +840,33 @@ const InteractionCard = ({
         <div className="interaction-timer" aria-live="polite">
           {enableTimer && !readOnly ? (
             <>
-              <span className="timer-label">Time</span>
+              <span className="timer-label">{t('learning.interaction.timeLabel')}</span>
               <span className={`timer-value ${timeLeft !== null && timeLeft <= 5 ? 'warn' : ''}`}>
                 {timeLeft ?? resolvedTimeLimit}s
               </span>
             </>
           ) : (
-            <span className="timer-label">No timer</span>
+            <span className="timer-label">{t('learning.interaction.noTimer')}</span>
           )}
         </div>
         <button
           type="button"
           className="narration-btn fx-pressable fx-focus"
           onClick={handleReplayNarration}
-          aria-label="Replay narration"
+          aria-label={t('learning.interaction.replayNarrationAria')}
           disabled={!enableTts}
         >
           {/* EPIC 2.1.2, 2.3.4: Learner-controlled question narration (simple control, not overwhelming). */}
-          Listen to Question
+          {t('learning.interaction.listenToQuestion')}
         </button>
 
         <button
           type="button"
           className="instructions-btn fx-pressable fx-focus"
           onClick={() => setIsInstructionsOpen(true)}
-          aria-label="Open instructions"
+          aria-label={t('learning.interaction.openInstructionsAria')}
         >
-          Instructions
+          {t('learning.interaction.instructionsButton')}
         </button>
       </div>
 
@@ -893,7 +917,7 @@ const InteractionCard = ({
           </div>
         ) : isShortAnswer ? (
           <div className="interaction-input">
-            <label htmlFor={`short-${interaction.id}`} className="sr-only">Type your answer</label>
+            <label htmlFor={`short-${interaction.id}`} className="sr-only">{t('learning.interaction.typeYourAnswer')}</label>
             <input
               id={`short-${interaction.id}`}
               type="text"
@@ -902,7 +926,7 @@ const InteractionCard = ({
                 setTypedAnswer(event.target.value);
                 setSelectedAnswer('');
               }}
-              placeholder="Type your answer here"
+              placeholder={t('learning.interaction.typeYourAnswerPlaceholder')}
               disabled={readOnly || isLocked}
             />
           </div>
@@ -943,11 +967,11 @@ const InteractionCard = ({
               >
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
                   <Mic size={18} aria-hidden="true" />
-                  <span>{isListening ? 'Stop Voice' : 'Answer by Voice'}</span>
+                  <span>{isListening ? t('learning.interaction.stopVoice') : t('learning.interaction.answerByVoice')}</span>
                 </span>
               </button>
               {lastTranscript && (
-                <span className="voice-transcript">Heard: {lastTranscript}</span>
+                <span className="voice-transcript">{t('learning.interaction.heardPrefix')} {lastTranscript}</span>
               )}
             </div>
             {voiceError && <p className="interaction-feedback warning">{voiceError}</p>}
@@ -956,7 +980,7 @@ const InteractionCard = ({
 
         {!isShortAnswer && (
           <div className="interaction-typed-fallback">
-            <label htmlFor={`typed-${interaction.id}`}>Prefer typing?</label>
+            <label htmlFor={`typed-${interaction.id}`}>{t('learning.interaction.preferTyping')}</label>
             <input
               id={`typed-${interaction.id}`}
               type="text"
@@ -965,7 +989,7 @@ const InteractionCard = ({
                 setTypedAnswer(event.target.value);
                 setSelectedAnswer('');
               }}
-              placeholder="Type your answer"
+              placeholder={t('learning.interaction.typeYourAnswerShort')}
               disabled={readOnly || isLocked}
             />
           </div>
@@ -999,13 +1023,16 @@ const InteractionCard = ({
 
       {readOnly && (
         <p className="interaction-feedback" role="status">
-          Replay mode: interactions are read-only.
+          {t('learning.interaction.replayReadOnly')}
         </p>
       )}
 
       <GuidedSupport
         // EPIC 2.4.1-2.4.4: One-tap access to hints/explanations and encouraging messages.
         message={guidanceMessage}
+        messageI18n={guidanceMessageI18n}
+        bilingualTextMode={bilingualTextMode}
+        uiLanguage={uiLanguage}
         tone={guidanceTone}
         onHelp={handleHelp}
         isLoading={isHelping}
@@ -1014,13 +1041,13 @@ const InteractionCard = ({
       <div className="interaction-actions">
         {!isAnswered ? (
           <button type="submit" className="btn-submit fx-pressable fx-focus" disabled={readOnly || !hasAnswer || isSubmitting}>
-            {isSubmitting ? 'Checking…' : 'Submit Answer'}
+            {isSubmitting ? t('learning.interaction.checking') : t('learning.interaction.submitAnswer')}
           </button>
         ) : (
           <>
             {!isCorrect && (
               <button type="button" className="btn-retry fx-pressable fx-focus" onClick={handleRetry}>
-                Try Again
+                {t('learning.interaction.tryAgain')}
               </button>
             )}
             {isCorrect && onContinue && (
@@ -1030,7 +1057,7 @@ const InteractionCard = ({
                 onClick={onContinue}
                 disabled={disableContinue}
               >
-                Continue
+                {t('app.continue')}
               </button>
             )}
           </>
@@ -1056,12 +1083,12 @@ const InteractionCard = ({
             onMouseDown={(e) => e.stopPropagation()}
           >
             <div className="instructions-header">
-              <h3 id="instructions-title">Instructions</h3>
+              <h3 id="instructions-title">{t('learning.interaction.instructionsTitle')}</h3>
               <button
                 type="button"
                 className="instructions-close fx-pressable fx-focus"
                 onClick={closeInstructions}
-                aria-label="Close instructions"
+                aria-label={t('learning.interaction.closeInstructionsAria')}
               >
                 ×
               </button>
@@ -1077,9 +1104,6 @@ const InteractionCard = ({
                   <div className="instructions-step-primary">
                     {renderHighlightableText(step, instructionsActiveWord)}
                   </div>
-                  {isBilingualTextMode(bilingualTextMode) ? (
-                    <div className="instructions-step-secondary">{instructionStepsEnglish[idx]}</div>
-                  ) : null}
                 </li>
               ))}
             </ol>
@@ -1091,18 +1115,18 @@ const InteractionCard = ({
                 onClick={handlePlayInstructions}
                 disabled={!enableTts}
               >
-                Play / Replay
+                {t('learning.interaction.playReplay')}
               </button>
               <button
                 type="button"
                 className="btn-instructions-stop fx-pressable fx-focus"
                 onClick={stopInstructionAudio}
               >
-                Stop
+                {t('learning.common.stop')}
               </button>
             </div>
 
-            <p className="instructions-muted">Tip: You can press Esc to close.</p>
+            <p className="instructions-muted">{t('learning.interaction.tipEscToClose')}</p>
           </div>
         </div>
       )}
@@ -1113,13 +1137,13 @@ const InteractionCard = ({
 const resolveGuidance = (payload) => {
   if (!payload) return null;
   if (payload.explanation) {
-    return { message: payload.explanation, tone: 'explanation' };
+    return { message: payload.explanation, i18n: payload.explanationI18n || null, tone: 'explanation' };
   }
   if (payload.hint) {
-    return { message: payload.hint, tone: 'hint' };
+    return { message: payload.hint, i18n: payload.hintI18n || null, tone: 'hint' };
   }
   if (payload.encouragement) {
-    return { message: payload.encouragement, tone: 'encouragement' };
+    return { message: payload.encouragement, i18n: null, tone: 'encouragement' };
   }
   return null;
 };

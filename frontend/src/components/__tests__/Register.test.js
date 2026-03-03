@@ -56,9 +56,11 @@ describe('Register Component', () => {
         const user = userEvent.setup();
         renderRegister();
 
-        const minorCheckbox = screen.getByRole('checkbox', {
+        // Use getAllByRole to handle multiple checkboxes from bilingual rendering
+        const minorCheckboxes = screen.getAllByRole('checkbox', {
             name: /i am under 13 years old/i,
         });
+        const minorCheckbox = minorCheckboxes[0];
 
         await user.click(minorCheckbox);
 
@@ -69,9 +71,11 @@ describe('Register Component', () => {
         const user = userEvent.setup();
         renderRegister();
 
-        const minorCheckbox = screen.getByRole('checkbox', {
+        // Use getAllByRole to handle multiple checkboxes from bilingual rendering
+        const minorCheckboxes = screen.getAllByRole('checkbox', {
             name: /i am under 13 years old/i,
         });
+        const minorCheckbox = minorCheckboxes[0];
 
         // Check and then uncheck
         await user.click(minorCheckbox);
@@ -123,9 +127,11 @@ describe('Register Component', () => {
         await user.type(screen.getByLabelText(/^password/i), 'password123');
         await user.type(screen.getByLabelText(/confirm password/i), 'password123');
         await user.selectOptions(screen.getByLabelText(/learning condition/i), 'dyslexia');
-        await user.click(
-            screen.getByRole('checkbox', { name: /i am under 13 years old/i })
-        );
+        // Use getAllByRole to handle multiple checkboxes from bilingual rendering
+        const minorCheckboxes = screen.getAllByRole('checkbox', {
+            name: /i am under 13 years old/i,
+        });
+        await user.click(minorCheckboxes[0]);
         await user.click(screen.getByRole('button', { name: /create.*account/i }));
 
         await waitFor(() => {

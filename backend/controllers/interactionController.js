@@ -69,6 +69,10 @@ const localizeInteractionText = (interaction, uiLanguage) => {
       : undefined,
     hint: pickI18nString(uiLanguage, interaction?.hint || '', interaction?.hintI18n),
     explanation: pickI18nString(uiLanguage, interaction?.explanation || '', interaction?.explanationI18n),
+    // Pass through i18n objects (if present) so clients can render bilingual help text.
+    // Keeping `hint` / `explanation` as strings preserves backward compatibility.
+    hintI18n: interaction?.hintI18n,
+    explanationI18n: interaction?.explanationI18n,
   };
 };
 
@@ -169,10 +173,16 @@ exports.submitInteraction = async (req, res) => {
     };
 
     if (!isCorrect) {
-      if (localized.explanation) response.explanation = localized.explanation;
+      if (localized.explanation) {
+        response.explanation = localized.explanation;
+        if (localized.explanationI18n) response.explanationI18n = localized.explanationI18n;
+      }
 
       const hintTriggerAttempts = getHintTriggerAttempts();
-      if (localized.hint && nextAttempts >= hintTriggerAttempts) response.hint = localized.hint;
+      if (localized.hint && nextAttempts >= hintTriggerAttempts) {
+        response.hint = localized.hint;
+        if (localized.hintI18n) response.hintI18n = localized.hintI18n;
+      }
 
       response.encouragement = pickEncouragement();
     }
@@ -237,10 +247,13 @@ exports.requestHelp = async (req, res) => {
 
     if (localized.hint && attempts >= hintTriggerAttempts) {
       response.hint = localized.hint;
+      if (localized.hintI18n) response.hintI18n = localized.hintI18n;
     } else if (localized.explanation) {
       response.explanation = localized.explanation;
+      if (localized.explanationI18n) response.explanationI18n = localized.explanationI18n;
     } else if (localized.hint) {
       response.hint = localized.hint;
+      if (localized.hintI18n) response.hintI18n = localized.hintI18n;
     }
 
     response.encouragement = pickEncouragement();

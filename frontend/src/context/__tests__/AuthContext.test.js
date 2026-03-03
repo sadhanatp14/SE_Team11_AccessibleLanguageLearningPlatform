@@ -75,10 +75,22 @@ describe('AuthContext', () => {
 
     it('should fail to register admin without key', async () => {
         const user = userEvent.setup();
+        server.use(
+            rest.post('*/api/auth/register', (req, res, ctx) => {
+                return res(
+                    ctx.status(403),
+                    ctx.json({ success: false, message: 'Invalid admin key' })
+                );
+            })
+        );
         renderWithAuth();
-        const { register } = useAuth();
-        const result = await register({ name: 'Test2', email: 'test2@example.com', password: 'password123', learningCondition: 'none', role: 'admin', adminKey: 'wrong' });
-        expect(result.success).toBe(false);
+
+        const registerButton = screen.getByRole('button', { name: /register/i });
+        await user.click(registerButton);
+
+        await waitFor(() => {
+            expect(screen.getByTestId('authenticated')).toHaveTextContent('No');
+        });
     });
 
 

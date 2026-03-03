@@ -1,6 +1,7 @@
 const request = require('supertest');
 const express = require('express');
 const mongoose = require('mongoose');
+const { ObjectId } = require('mongoose').Types;
 const jwt = require('jsonwebtoken');
 const adminRouter = require('../admin');
 const authRouter = require('../auth');
@@ -83,13 +84,13 @@ describe('Admin Routes', () => {
 
         // add some progress and interactions for the normal user
         await UserProgress.create({
-            userId: normalUser._id,
-            lessonId: mongoose.Types.ObjectId(),
+            userId: new ObjectId(normalUser._id),
+            lessonId: new ObjectId(),
             completed: true,
         });
         await UserInteraction.create({
             userId: normalUser._id,
-            lessonId: mongoose.Types.ObjectId(),
+            lessonId: new ObjectId(),
             interactionId: 'int1',
             attempts: 2,
             isCorrect: true,
