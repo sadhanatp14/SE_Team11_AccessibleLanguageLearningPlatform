@@ -111,7 +111,6 @@ const Register = () => {
 
     // If admin role, include adminKey and override learningCondition
     if (registrationData.role === 'admin') {
-      registrationData.adminKey = registrationData.adminKey;
       registrationData.learningCondition = 'none';
       delete registrationData.age;
       delete registrationData.isMinor;

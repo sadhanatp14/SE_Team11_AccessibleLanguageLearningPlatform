@@ -753,7 +753,7 @@ const ADHDView = ({ initialLessonId = null }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialLessonId, activeLesson]);
 
-  const handleNextStep = () => {
+  const handleNextStep = useCallback(() => {
     window.speechSynthesis.cancel(); // Stop audio on next
     if (currentStepIndex < steps.length - 1) {
       setCurrentStepIndex(prev => prev + 1);
@@ -765,7 +765,7 @@ const ADHDView = ({ initialLessonId = null }) => {
       setLessonPhase('pronunciation');
       // Removed completion audio
     }
-  }
+  }, [currentStepIndex, steps.length]);
 
   useEffect(() => {
     if (lessonPhase !== 'complete') return;
