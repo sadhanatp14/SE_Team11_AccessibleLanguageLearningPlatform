@@ -22,6 +22,55 @@ const normalizeAnswer = (value) => {
   return String(value ?? '').trim().toLowerCase();
 };
 
+const normalizeVoiceText = (value) => {
+  const raw = String(value ?? '').trim().toLowerCase();
+  if (!raw) return '';
+
+  const withoutPunctuation = raw
+    .replace(/[.,!?;:()"'{}\u005B\u005D\u201C\u201D\u2018\u2019\u2013\u2014]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  try {
+    return withoutPunctuation
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .trim();
+  } catch {
+    return withoutPunctuation;
+  }
+};
+
+const compactVoiceText = (value) => normalizeVoiceText(value).replace(/\s+/g, '');
+
+const voiceMatchesOption = (heard, option) => {
+  const heardNorm = normalizeVoiceText(heard);
+  const optionNorm = normalizeVoiceText(option);
+  if (!heardNorm || !optionNorm) return false;
+
+  if (heardNorm === optionNorm) return true;
+
+  const heardCompact = compactVoiceText(heardNorm);
+  const optionCompact = compactVoiceText(optionNorm);
+  if (heardCompact && optionCompact && heardCompact === optionCompact) return true;
+
+  // Avoid over-matching tiny terms like "a".
+  const minLen = Math.min(heardNorm.length, optionNorm.length);
+  if (minLen >= 3 && (heardNorm.includes(optionNorm) || optionNorm.includes(heardNorm))) {
+    return true;
+  }
+
+  // Helpful aliases for true/false questions.
+  if (optionNorm === 'true') {
+    return ['yes', 'yeah', 'correct', 'right'].includes(heardNorm);
+  }
+  if (optionNorm === 'false') {
+    return ['no', 'wrong', 'incorrect'].includes(heardNorm);
+  }
+
+  return false;
+};
+
 const encouragementMessages = [
   "You're getting closer!",
   'Nice try. Let’s look at this together.',
@@ -755,7 +804,7 @@ const InteractionCard = ({
     const recognition = new SpeechRecognition();
     recognition.lang = speechSynthesisLangFor(resolvedContentLanguage);
     recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+    recognition.maxAlternatives = 5;
     return recognition;
   };
 
@@ -778,18 +827,19 @@ const InteractionCard = ({
     };
 
     recognition.onresult = (event) => {
-      const transcript = event.results?.[0]?.[0]?.transcript || '';
-      const cleaned = transcript.trim();
+      const altList = Array.from(event?.results?.[0] || [])
+        .map((item) => String(item?.transcript || '').trim())
+        .filter(Boolean);
+
+      const cleaned = altList[0] || '';
       setLastTranscript(cleaned);
       
       // Always show the transcribed text in the typing field
       setTypedAnswer(cleaned);
       
-      if (options.length > 0) {
-        // loose matching
-        const matched = options.find(
-          (option) => normalizeAnswer(option) === normalizeAnswer(cleaned) ||
-            cleaned.toLowerCase().includes(option.toLowerCase())
+      if (options.length > 0 && altList.length > 0) {
+        const matched = options.find((option) =>
+          altList.some((candidate) => voiceMatchesOption(candidate, option))
         );
         if (matched) {
           setSelectedAnswer(matched);
