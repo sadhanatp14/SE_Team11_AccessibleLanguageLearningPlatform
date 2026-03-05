@@ -31,6 +31,8 @@ import {
   Settings,
   Star,
   Timer,
+  ToggleLeft,
+  ToggleRight,
   Volume2,
 } from 'lucide-react';
 import PronunciationPractice from './PronunciationPractice';
@@ -43,7 +45,7 @@ import './AutismView.css';
 const AutismView = ({ initialLessonId = null }) => {
   // Auth context
   const { user, logout } = useAuth();
-  const { preferences } = usePreferences();
+  const { preferences, updateAccessibilitySettings } = usePreferences();
   const uiLanguage = resolveUiLanguageFromPreferences(preferences);
   const { t } = useI18n();
   const navigate = useNavigate();
@@ -2289,8 +2291,28 @@ const AutismView = ({ initialLessonId = null }) => {
             onClick={() => navigate('/progress')}
             className="btn-settings"
             title={t('learning.common.progress')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
-            {t('learning.common.progress')}
+            <Hash size={18} aria-hidden="true" />
+            <span>Progress</span>
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              const newValue = !preferences?.simplifiedLayout;
+              await updateAccessibilitySettings({ simplifiedLayout: newValue });
+            }}
+            className="btn-settings btn-simplified-toggle"
+            title="Toggle simple layout"
+            aria-pressed={preferences?.simplifiedLayout}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            {preferences?.simplifiedLayout ? (
+              <ToggleRight size={18} aria-hidden="true" />
+            ) : (
+              <ToggleLeft size={18} aria-hidden="true" />
+            )}
+            <span>Simple</span>
           </button>
           <button onClick={() => setShowSettings(true)} className="btn-settings" title={t('learning.common.settings')}>
             <Settings size={18} aria-hidden="true" />

@@ -1128,6 +1128,25 @@ const ADHDView = ({ initialLessonId = null }) => {
             <span className="btn-distraction-toggle__state">{distractionFreeMode ? t('learning.common.on') : t('learning.common.off')}</span>
           </button>
 
+          <button
+            type="button"
+            onClick={async () => {
+              const newValue = !preferences?.simplifiedLayout;
+              await updatePreferences({ simplifiedLayout: newValue });
+            }}
+            className="btn-minimal btn-simplified-toggle"
+            title="Toggle simple layout"
+            aria-pressed={preferences?.simplifiedLayout}
+          >
+            {preferences?.simplifiedLayout ? (
+              <ToggleRight size={18} aria-hidden="true" />
+            ) : (
+              <ToggleLeft size={18} aria-hidden="true" />
+            )}
+            <span className="btn-simplified-toggle__label">Simple</span>
+            <span className="btn-simplified-toggle__state">{preferences?.simplifiedLayout ? t('learning.common.on') : t('learning.common.off')}</span>
+          </button>
+
           {isSessionActive && !activeLesson && (
             <button
               type="button"

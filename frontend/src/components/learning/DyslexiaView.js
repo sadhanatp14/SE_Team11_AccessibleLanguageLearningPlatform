@@ -24,6 +24,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 // Authentication context – provides current user object and logout function
 import { useAuth } from '../../context/AuthContext';
+import { usePreferences } from '../../context/PreferencesContext';
 // Service for reading/writing per-user lesson progress from localStorage
 import { getAllLessonProgress, normalizeUserId } from '../../services/dyslexiaProgressService';
 // Performance-based difficulty adjustment service
@@ -54,6 +55,7 @@ import './DyslexiaView.css';
 const DyslexiaView = () => {
   // Destructure the authenticated user and the logout handler from AuthContext
   const { user, logout } = useAuth();
+  const { preferences, updateAccessibilitySettings } = usePreferences();
 
   // Controls whether the ProfileSettings modal is visible
   const [showSettings, setShowSettings] = useState(false);
@@ -336,6 +338,25 @@ const DyslexiaView = () => {
             )}
             <span className="btn-syllable-toggle__label">{t('learning.dyslexia.syllableMode')}</span>
             <span className="btn-syllable-toggle__state">{syllableMode ? t('learning.common.on') : t('learning.common.off')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              const newValue = !preferences?.simplifiedLayout;
+              await updateAccessibilitySettings({ simplifiedLayout: newValue });
+            }}
+            className="btn-settings btn-simplified-toggle"
+            title="Toggle simple layout"
+            aria-pressed={preferences?.simplifiedLayout}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            {preferences?.simplifiedLayout ? (
+              <ToggleRight size={18} aria-hidden="true" />
+            ) : (
+              <ToggleLeft size={18} aria-hidden="true" />
+            )}
+            <span className="btn-simplified-toggle__label">Simple</span>
+            <span className="btn-simplified-toggle__state">{preferences?.simplifiedLayout ? t('learning.common.on') : t('learning.common.off')}</span>
           </button>
           <button
             type="button"
