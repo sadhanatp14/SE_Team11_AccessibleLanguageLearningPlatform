@@ -834,7 +834,7 @@ const AutismView = ({ initialLessonId = null }) => {
     const recognition = new SpeechRecognition();
     recognition.lang = speechSynthesisLangFor(preferredLanguage || 'english');
     recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+    recognition.maxAlternatives = 5;
     return recognition;
   }, []);
 
@@ -851,9 +851,11 @@ const AutismView = ({ initialLessonId = null }) => {
     if (questionAnswered) return;
     setAnswerVoiceError('');
 
-    const desiredLang = speechSynthesisLangFor(teachingLanguage || 'english');
+    // ALWAYS use English recognition because all answer options are in English
+    // (even for Tamil/Hindi lessons - the options remain in English)
+    const desiredLang = speechSynthesisLangFor('english');
     if (!answerRecognitionRef.current || answerRecognitionRef.current.lang !== desiredLang) {
-      answerRecognitionRef.current = initAnswerSpeechRecognition(teachingLanguage);
+      answerRecognitionRef.current = initAnswerSpeechRecognition('english');
     }
 
     const recognition = answerRecognitionRef.current;
@@ -868,33 +870,46 @@ const AutismView = ({ initialLessonId = null }) => {
     };
 
     recognition.onresult = (event) => {
-      const transcript = event.results?.[0]?.[0]?.transcript || '';
-      const cleaned = transcript.trim();
+      // Collect all alternative transcripts for better matching
+      const altList = Array.from(event?.results?.[0] || [])
+        .map((item) => String(item?.transcript || '').trim())
+        .filter(Boolean);
+
+      const cleaned = altList[0] || '';
       setAnswerTranscript(cleaned);
 
       const options = currentStep?.interaction?.options || [];
-      if (!options.length) return;
+      if (!options.length || !altList.length) return;
 
-      const normalized = normalizeVoice(cleaned);
+      // Try each alternative transcript
+      for (const transcript of altList) {
+        const normalized = normalizeVoice(transcript);
 
-      // Support speaking A/B/C
-      const letterMap = { a: 0, b: 1, c: 2, d: 3 };
-      if (letterMap[normalized] !== undefined) {
-        const idx = letterMap[normalized];
-        if (idx >= 0 && idx < options.length) {
-          handleInteraction(idx);
+        // Support speaking A/B/C
+        const letterMap = { a: 0, b: 1, c: 2, d: 3 };
+        if (letterMap[normalized] !== undefined) {
+          const idx = letterMap[normalized];
+          if (idx >= 0 && idx < options.length) {
+            handleInteraction(idx);
+            return;
+          }
+        }
+
+        // Match by option text - try exact, substring, or partial match
+        const matchedIndex = options.findIndex((opt) => {
+          const optNorm = normalizeVoice(opt);
+          if (optNorm === normalized) return true;
+          if (normalized.includes(optNorm) || optNorm.includes(normalized)) return true;
+          // Also try compact match (no spaces)
+          const normalizedCompact = normalized.replace(/\s+/g, '');
+          const optCompact = optNorm.replace(/\s+/g, '');
+          return normalizedCompact === optCompact || normalizedCompact.includes(optCompact) || optCompact.includes(normalizedCompact);
+        });
+
+        if (matchedIndex >= 0) {
+          handleInteraction(matchedIndex);
           return;
         }
-      }
-
-      // Match by option text
-      const matchedIndex = options.findIndex((opt) => {
-        const optNorm = normalizeVoice(opt);
-        return optNorm === normalized || normalized.includes(optNorm) || optNorm.includes(normalized);
-      });
-
-      if (matchedIndex >= 0) {
-        handleInteraction(matchedIndex);
       }
     };
 
@@ -915,7 +930,7 @@ const AutismView = ({ initialLessonId = null }) => {
     } catch (e) {
       setIsAnswerListening(false);
     }
-  }, [currentStep?.interaction?.options, handleInteraction, initAnswerSpeechRecognition, normalizeVoice, questionAnswered, teachingLanguage]);
+  }, [currentStep?.interaction?.options, handleInteraction, initAnswerSpeechRecognition, normalizeVoice, questionAnswered]);
 
   const getInstructionsTextForStep = useCallback(
     (step) => {
