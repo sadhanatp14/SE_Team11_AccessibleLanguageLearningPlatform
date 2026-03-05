@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usePreferences } from '../context/PreferencesContext';
+import { useI18n } from '../utils/i18n';
 import './AccessibilitySetup.css';
 
 /**
@@ -20,23 +21,24 @@ const AccessibilitySetup = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { updatePreferences } = usePreferences();
+  const { t } = useI18n();
 
   const activeCondition = user?.learningCondition;
 
   const steps = useMemo(() => {
     // EPIC 1.3.1: Wizard steps are condition-aware (base visual + condition add-ons)
-    const baseSteps = [{ key: 'visual', title: 'Visual Settings' }];
+    const baseSteps = [{ key: 'visual', title: t('setup.visualTitle') }];
 
     if (activeCondition === 'adhd') {
-      baseSteps.push({ key: 'learning', title: 'Learning Preferences' });
+      baseSteps.push({ key: 'learning', title: t('setup.learningTitle') });
     }
 
     if (activeCondition === 'autism') {
-      baseSteps.push({ key: 'focus', title: 'Focus & Environment' });
+      baseSteps.push({ key: 'focus', title: t('setup.focusTitle') });
     }
 
     return baseSteps;
-  }, [activeCondition]);
+  }, [activeCondition, t]);
 
   const [step, setStep] = useState(1);
   const [settings, setSettings] = useState({
@@ -127,9 +129,9 @@ const AccessibilitySetup = () => {
   return (
     <div className="setup-container">
       <div className="setup-card">
-        <h1 className="setup-title">Customize Your Experience</h1>
+        <h1 className="setup-title">{t('setup.title')}</h1>
         <p className="setup-subtitle">
-          Let's set up your accessibility preferences for the best learning experience
+          {t('setup.subtitle')}
         </p>
 
         <div className="progress-bar">
@@ -148,13 +150,13 @@ const AccessibilitySetup = () => {
         <div className="setup-content">
           {steps[step - 1]?.key === 'visual' && (
             <div className="step-content">
-              <h2>Visual Settings</h2>
+              <h2>{t('setup.visualTitle')}</h2>
               <p className="step-description">
-                Adjust how text and content appear on your screen
+                {t('setup.visualDesc')}
               </p>
 
               <div className="setting-group">
-                <label>Text Size</label>
+                <label>{t('setup.textSize')}</label>
                 <div className="button-group">
                   {['small', 'medium', 'large', 'extra-large'].map((size) => (
                     <button
@@ -170,13 +172,13 @@ const AccessibilitySetup = () => {
               </div>
 
               <div className="setting-group">
-                <label>Color Theme</label>
+                <label>{t('setup.colorTheme')}</label>
                 <div className="button-group">
                   {[
-                    { value: 'default', label: 'Default' },
-                    { value: 'high-contrast', label: 'High Contrast' },
-                    { value: 'dark', label: 'Dark' },
-                    { value: 'yellow-black', label: 'Yellow on Black' },
+                    { value: 'default', label: t('setup.defaultTheme') },
+                    { value: 'high-contrast', label: t('setup.highContrast') },
+                    { value: 'dark', label: t('setup.dark') },
+                    { value: 'yellow-black', label: t('setup.yellowOnBlack') },
                   ].map((theme) => (
                     <button
                       key={theme.value}
@@ -193,7 +195,7 @@ const AccessibilitySetup = () => {
               {user?.learningCondition === 'dyslexia' && (
                 <>
                   <div className="setting-group">
-                    <label>Font Style</label>
+                    <label>{t('setup.fontStyle')}</label>
                     <div className="button-group">
                       {[
                         { value: 'opendyslexic', label: 'OpenDyslexic' },
@@ -213,7 +215,7 @@ const AccessibilitySetup = () => {
                   </div>
 
                   <div className="setting-group">
-                    <label>Letter Spacing</label>
+                    <label>{t('setup.letterSpacing')}</label>
                     <div className="button-group">
                       {['normal', 'wide', 'extra-wide'].map((spacing) => (
                         <button
@@ -234,14 +236,14 @@ const AccessibilitySetup = () => {
 
           {steps[step - 1]?.key === 'learning' && (
             <div className="step-content">
-              <h2>Learning Preferences</h2>
+              <h2>{t('setup.learningTitle')}</h2>
               <p className="step-description">
-                Set your preferences for learning sessions
+                {t('setup.learningDesc')}
               </p>
 
               {user?.learningCondition === 'adhd' && (
                 <div className="setting-group">
-                  <label>Learning Pace</label>
+                  <label>{t('setup.learningPace')}</label>
                   <div className="button-group">
                     {['slow', 'normal', 'fast'].map((pace) => (
                       <button
@@ -261,9 +263,9 @@ const AccessibilitySetup = () => {
 
           {steps[step - 1]?.key === 'focus' && (
             <div className="step-content">
-              <h2>Focus & Environment</h2>
+              <h2>{t('setup.focusTitle')}</h2>
               <p className="step-description">
-                Optimize your learning environment to your needs
+                {t('setup.focusDesc')}
               </p>
 
               {user?.learningCondition === 'autism' && (
@@ -274,9 +276,9 @@ const AccessibilitySetup = () => {
                       checked={settings.distractionFreeMode}
                       onChange={(e) => handleChange('distractionFreeMode', e.target.checked)}
                     />
-                    <span>Enable distraction-free mode</span>
+                    <span>{t('setup.distractionFreeEnable')}</span>
                   </label>
-                  <p className="help-text">Removes unnecessary UI elements</p>
+                  <p className="help-text">{t('setup.distractionFreeHelp')}</p>
                 </div>
               )}
 
@@ -289,9 +291,9 @@ const AccessibilitySetup = () => {
                         checked={settings.reduceAnimations}
                         onChange={(e) => handleChange('reduceAnimations', e.target.checked)}
                       />
-                      <span>Reduce animations</span>
+                      <span>{t('setup.reduceAnimations')}</span>
                     </label>
-                    <p className="help-text">Minimizes moving elements</p>
+                      <p className="help-text">{t('setup.reduceAnimationsHelp')}</p>
                   </div>
 
                   <div className="setting-group checkbox">
@@ -301,9 +303,9 @@ const AccessibilitySetup = () => {
                         checked={settings.simplifiedLayout}
                         onChange={(e) => handleChange('simplifiedLayout', e.target.checked)}
                       />
-                      <span>Use simplified layout</span>
+                      <span>{t('setup.simplifiedLayout')}</span>
                     </label>
-                    <p className="help-text">Cleaner, more predictable interface</p>
+                      <p className="help-text">{t('setup.simplifiedLayoutHelp')}</p>
                   </div>
                 </>
               )}
@@ -317,7 +319,7 @@ const AccessibilitySetup = () => {
             className="btn btn-secondary"
             onClick={skipSetup}
           >
-            Skip for Now
+            {t('setup.skipSetup')}
           </button>
 
           <div className="action-buttons">
@@ -327,7 +329,7 @@ const AccessibilitySetup = () => {
                 className="btn btn-outline"
                 onClick={prevStep}
               >
-                Back
+                {t('app.back')}
               </button>
             )}
 
@@ -337,7 +339,7 @@ const AccessibilitySetup = () => {
                 className="btn btn-primary"
                 onClick={nextStep}
               >
-                Next
+                {t('setup.next')}
               </button>
             ) : (
               <button
@@ -345,7 +347,7 @@ const AccessibilitySetup = () => {
                 className="btn btn-primary"
                 onClick={handleSubmit}
               >
-                Save & Continue
+                {t('app.continue')}
               </button>
             )}
           </div>

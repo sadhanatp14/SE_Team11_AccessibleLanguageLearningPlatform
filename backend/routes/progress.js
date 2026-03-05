@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { protect } = require('../middleware/auth');
 const { getProgress, updateProgress } = require('../controllers/progressController');
+const { getNextLesson } = require('../controllers/recommendationController');
 
 const router = express.Router();
 
@@ -25,6 +26,11 @@ const handleValidation = (req, res, next) => {
   }
   return next();
 };
+
+// @route   GET /api/progress/next-lesson
+// @desc    Get the recommended next lesson for the current user
+// @access  Private
+router.get('/next-lesson', protect, getNextLesson);
 
 // @route   GET /api/progress/summary
 // @desc    Get progress summary for user

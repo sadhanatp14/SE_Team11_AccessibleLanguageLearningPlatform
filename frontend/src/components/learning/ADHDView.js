@@ -12,6 +12,7 @@ import PronunciationPractice from './PronunciationPractice';
 import ReactConfetti from 'react-confetti';
 import { getSummary } from '../../services/progressService';
 import api from '../../utils/api';
+import { useI18n } from '../../utils/i18n';
 // Icon imports for UI elements
 import {
   Bot,
@@ -36,11 +37,14 @@ import {
   ToggleRight,
   Volume2,
 } from 'lucide-react';
+import { backendTtsLangFor, pickByLanguage, resolveUiLanguageFromPreferences, speechSynthesisLangFor } from '../../utils/languagePrefs';
 
 const ADHDView = ({ initialLessonId = null }) => {
   // Auth and preferences context
   const { user, logout } = useAuth();
   const { preferences, updatePreferences } = usePreferences();
+  const uiLanguage = resolveUiLanguageFromPreferences(preferences);
+  const { t } = useI18n();
   const navigate = useNavigate();
 
   // Session and timer state
@@ -143,17 +147,52 @@ const ADHDView = ({ initialLessonId = null }) => {
   }, [currentAudio]);
 
   const getInstructionsTextForStep = (step) => {
-    if (!step) return 'Follow the on-screen instructions. Use Listen to hear the text, and use Next to continue.';
+    if (!step) {
+      return pickByLanguage(uiLanguage, {
+        english: 'Follow the on-screen instructions. Use Listen to hear the text, and use Next to continue.',
+        tamil: 'திரையில் உள்ள வழிமுறைகளை பின்பற்றுங்கள். கேட்க “Listen” ஐ அழுத்துங்கள். தொடர “Next” ஐ அழுத்துங்கள்.',
+        hindi: 'स्क्रीन पर दिए निर्देशों का पालन करें। सुनने के लिए “Listen” दबाएँ और आगे बढ़ने के लिए “Next” दबाएँ।',
+      });
+    }
+
     if (step.type === 'learn') {
-      return 'This is a learning step. Read the word and the explanation. Press Listen to hear it. Press Next when you are ready to continue.';
+      return pickByLanguage(uiLanguage, {
+        english:
+          'This is a learning step. Read the word and the explanation. Press Listen to hear it. Press Next when you are ready to continue.',
+        tamil:
+          'இது ஒரு கற்றல் படி. சொல்லையும் விளக்கத்தையும் வாசியுங்கள். கேட்க “Listen” ஐ அழுத்துங்கள். தயாரானதும் “Next” ஐ அழுத்துங்கள்.',
+        hindi:
+          'यह सीखने वाला चरण है। शब्द और उसका अर्थ पढ़ें। सुनने के लिए “Listen” दबाएँ। तैयार होने पर “Next” दबाएँ।',
+      });
     }
+
     if (step.type === 'quiz') {
-      return 'This is a quiz step. Read the question and choose one option. Press Listen to hear the question again. If a hint is available, you can open it. Answer correctly to move on.';
+      return pickByLanguage(uiLanguage, {
+        english:
+          'This is a quiz step. Read the question and choose one option. Press Listen to hear the question again. If a hint is available, you can open it. Answer correctly to move on.',
+        tamil:
+          'இது ஒரு வினாடி வினா படி. கேள்வியை வாசித்து ஒரு விருப்பத்தைத் தேர்வு செய்யுங்கள். மீண்டும் கேட்க “Listen” ஐ அழுத்துங்கள். Hint இருந்தால் அதை திறக்கலாம். சரியாக பதிலளித்தால் அடுத்ததாக செல்லலாம்.',
+        hindi:
+          'यह क्विज़ चरण है। प्रश्न पढ़ें और एक विकल्प चुनें। फिर से सुनने के लिए “Listen” दबाएँ। अगर Hint उपलब्ध है तो उसे खोलें। सही उत्तर देकर आगे बढ़ें।',
+      });
     }
+
     if (step.type === 'story') {
-      return 'This is a story step. Press Play Story to listen. Use the speed slider to slow down or speed up. You can Pause and Resume. Press Replay to listen again, then press Next to continue.';
+      return pickByLanguage(uiLanguage, {
+        english:
+          'This is a story step. Press Play Story to listen. Use the speed slider to slow down or speed up. You can Pause and Resume. Press Replay to listen again, then press Next to continue.',
+        tamil:
+          'இது ஒரு கதை படி. கேட்க “Play Story” ஐ அழுத்துங்கள். வேகத்தை மாற்ற speed slider ஐ பயன்படுத்துங்கள். Pause/Resume செய்யலாம். மீண்டும் கேட்க “Replay” அழுத்தி, பிறகு “Next” ஐ அழுத்துங்கள்.',
+        hindi:
+          'यह कहानी वाला चरण है। सुनने के लिए “Play Story” दबाएँ। गति कम/ज़्यादा करने के लिए speed slider इस्तेमाल करें। Pause/Resume कर सकते हैं। फिर से सुनने के लिए “Replay” दबाएँ और आगे बढ़ने के लिए “Next” दबाएँ।',
+      });
     }
-    return 'Follow the on-screen instructions. Use Listen to hear the text, and use Next to continue.';
+
+    return pickByLanguage(uiLanguage, {
+      english: 'Follow the on-screen instructions. Use Listen to hear the text, and use Next to continue.',
+      tamil: 'திரையில் உள்ள வழிமுறைகளை பின்பற்றுங்கள். கேட்க “Listen” ஐ அழுத்துங்கள். தொடர “Next” ஐ அழுத்துங்கள்.',
+      hindi: 'स्क्रीन पर दिए निर्देशों का पालन करें। सुनने के लिए “Listen” दबाएँ और आगे बढ़ने के लिए “Next” दबाएँ।',
+    });
   };
 
   useEffect(() => {
@@ -233,7 +272,7 @@ const ADHDView = ({ initialLessonId = null }) => {
       const response = await fetch('/api/tts/speak', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, speed: rate })
+        body: JSON.stringify({ text, speed: rate, lang: backendTtsLangFor(uiLanguage) })
       });
 
       if (!response.ok) throw new Error('Audio generation failed');
@@ -269,6 +308,7 @@ const ADHDView = ({ initialLessonId = null }) => {
       console.error("Server TTS failed, falling back to browser:", error);
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = rate;
+      utterance.lang = speechSynthesisLangFor(uiLanguage);
       if (trackWords) {
         utterance.onboundary = (event) => {
           if (event.name === 'word') {
@@ -713,7 +753,7 @@ const ADHDView = ({ initialLessonId = null }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialLessonId, activeLesson]);
 
-  const handleNextStep = () => {
+  const handleNextStep = useCallback(() => {
     window.speechSynthesis.cancel(); // Stop audio on next
     if (currentStepIndex < steps.length - 1) {
       setCurrentStepIndex(prev => prev + 1);
@@ -725,7 +765,7 @@ const ADHDView = ({ initialLessonId = null }) => {
       setLessonPhase('pronunciation');
       // Removed completion audio
     }
-  }
+  }, [currentStepIndex, steps.length]);
 
   useEffect(() => {
     if (lessonPhase !== 'complete') return;
@@ -785,10 +825,10 @@ const ADHDView = ({ initialLessonId = null }) => {
 
     // EPIC 3.1.1: Provide a “Play Audio”/Listen control for lesson text.
     // EPIC 3.1.4: Keep audio speed slow and easy to understand (playbackRate).
-    playAudio(text, playbackRate);
+    playAudio(text, playbackRate, { trackWords: true, lang: uiLanguage });
   };
 
-  const handleAnswer = (option) => {
+  const handleAnswer = React.useCallback((option) => {
     if (isTransitioning) return;
 
     const step = steps[currentStepIndex];
@@ -817,7 +857,13 @@ const ADHDView = ({ initialLessonId = null }) => {
         // Removed audio feedback
       }
     }
-  };
+  }, [
+    isTransitioning,
+    steps,
+    currentStepIndex,
+    attempts,
+    handleNextStep,
+  ]);
 
   // EPIC 3.2: Voice-based answer input (STT) for quiz steps
   const answerRecognitionRef = React.useRef(null);
@@ -1032,7 +1078,7 @@ const ADHDView = ({ initialLessonId = null }) => {
       <header className="top-bar">
         <h1 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <BookOpen size={22} aria-hidden="true" />
-          <span>LinguaEase</span>
+          <span>{t('learning.common.brand')}</span>
         </h1>
         <div className="header-actions">
           {isSessionActive && timeRemaining !== null && (
@@ -1046,7 +1092,7 @@ const ADHDView = ({ initialLessonId = null }) => {
             type="button"
             onClick={toggleDistractionFreeMode}
             className="btn-minimal btn-distraction-toggle"
-            title="Toggle distraction-free mode"
+            title={t('learning.adhd.toggleDistractionFreeTitle')}
             aria-pressed={distractionFreeMode}
           >
             {distractionFreeMode ? (
@@ -1054,8 +1100,8 @@ const ADHDView = ({ initialLessonId = null }) => {
             ) : (
               <ToggleLeft size={18} aria-hidden="true" />
             )}
-            <span className="btn-distraction-toggle__label">Distraction-Free</span>
-            <span className="btn-distraction-toggle__state">{distractionFreeMode ? 'On' : 'Off'}</span>
+            <span className="btn-distraction-toggle__label">{t('learning.adhd.distractionFree')}</span>
+            <span className="btn-distraction-toggle__state">{distractionFreeMode ? t('learning.common.on') : t('learning.common.off')}</span>
           </button>
 
           {isSessionActive && !activeLesson && (
@@ -1063,24 +1109,24 @@ const ADHDView = ({ initialLessonId = null }) => {
               type="button"
               onClick={backToSessionStart}
               className="btn-minimal"
-              title="Back to session start"
+              title={t('learning.adhd.backToSessionStartTitle')}
             >
-              Back
+              {t('learning.common.back')}
             </button>
           )}
           <button
             type="button"
             onClick={() => navigate('/progress')}
             className="btn-minimal"
-            title="View progress"
+            title={t('learning.common.progress')}
           >
-            Progress
+            {t('learning.common.progress')}
           </button>
-          <button onClick={() => setShowSettings(true)} className="btn-minimal" title="Settings">
+          <button onClick={() => setShowSettings(true)} className="btn-minimal" title={t('learning.common.settings')}>
             <Settings size={18} aria-hidden="true" />
           </button>
-          <button type="button" onClick={logout} className="btn-logout" title="Logout">
-            Logout
+          <button type="button" onClick={logout} className="btn-logout" title={t('learning.common.logout')}>
+            {t('learning.common.logout')}
           </button>
         </div>
       </header>
@@ -1097,30 +1143,30 @@ const ADHDView = ({ initialLessonId = null }) => {
             <>
               <div className="focus-card">
                 <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span>Hi, {user?.name}!</span>
+                  <span>{t('learning.adhd.hi', { name: user?.name || '' })}</span>
                   <Hand size={18} aria-hidden="true" />
                 </h2>
-                <p>Let's focus on one lesson at a time.</p>
+                <p>{t('learning.adhd.focusOneLesson')}</p>
               </div>
 
               {!isSessionActive ? (
                 <div className="session-start">
-                  <h3>{cooldownRemaining > 0 ? 'Take a Break' : 'Ready to Learn?'}</h3>
+                  <h3>{cooldownRemaining > 0 ? t('learning.adhd.takeABreak') : t('learning.adhd.readyToLearn')}</h3>
                   {cooldownRemaining > 0 ? (
                     <>
-                      <p>Great job! Please rest for {Math.ceil(cooldownRemaining / 60)} minutes before starting again.</p>
+                      <p>{t('learning.adhd.restMessage', { minutes: Math.ceil(cooldownRemaining / 60) })}</p>
                       <div className="stat-number" style={{ fontSize: '48px', margin: '20px 0' }}>
                         {formatTime(cooldownRemaining)}
                       </div>
                       <button disabled className="btn-start" style={{ opacity: 0.6, cursor: 'not-allowed', backgroundColor: 'var(--text-secondary)' }}>
-                        Break Time
+                        {t('learning.adhd.breakTime')}
                       </button>
                     </>
                   ) : (
                     <>
-                      <p>Click below to start a focused {preferences?.sessionDuration || 20}-minute session</p>
+                      <p>{t('learning.adhd.startFocusedSession', { minutes: preferences?.sessionDuration || 20 })}</p>
                       <button onClick={startSession} className="btn-start">
-                        Start Session
+                        {t('learning.adhd.startSession')}
                       </button>
                     </>
                   )}
@@ -1130,16 +1176,16 @@ const ADHDView = ({ initialLessonId = null }) => {
                   <div className="quick-stats">
                     <div className="stat-box">
                       <div className="stat-number">{baseLessons.length}</div>
-                      <div className="stat-text">Lessons</div>
+                      <div className="stat-text">{t('learning.common.lessons')}</div>
                     </div>
                     <div className="stat-box">
                       <div className="stat-number">{score}</div>
-                      <div className="stat-text">Points Today</div>
+                      <div className="stat-text">{t('learning.common.pointsToday')}</div>
                     </div>
                   </div>
 
                   <div className="lesson-focus">
-                    <h3>Choose One Lesson</h3>
+                    <h3>{t('learning.adhd.chooseOneLesson')}</h3>
                     <div className="lesson-list">
                       {baseLessons.map((lesson) => (
                         <div key={lesson.id} className="lesson-item">
@@ -1149,7 +1195,7 @@ const ADHDView = ({ initialLessonId = null }) => {
                               <h4>{lesson.title}</h4>
                             </div>
                           </div>
-                          <button onClick={() => handleStartLesson(lesson)} className="btn-lesson">Start</button>
+                          <button onClick={() => handleStartLesson(lesson)} className="btn-lesson">{t('learning.common.start')}</button>
                         </div>
                       ))}
                     </div>
@@ -1163,14 +1209,14 @@ const ADHDView = ({ initialLessonId = null }) => {
               {isLoading && (
                 <p style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                   <Bot size={16} aria-hidden="true" />
-                  <span>Generating focused content for you...</span>
+                  <span>{t('learning.adhd.generatingFocusedContent')}</span>
                 </p>
               )}
               <div style={{ background: 'var(--accent-color-soft)', padding: '2rem', borderRadius: '15px', display: 'inline-block', marginBottom: '2rem', border: '1px solid var(--border-color)' }}>
-                <p style={{ fontSize: '1.5rem', margin: 0, color: 'var(--accent-color-hover)' }}>Passing Score: <strong>20 Points</strong></p>
+                <p style={{ fontSize: '1.5rem', margin: 0, color: 'var(--accent-color-hover)' }}>{t('learning.adhd.passingScore')} <strong>20 {t('learning.adhd.points')}</strong></p>
               </div>
               <p style={{ fontSize: '1.2rem', marginBottom: '2rem', color: 'var(--text-secondary)' }}>
-                Get ready! We will count down before we start.
+                {t('learning.adhd.getReady')}
               </p>
               <button
                 onClick={() => setLessonPhase('countdown')}
@@ -1187,10 +1233,10 @@ const ADHDView = ({ initialLessonId = null }) => {
                   boxShadow: '0 4px 15px rgba(77, 134, 201, 0.28)'
                 }}
               >
-                {isLoading ? 'Loading...' : (
+                {isLoading ? t('learning.adhd.loading') : (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
                     <Rocket size={18} aria-hidden="true" />
-                    <span>I'm Ready!</span>
+                    <span>{t('learning.adhd.imReady')}</span>
                   </span>
                 )}
               </button>
@@ -1233,20 +1279,20 @@ const ADHDView = ({ initialLessonId = null }) => {
                       gravity={0.2}
                     />
                   )}
-                  <h2 style={{ fontSize: '2rem', marginBottom: '1rem', color: 'var(--text-primary)', zIndex: 10, position: 'relative' }}>Congratulations!</h2>
+                  <h2 style={{ fontSize: '2rem', marginBottom: '1rem', color: 'var(--text-primary)', zIndex: 10, position: 'relative' }}>{t('learning.adhd.congratulations')}</h2>
                   <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)', zIndex: 10, position: 'relative' }}>
-                    You have completed <strong>{activeLesson.title}</strong>!
+                    {t('learning.adhd.completedLesson', { lesson: activeLesson.title })}
                   </p>
                 </>
               ) : (
                 <>
                   <div style={{ marginBottom: '1rem' }} aria-hidden="true"><Dumbbell size={64} /></div>
-                  <h2 style={{ fontSize: '2rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>Don't Give Up!</h2>
+                  <h2 style={{ fontSize: '2rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>{t('learning.adhd.dontGiveUp')}</h2>
                   <p style={{ fontSize: '1.5rem', color: 'var(--error-color)', fontWeight: 'bold' }}>
-                    You have one more chance!!!!
+                    {t('learning.adhd.oneMoreChance')}
                   </p>
                   <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', marginTop: '1rem' }}>
-                    You need 20 points to pass. Let's try again!
+                    {t('learning.adhd.needPointsToPass', { points: 20 })}
                   </p>
                 </>
               )}
@@ -1255,10 +1301,10 @@ const ADHDView = ({ initialLessonId = null }) => {
                 background: 'var(--bg-secondary)', padding: '2rem', borderRadius: '20px', margin: '2rem auto', maxWidth: '300px',
                 boxShadow: 'var(--fx-shadow-soft)', border: '1px solid var(--border-color)', zIndex: 10, position: 'relative'
               }}>
-                <div style={{ fontSize: '0.9rem', color: '#888', textTransform: 'uppercase', letterSpacing: '1px' }}>Lesson Score</div>
+                <div style={{ fontSize: '0.9rem', color: '#888', textTransform: 'uppercase', letterSpacing: '1px' }}>{t('learning.adhd.lessonScoreLabel')}</div>
                 <div style={{ fontSize: '3.5rem', fontWeight: '800', color: currentLessonScore >= 20 ? 'var(--success-color)' : 'var(--error-color)', margin: '0.5rem 0' }}>{currentLessonScore}</div>
                 <div style={{ fontSize: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
-                  Total Points Today: <strong>{score}</strong>
+                  {t('learning.adhd.totalPointsTodayLabel')} <strong>{score}</strong>
                 </div>
               </div>
 
@@ -1272,7 +1318,7 @@ const ADHDView = ({ initialLessonId = null }) => {
                       background: 'var(--accent-color)', color: 'white', cursor: 'pointer', boxShadow: '0 4px 12px rgba(77, 134, 201, 0.22)'
                     }}
                   >
-                    Return to Dashboard
+                    {t('learning.adhd.returnToDashboard')}
                   </button>
                 ) : (
                   <button
@@ -1285,7 +1331,7 @@ const ADHDView = ({ initialLessonId = null }) => {
                   >
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
                       <RotateCcw size={18} aria-hidden="true" />
-                      <span>Try Again</span>
+                      <span>{t('learning.adhd.tryAgain')}</span>
                     </span>
                   </button>
                 )}
@@ -1294,23 +1340,27 @@ const ADHDView = ({ initialLessonId = null }) => {
           ) : (
             <div className="lesson-player">
               <div className="lesson-header">
-                <button onClick={exitLesson} className="btn-back">← Back</button>
-                <h3>{activeLesson.title} - Step {currentStepIndex + 1}/{steps.length}</h3>
+                <button onClick={exitLesson} className="btn-back">← {t('learning.common.back')}</button>
+                <h3>{activeLesson.title} - {t('learning.adhd.stepProgress', { current: currentStepIndex + 1, total: steps.length })}</h3>
                 <button
                   type="button"
                   onClick={() => setShowInstructions(true)}
                   className="btn-instructions"
-                  title="Instructions"
+                  title={pickByLanguage(uiLanguage, {
+                    english: 'Instructions',
+                    tamil: 'வழிமுறைகள்',
+                    hindi: 'निर्देश',
+                  })}
                 >
                   <Info size={18} aria-hidden="true" />
-                  <span>Instructions</span>
+                  <span>{t('learning.adhd.instructions')}</span>
                 </button>
               </div>
 
               <div className="step-content">
                 {!currentStep ? (
                   <div style={{ textAlign: 'center', padding: '2rem' }}>
-                    <h3>Content coming soon</h3>
+                    <h3>{t('learning.adhd.contentComingSoon')}</h3>
                   </div>
                 ) : (
                   <>
@@ -1550,7 +1600,13 @@ const ADHDView = ({ initialLessonId = null }) => {
         >
           <div className="adhd-instructions-modal">
             <div className="adhd-instructions-header">
-              <h3>Instructions</h3>
+              <h3>
+                {pickByLanguage(uiLanguage, {
+                  english: 'Instructions',
+                  tamil: 'வழிமுறைகள்',
+                  hindi: 'निर्देश',
+                })}
+              </h3>
               <button
                 type="button"
                 className="adhd-instructions-close"
@@ -1590,7 +1646,13 @@ const ADHDView = ({ initialLessonId = null }) => {
                 <span>Stop</span>
               </button>
             </div>
-            <p className="adhd-instructions-hint">Tip: Press Esc to close.</p>
+            <p className="adhd-instructions-hint">
+              {pickByLanguage(uiLanguage, {
+                english: 'Tip: Press Esc to close.',
+                tamil: 'குறிப்பு: மூட Esc ஐ அழுத்துங்கள்.',
+                hindi: 'टिप: बंद करने के लिए Esc दबाएँ।',
+              })}
+            </p>
           </div>
         </div>
       )}

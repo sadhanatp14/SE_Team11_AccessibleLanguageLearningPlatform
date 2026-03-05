@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { Accessibility, Check, LogOut, User, X } from 'lucide-react';
+import { useI18n } from '../utils/i18n';
+import { resolveBilingualTextModeFromPreferences, resolveUiLanguageFromPreferences } from '../utils/languagePrefs';
 import './ProfileSettings.css';
 
 /**
@@ -17,6 +19,7 @@ import './ProfileSettings.css';
 const ProfileSettings = ({ onClose }) => {
   const { user, logout } = useAuth();
   const { preferences, updateAccessibilitySettings } = usePreferences();
+  const { t } = useI18n();
 
   const [activeTab, setActiveTab] = useState('profile');
   const [profileEditing, setProfileEditing] = useState(false);
@@ -32,8 +35,14 @@ const ProfileSettings = ({ onClose }) => {
     learningPace: preferences?.learningPace || 'normal',
     fontFamily: preferences?.fontFamily || 'default',
     letterSpacing: preferences?.letterSpacing || 'normal',
+    uiLanguage: resolveUiLanguageFromPreferences(preferences),
+    bilingualTextMode: resolveBilingualTextModeFromPreferences(preferences),
     distractionFreeMode: user?.learningCondition === 'autism' ? (preferences?.distractionFreeMode || false) : false,
   });
+
+  const uiLanguageValue = accessibilitySettings?.uiLanguage || 'english';
+  const bilingualMode = accessibilitySettings?.bilingualTextMode || 'off';
+  const isLanguageSelectionLocked = bilingualMode !== 'off';
 
   // Sync local state with preferences when they change
   useEffect(() => {
@@ -45,6 +54,8 @@ const ProfileSettings = ({ onClose }) => {
         learningPace: preferences.learningPace || 'normal',
         fontFamily: preferences.fontFamily || 'default',
         letterSpacing: preferences.letterSpacing || 'normal',
+        uiLanguage: resolveUiLanguageFromPreferences(preferences),
+        bilingualTextMode: resolveBilingualTextModeFromPreferences(preferences),
         distractionFreeMode: user?.learningCondition === 'autism' ? (preferences.distractionFreeMode || false) : false,
       });
     }
@@ -63,17 +74,24 @@ const ProfileSettings = ({ onClose }) => {
 
   const saveAccessibilitySettings = async () => {
     // EPIC 1.3.2 / 1.7.3: Persist preference changes from in-app settings panel
-    const result = await updateAccessibilitySettings(accessibilitySettings);
+    const payload = { ...accessibilitySettings };
+    // If bilingual text is enabled, uiLanguage is intentionally locked.
+    // Avoid sending accidental uiLanguage changes when locked.
+    if ((payload?.bilingualTextMode || 'off') !== 'off') {
+      delete payload.uiLanguage;
+    }
+
+    const result = await updateAccessibilitySettings(payload);
     if (result.success) {
-      alert('Accessibility settings updated!');
+      alert(t('settings.updatedOk'));
     } else {
-      alert('Error updating settings: ' + result.error);
+      alert(`${t('settings.updatedErrPrefix')} ${result.error}`);
     }
   };
 
   const handleLogout = () => {
     // Confirm reduces accidental logouts from a modal.
-    if (window.confirm('Are you sure you want to logout?')) {
+    if (window.confirm(t('settings.logoutConfirm'))) {
       logout();
     }
   };
@@ -83,8 +101,8 @@ const ProfileSettings = ({ onClose }) => {
       <div className="settings-overlay" onClick={onClose}></div>
       <div className="settings-card">
         <div className="settings-header">
-          <h2>Settings</h2>
-          <button className="close-btn" onClick={onClose} aria-label="Close settings"><X size={18} aria-hidden="true" /></button>
+          <h2>{t('settings.title')}</h2>
+          <button className="close-btn" onClick={onClose} aria-label={t('settings.close')}><X size={18} aria-hidden="true" /></button>
         </div>
 
         <div className="settings-tabs">
@@ -93,37 +111,37 @@ const ProfileSettings = ({ onClose }) => {
             onClick={() => setActiveTab('profile')}
           >
             <User size={16} aria-hidden="true" />
-            <span>Profile</span>
+            <span>{t('settings.profileTab')}</span>
           </button>
           <button
             className={`tab-btn ${activeTab === 'accessibility' ? 'active' : ''}`}
             onClick={() => setActiveTab('accessibility')}
           >
             <Accessibility size={16} aria-hidden="true" />
-            <span>Accessibility</span>
+            <span>{t('settings.accessibilityTab')}</span>
           </button>
         </div>
 
         {activeTab === 'profile' && (
           <div className="settings-content">
-            <h3>Profile Information</h3>
+            <h3>{t('settings.profileInfo')}</h3>
             {!profileEditing ? (
               <div className="profile-info">
                 <div className="info-item">
-                  <label>Name</label>
+                  <label>{t('settings.name')}</label>
                   <p>{user?.name}</p>
                 </div>
                 <div className="info-item">
-                  <label>Email</label>
+                  <label>{t('settings.email')}</label>
                   <p>{user?.email}</p>
                 </div>
                 <div className="info-item">
-                  <label>Learning Condition</label>
+                  <label>{t('settings.learningCondition')}</label>
                   <p>{user?.learningCondition?.charAt(0).toUpperCase() + user?.learningCondition?.slice(1)}</p>
                 </div>
                 {user?.age && (
                   <div className="info-item">
-                    <label>Age</label>
+                    <label>{t('settings.age')}</label>
                     <p>{user?.age}</p>
                   </div>
                 )}
@@ -131,13 +149,13 @@ const ProfileSettings = ({ onClose }) => {
                   className="btn btn-secondary"
                   onClick={() => setProfileEditing(true)}
                 >
-                  Edit Profile
+                  {t('settings.editProfile')}
                 </button>
               </div>
             ) : (
               <form className="profile-form">
                 <div className="form-group">
-                  <label htmlFor="name">Name</label>
+                  <label htmlFor="name">{t('settings.name')}</label>
                   <input
                     type="text"
                     id="name"
@@ -147,7 +165,7 @@ const ProfileSettings = ({ onClose }) => {
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="age">Age</label>
+                  <label htmlFor="age">{t('settings.age')}</label>
                   <input
                     type="number"
                     id="age"
@@ -164,17 +182,17 @@ const ProfileSettings = ({ onClose }) => {
                     className="btn btn-secondary"
                     onClick={() => setProfileEditing(false)}
                   >
-                    Cancel
+                    {t('settings.cancel')}
                   </button>
                   <button
                     type="button"
                     className="btn btn-primary"
                     onClick={() => {
-                      alert('Profile update functionality coming soon!');
+                      alert(t('settings.comingSoon'));
                       setProfileEditing(false);
                     }}
                   >
-                    Save Changes
+                    {t('settings.saveChanges')}
                   </button>
                 </div>
               </form>
@@ -184,9 +202,92 @@ const ProfileSettings = ({ onClose }) => {
 
         {activeTab === 'accessibility' && (
           <div className="settings-content">
-            <h3>Accessibility Preferences</h3>
+            <h3>{t('settings.accessibilityPrefs')}</h3>
+
             <div className="setting-group">
-              <label>Text Size</label>
+              <label>{t('settings.language')}</label>
+              <div className="button-group" role="radiogroup" aria-label="Preferred language">
+                {[
+                  { value: 'english', label: 'English' },
+                  { value: 'tamil', label: 'Tamil' },
+                  { value: 'hindi', label: 'Hindi' },
+                ].map((lang) => (
+                  <button
+                    key={lang.value}
+                    type="button"
+                    className={`option-btn ${uiLanguageValue === lang.value ? 'active' : ''}`}
+                    role="radio"
+                    aria-checked={uiLanguageValue === lang.value}
+                    disabled={isLanguageSelectionLocked}
+                    aria-disabled={isLanguageSelectionLocked}
+                    onClick={() => {
+                      if (isLanguageSelectionLocked) return;
+                      handleAccessibilityChange('uiLanguage', lang.value);
+                    }}
+                    title={
+                      isLanguageSelectionLocked
+                        ? t('settings.languageLockedByBilingual')
+                        : `Switch language to ${lang.label}`
+                    }
+                  >
+                    {lang.label}
+                  </button>
+                ))}
+              </div>
+              <p className="setting-help" aria-live="polite">
+                {t('settings.selected')}{' '}
+                {(() => {
+                  const map = {
+                    english: 'English',
+                    tamil: 'Tamil',
+                    hindi: 'Hindi',
+                  };
+                  return map[uiLanguageValue] || String(uiLanguageValue || 'English');
+                })()}
+              </p>
+              {isLanguageSelectionLocked ? (
+                <p className="setting-help" role="note">
+                  {t('settings.languageLockedByBilingual')}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="setting-group">
+              <label>{t('settings.bilingualText')}</label>
+              <div className="button-group" role="radiogroup" aria-label="Bilingual text mode">
+                {[
+                  { value: 'off', label: t('settings.bilingualOff') },
+                  { value: 'english_tamil', label: 'English + Tamil' },
+                  { value: 'english_hindi', label: 'English + Hindi' },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`option-btn ${bilingualMode === option.value ? 'active' : ''}`}
+                    role="radio"
+                    aria-checked={bilingualMode === option.value}
+                    onClick={() => handleAccessibilityChange('bilingualTextMode', option.value)}
+                    title={`Set bilingual mode to ${option.label}`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <p className="setting-help" aria-live="polite">
+                {t('settings.selected')}{' '}
+                {(() => {
+                  const map = {
+                    off: t('settings.bilingualOff'),
+                    english_tamil: 'English + Tamil',
+                    english_hindi: 'English + Hindi',
+                  };
+                  return map[bilingualMode] || t('settings.bilingualOff');
+                })()}
+              </p>
+            </div>
+
+            <div className="setting-group">
+              <label>{t('settings.textSize')}</label>
               <div className="button-group">
                 {['small', 'medium', 'large', 'extra-large'].map((size) => (
                   <button
@@ -202,7 +303,7 @@ const ProfileSettings = ({ onClose }) => {
             </div>
 
             <div className="setting-group">
-              <label>Color Theme</label>
+              <label>{t('settings.colorTheme')}</label>
               <div className="button-group">
                 {[
                   { value: 'default', label: 'Default' },
@@ -224,7 +325,7 @@ const ProfileSettings = ({ onClose }) => {
 
             {user?.learningCondition === 'adhd' && (
               <div className="setting-group">
-                <label>Learning Pace</label>
+                <label>{t('settings.pace')}</label>
                 <div className="button-group">
                   {['slow', 'normal', 'fast'].map((pace) => (
                     <button
@@ -243,7 +344,7 @@ const ProfileSettings = ({ onClose }) => {
             {user?.learningCondition === 'dyslexia' && (
               <>
                 <div className="setting-group">
-                  <label>Font Style</label>
+                  <label>{t('settings.fontStyle')}</label>
                   <div className="button-group">
                     {[
                       { value: 'opendyslexic', label: 'OpenDyslexic' },
@@ -263,7 +364,7 @@ const ProfileSettings = ({ onClose }) => {
                 </div>
 
                 <div className="setting-group">
-                  <label>Letter Spacing</label>
+                  <label>{t('settings.letterSpacing')}</label>
                   <div className="button-group">
                     {['normal', 'wide', 'extra-wide'].map((spacing) => (
                       <button
@@ -282,7 +383,7 @@ const ProfileSettings = ({ onClose }) => {
 
             {user?.learningCondition === 'autism' && (
               <div className="setting-group">
-                <label>Distraction-Free Mode</label>
+                <label>{t('settings.distractionFree')}</label>
                 <button
                   type="button"
                   className={`toggle-btn ${accessibilitySettings.distractionFreeMode ? 'active' : ''}`}
@@ -321,14 +422,14 @@ const ProfileSettings = ({ onClose }) => {
                 className="btn btn-secondary"
                 onClick={onClose}
               >
-                Cancel
+                {t('settings.cancel')}
               </button>
               <button
                 type="button"
                 className="btn btn-primary"
                 onClick={saveAccessibilitySettings}
               >
-                Save Settings
+                {t('settings.saveChanges')}
               </button>
             </div>
           </div>
@@ -340,7 +441,7 @@ const ProfileSettings = ({ onClose }) => {
             onClick={handleLogout}
           >
             <LogOut size={16} aria-hidden="true" />
-            <span>Logout</span>
+            <span>{t('settings.logout')}</span>
           </button>
         </div>
       </div>

@@ -45,6 +45,7 @@ export const getLessonProgress = (userKey, lessonId) => {
       status: 'Not Started',
       correctCount: 0,
       correctIds: [],
+      totalInteractions: 0,
       updatedAt: null,
     }
   );

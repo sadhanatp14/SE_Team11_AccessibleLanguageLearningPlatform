@@ -1,0 +1,245 @@
+/* NextLessonCard.css — Prominent recommendation card */
+
+/* ===== Card container ===== */
+.next-lesson-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 24px 28px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 50%, #bfdbfe 100%);
+  border: 2px solid #93c5fd;
+  box-shadow: 0 8px 30px rgba(59, 130, 246, 0.12);
+  margin-bottom: 28px;
+  animation: nlcSlideIn 0.5s ease-out;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle decorative shimmer */
+.next-lesson-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.35),
+    transparent
+  );
+  animation: nlcShimmer 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes nlcShimmer {
+  0% { left: -60%; }
+  100% { left: 120%; }
+}
+
+@keyframes nlcSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ===== Completed variant ===== */
+.next-lesson-card--completed {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 50%, #bbf7d0 100%);
+  border-color: #86efac;
+  box-shadow: 0 8px 30px rgba(34, 197, 94, 0.12);
+}
+
+.next-lesson-card--completed::before {
+  display: none;
+}
+
+/* ===== Icon circle ===== */
+.nlc-icon {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+}
+
+.nlc-icon--done {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3);
+}
+
+/* ===== Body ===== */
+.nlc-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.nlc-reason {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #3b82f6;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.next-lesson-card--completed .nlc-reason {
+  color: #16a34a;
+}
+
+.nlc-title {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.nlc-description {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.nlc-subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.nlc-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.nlc-progress-pill {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: rgba(59, 130, 246, 0.15);
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.nlc-completed-count {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* ===== Action buttons ===== */
+.nlc-actions {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-self: center;
+}
+
+.nlc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.nlc-btn--accept {
+  padding: 12px 22px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+}
+
+.nlc-btn--accept:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+}
+
+.nlc-btn--accept:active {
+  transform: translateY(0);
+}
+
+.nlc-btn--skip {
+  padding: 8px 16px;
+  background: transparent;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+}
+
+.nlc-btn--skip:hover {
+  background: #f1f5f9;
+  color: #334155;
+  border-color: #94a3b8;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .next-lesson-card {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+    padding: 20px;
+    gap: 16px;
+  }
+
+  .nlc-meta {
+    justify-content: center;
+  }
+
+  .nlc-actions {
+    flex-direction: row;
+    width: 100%;
+  }
+
+  .nlc-btn {
+    flex: 1;
+  }
+}
+
+/* ===== High-contrast theme ===== */
+body.theme-high-contrast .next-lesson-card {
+  background: #000;
+  border: 2px solid yellow;
+  color: white;
+  box-shadow: none;
+}
+
+body.theme-high-contrast .nlc-title,
+body.theme-high-contrast .nlc-description,
+body.theme-high-contrast .nlc-subtitle,
+body.theme-high-contrast .nlc-reason {
+  color: white;
+}
+
+body.theme-high-contrast .nlc-btn--accept {
+  background: yellow;
+  color: black;
+  box-shadow: none;
+}
+
+body.theme-high-contrast .nlc-btn--skip {
+  border-color: yellow;
+  color: yellow;
+}

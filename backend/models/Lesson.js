@@ -26,6 +26,15 @@ const LessonVisualSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const I18nStringSchema = new mongoose.Schema(
+  {
+    english: { type: String, trim: true, default: '' },
+    tamil: { type: String, trim: true, default: '' },
+    hindi: { type: String, trim: true, default: '' },
+  },
+  { _id: false }
+);
+
 const LessonSchema = new mongoose.Schema(
   {
     title: {
@@ -33,10 +42,18 @@ const LessonSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    titleI18n: {
+      type: I18nStringSchema,
+      default: undefined,
+    },
     textContent: {
       type: String,
       required: true,
       trim: true,
+    },
+    textContentI18n: {
+      type: I18nStringSchema,
+      default: undefined,
     },
     audioUrl: {
       type: String,
@@ -140,8 +157,16 @@ const LessonSchema = new mongoose.Schema(
               required: true,
               trim: true,
             },
+            questionI18n: {
+              type: I18nStringSchema,
+              default: undefined,
+            },
             options: {
               type: [String],
+              default: undefined,
+            },
+            optionsI18n: {
+              type: [I18nStringSchema],
               default: undefined,
             },
             correctAnswer: {
@@ -153,10 +178,18 @@ const LessonSchema = new mongoose.Schema(
               trim: true,
               default: '',
             },
+            hintI18n: {
+              type: I18nStringSchema,
+              default: undefined,
+            },
             explanation: {
               type: String,
               trim: true,
               default: '',
+            },
+            explanationI18n: {
+              type: I18nStringSchema,
+              default: undefined,
             },
             maxAttempts: {
               type: Number,
@@ -174,6 +207,10 @@ const LessonSchema = new mongoose.Schema(
                 required: true,
                 trim: true,
               },
+            },
+            feedbackI18n: {
+              correct: { type: I18nStringSchema, default: undefined },
+              incorrect: { type: I18nStringSchema, default: undefined },
             },
             position: {
               type: Number,

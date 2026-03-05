@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import api from '../utils/api';
 import { useAuth } from './AuthContext';
 
-const PreferencesContext = createContext(null);
+export const PreferencesContext = createContext(null);
 
 export const usePreferences = () => {
   const context = useContext(PreferencesContext);

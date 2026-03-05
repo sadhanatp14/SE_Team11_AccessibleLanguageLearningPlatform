@@ -7,7 +7,19 @@ import api from '../utils/api';
  * @param {string} lessonId
  * @returns {Promise<Array>} ordered lesson section objects
  */
-export const getLessonSections = async (lessonId) => {
-  const response = await api.get(`/lessons/${lessonId}/sections`);
+export const getLessonSections = async (lessonId, uiLanguage) => {
+  const response = await api.get(`/lessons/${lessonId}/sections`, {
+    params: { lang: uiLanguage },
+  });
+  return response.data.sections || [];
+};
+
+/**
+ * Fetch all sections for a given lesson with separate UI/content languages.
+ */
+export const getLessonSectionsWithContentLang = async (lessonId, uiLanguage, contentLanguage) => {
+  const response = await api.get(`/lessons/${lessonId}/sections`, {
+    params: { lang: uiLanguage, contentLang: contentLanguage },
+  });
   return response.data.sections || [];
 };

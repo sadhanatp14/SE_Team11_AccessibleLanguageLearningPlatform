@@ -5,6 +5,17 @@ const Preferences = require('../models/Preferences');
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
 
+const normalizeBilingualTextMode = (value) => {
+  const raw = String(value || '').trim().toLowerCase();
+  if (raw === 'english_tamil' || raw === 'english_hindi') return raw;
+  return 'off';
+};
+
+const isBilingualEnabled = (value) => {
+  const mode = normalizeBilingualTextMode(value);
+  return mode !== 'off';
+};
+
 // @route   GET /api/preferences
 // @desc    Get user preferences (1.7)
 // @access  Private
@@ -40,6 +51,25 @@ router.put('/', protect, async (req, res) => {
   // EPIC 1.3.2 / 1.4.2 / 1.5.1 / 1.6.1: Save preference updates from the client
   try {
     let preferences = await Preferences.findOne({ user: req.user.id });
+
+    // Enforce: when bilingual text is enabled, uiLanguage is locked.
+    // We only block *changes* (sending the same value is fine).
+    if (preferences && req.body && Object.prototype.hasOwnProperty.call(req.body, 'uiLanguage')) {
+      const effectiveBilingual =
+        req.body?.bilingualTextMode ??
+        preferences?.bilingualTextMode ??
+        preferences?.preferredLanguage ??
+        'off';
+
+      if (isBilingualEnabled(effectiveBilingual)) {
+        const requested = String(req.body.uiLanguage || '').trim().toLowerCase();
+        const current = String(preferences.uiLanguage || '').trim().toLowerCase();
+        if (requested && current && requested !== current) {
+          // Ignore the change rather than failing the whole update.
+          delete req.body.uiLanguage;
+        }
+      }
+    }
 
     if (!preferences) {
       // Create preferences if they don't exist
@@ -84,10 +114,15 @@ router.patch('/accessibility', protect, async (req, res) => {
     learningPace,
     fontFamily,
     letterSpacing,
-    distractionFreeMode
+    distractionFreeMode,
+    preferredLanguage,
+    uiLanguage,
+    bilingualTextMode
   } = req.body;
 
   try {
+    const existing = await Preferences.findOne({ user: req.user.id });
+
     const updateData = {};
     if (fontSize !== undefined) updateData.fontSize = fontSize;
     if (contrastTheme !== undefined) updateData.contrastTheme = contrastTheme;
@@ -95,6 +130,32 @@ router.patch('/accessibility', protect, async (req, res) => {
     if (fontFamily !== undefined) updateData.fontFamily = fontFamily;
     if (letterSpacing !== undefined) updateData.letterSpacing = letterSpacing;
     if (distractionFreeMode !== undefined) updateData.distractionFreeMode = distractionFreeMode;
+    if (preferredLanguage !== undefined) updateData.preferredLanguage = preferredLanguage;
+    if (bilingualTextMode !== undefined) updateData.bilingualTextMode = bilingualTextMode;
+
+    // Enforce: when bilingual text is enabled, uiLanguage is locked.
+    // Allow changing uiLanguage only when the *effective* bilingual mode is Off.
+    const effectiveBilingual =
+      updateData.bilingualTextMode ??
+      existing?.bilingualTextMode ??
+      existing?.preferredLanguage ??
+      'off';
+
+    if (uiLanguage !== undefined) {
+      if (isBilingualEnabled(effectiveBilingual)) {
+        const requested = String(uiLanguage || '').trim().toLowerCase();
+        const current = String(existing?.uiLanguage || '').trim().toLowerCase();
+        // If it's a no-op (same value), keep it; if it's a change, ignore.
+        if (!current || requested === current) {
+          updateData.uiLanguage = uiLanguage;
+        }
+      } else {
+        updateData.uiLanguage = uiLanguage;
+      }
+    }
+
+    // Keep metadata aligned with other update paths.
+    updateData.lastModified = Date.now();
 
     const preferences = await Preferences.findOneAndUpdate(
       { user: req.user.id },

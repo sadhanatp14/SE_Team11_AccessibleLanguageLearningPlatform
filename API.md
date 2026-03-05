@@ -68,6 +68,19 @@ Notes:
 
 ### POST /api/auth/login
 
+
+### Admin Routes
+
+#### POST /api/auth/register (admin)
+The public registration endpoint may optionally create an admin account when the `role` field is set to `admin` **and** a valid admin key is supplied in `adminKey`. The key is configured via the `ADMIN_REG_SECRET` environment variable. Without the correct key, attempts to register as admin return 403.
+
+#### GET /api/admin/users
+List all users. Requires admin authentication.
+
+#### GET /api/admin/users/:id
+Return detailed information about a user, including progress summary and interaction records. Admin-only.
+
+
 Logs in a user.
 
 Request body:
