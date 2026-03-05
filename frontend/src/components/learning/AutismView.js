@@ -2334,6 +2334,17 @@ const AutismView = ({ initialLessonId = null }) => {
         <div className="header-actions">
           <button
             type="button"
+            onClick={() => navigate('/dashboard')}
+            className="btn-settings"
+            title="Home"
+            aria-label="Home"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <BookOpen size={18} aria-hidden="true" />
+            <span>Home</span>
+          </button>
+          <button
+            type="button"
             onClick={() => navigate('/progress')}
             className="btn-settings"
             title={t('learning.common.progress')}
@@ -2342,6 +2353,7 @@ const AutismView = ({ initialLessonId = null }) => {
           </button>
           <button onClick={() => setShowSettings(true)} className="btn-settings" title={t('learning.common.settings')}>
             <Settings size={18} aria-hidden="true" />
+            <span>Settings</span>
           </button>
           <button onClick={logout} className="btn-exit">
             {t('learning.common.logout')}

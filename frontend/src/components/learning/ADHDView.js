@@ -1081,6 +1081,30 @@ const ADHDView = ({ initialLessonId = null }) => {
           <span>{t('learning.common.brand')}</span>
         </h1>
         <div className="header-actions">
+          {/* Icon-based navigation buttons (EPIC 5.4) */}
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="btn-minimal"
+            title="Home"
+            aria-label="Home"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <BookOpen size={18} aria-hidden="true" />
+            <span>Home</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/progress')}
+            className="btn-minimal"
+            title="Progress"
+            aria-label="Progress"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <Hash size={18} aria-hidden="true" />
+            <span>Progress</span>
+          </button>
+          {/* Existing controls below */}
           {isSessionActive && timeRemaining !== null && (
             <div className="timer-display">
               <span className="timer-icon" aria-hidden="true"><Timer size={16} /></span>
@@ -1124,6 +1148,7 @@ const ADHDView = ({ initialLessonId = null }) => {
           </button>
           <button onClick={() => setShowSettings(true)} className="btn-minimal" title={t('learning.common.settings')}>
             <Settings size={18} aria-hidden="true" />
+            <span>Settings</span>
           </button>
           <button type="button" onClick={logout} className="btn-logout" title={t('learning.common.logout')}>
             {t('learning.common.logout')}

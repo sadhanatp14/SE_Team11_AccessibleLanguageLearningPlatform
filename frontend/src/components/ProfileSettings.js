@@ -409,7 +409,7 @@ const ProfileSettings = ({ onClose }) => {
                   </span>
                   <span className="toggle-label">
                     {accessibilitySettings.distractionFreeMode
-                      ? 'Minimal distractions enabled'
+                      ? 'Fewer distractions'
                       : 'Normal mode'}
                   </span>
                 </button>

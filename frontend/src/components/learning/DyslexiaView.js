@@ -299,13 +299,35 @@ const DyslexiaView = () => {
           </h1>
         </div>
         <div className="nav-menu">
-          <span className="user-name">{copy.greeting}, {user?.name}!</span>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="btn-settings"
+            title="Home"
+            aria-label="Home"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <BookOpen size={18} aria-hidden="true" />
+            <span>Home</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/progress')}
+            className="btn-settings"
+            title="Progress"
+            aria-label="Progress"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <Hash size={18} aria-hidden="true" />
+            <span>Progress</span>
+          </button>
           <button
             type="button"
             onClick={toggleSyllableMode}
             className="btn-settings btn-syllable-toggle"
             title={t('learning.dyslexia.toggleSyllableTitle')}
             aria-pressed={syllableMode}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
             {syllableMode ? (
               <ToggleRight size={18} aria-hidden="true" />
@@ -331,6 +353,7 @@ const DyslexiaView = () => {
             aria-label={t('learning.common.settings')}
           >
             <Settings size={18} aria-hidden="true" />
+            <span>Settings</span>
           </button>
           <button onClick={logout} className="btn-logout">
             {t('learning.common.logout')}
