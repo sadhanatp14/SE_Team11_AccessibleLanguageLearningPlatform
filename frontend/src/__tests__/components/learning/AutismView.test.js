@@ -36,6 +36,28 @@ jest.mock('../../../context/AuthContext', () => ({
   }),
 }));
 
+// Mock PreferencesContext (AutismView reads preferredLanguage from preferences)
+const mockUpdatePreferences = jest.fn();
+let mockPreferences = {
+  preferredLanguage: 'english',
+};
+
+jest.mock('../../../context/PreferencesContext', () => {
+  const React = require('react');
+  const defaultValue = {};
+  Object.defineProperty(defaultValue, 'preferences', { get: () => mockPreferences });
+  Object.defineProperty(defaultValue, 'updatePreferences', { get: () => mockUpdatePreferences });
+  const PreferencesContext = React.createContext(defaultValue);
+
+  return {
+    PreferencesContext,
+    usePreferences: () => ({
+      preferences: mockPreferences,
+      updatePreferences: mockUpdatePreferences,
+    }),
+  };
+});
+
 // Mock Web Speech API
 const mockSpeechSynthesis = {
   speak: jest.fn(),
@@ -43,7 +65,15 @@ const mockSpeechSynthesis = {
   getVoices: jest.fn(() => []),
 };
 global.speechSynthesis = mockSpeechSynthesis;
-global.SpeechSynthesisUtterance = jest.fn();
+global.SpeechSynthesisUtterance = jest.fn().mockImplementation((text) => ({
+  text,
+  rate: 1,
+  lang: 'en-US',
+  volume: 1,
+  onboundary: null,
+  onstart: null,
+  onend: null,
+}));
 
 // Mock Audio API
 global.Audio = jest.fn().mockImplementation(() => ({
@@ -137,6 +167,13 @@ describe('AutismView Component - Autism Learning Features', () => {
     jest.clearAllMocks();
     api.get.mockResolvedValue({ data: { success: true, completedLessons: [] } });
     api.post.mockResolvedValue({ data: { success: true } });
+
+    mockPreferences = {
+      preferredLanguage: 'english',
+    };
+
+    // Prevent jsdom from attempting real network calls when the component uses fetch for TTS.
+    global.fetch = jest.fn().mockRejectedValue(new Error('Network request failed'));
   });
 
   // ===================================================================

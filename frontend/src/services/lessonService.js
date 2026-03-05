@@ -7,8 +7,22 @@ import api from '../utils/api';
  * @param {string} lessonId
  * @returns {Promise<Object>} lesson payload
  */
-export const getLessonById = async (lessonId) => {
-  const response = await api.get(`/lessons/${lessonId}`);
+export const getLessonById = async (lessonId, uiLanguage) => {
+  const response = await api.get(`/lessons/${lessonId}`, {
+    params: { lang: uiLanguage },
+  });
+  return response.data.lesson;
+};
+
+/**
+ * Fetch a lesson by MongoDB ObjectId with separate UI/content languages.
+ * `lang` localizes scaffolding text (titles, questions, hints), while `contentLang`
+ * localizes teaching content (e.g., multiple-choice options).
+ */
+export const getLessonByIdWithContentLang = async (lessonId, uiLanguage, contentLanguage) => {
+  const response = await api.get(`/lessons/${lessonId}`, {
+    params: { lang: uiLanguage, contentLang: contentLanguage },
+  });
   return response.data.lesson;
 };
 
@@ -17,9 +31,9 @@ export const getLessonById = async (lessonId) => {
  * @param {string} query
  * @returns {Promise<Array>} lesson list
  */
-export const searchLessons = async (query) => {
+export const searchLessons = async (query, uiLanguage) => {
   const response = await api.get('/lessons/search', {
-    params: { q: query },
+    params: { q: query, lang: uiLanguage },
   });
   return response.data.lessons || [];
 };

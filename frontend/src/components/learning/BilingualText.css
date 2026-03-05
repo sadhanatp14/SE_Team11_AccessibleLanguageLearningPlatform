@@ -1,0 +1,59 @@
+.bilingual-text {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+  line-height: 1.25;
+  color: var(--theme-text, var(--text-primary));
+  -webkit-text-fill-color: currentColor;
+  background: none;
+  -webkit-background-clip: initial;
+}
+
+.bilingual-text * {
+  color: inherit;
+  -webkit-text-fill-color: currentColor;
+  background: none;
+  -webkit-background-clip: initial;
+}
+
+.bilingual-text.compact {
+  gap: 4px;
+}
+
+.bilingual-line {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bilingual-label {
+  font-size: 0.78em;
+  font-weight: 600;
+  opacity: 0.75;
+  letter-spacing: 0.01em;
+}
+
+.bilingual-value {
+  white-space: pre-wrap;
+}
+
+.bilingual-primary .bilingual-value {
+  font-weight: 800;
+  font-size: 1.08em;
+}
+
+.bilingual-secondary .bilingual-value {
+  font-weight: 600;
+  opacity: 0.9;
+  font-size: 0.98em;
+}
+
+/* Used as a semantic line break in inline contexts (buttons/legend). */
+.bilingual-break {
+  display: block;
+  height: 0;
+}
+
+.bilingual-single {
+  font-weight: inherit;
+}

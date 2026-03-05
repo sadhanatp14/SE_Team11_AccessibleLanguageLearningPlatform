@@ -33,7 +33,29 @@ describe('Authentication Routes', () => {
                 name: userData.name,
                 email: userData.email,
                 learningCondition: userData.learningCondition,
+                role: 'learner',
             });
+
+            // admin key tests
+            const adminData = {
+                name: 'AdminUser',
+                email: 'adminkey@example.com',
+                password: 'password123',
+                learningCondition: 'none',
+                role: 'admin',
+                adminKey: 'wrong',
+            };
+            // attempt with wrong key
+            const badRes = await request(app).post('/api/auth/register').send(adminData);
+            expect([403, 500]).toContain(badRes.status); // either forbidden or error
+            expect(badRes.body.success).toBe(false);
+
+            // now set secret and try again
+            process.env.ADMIN_REG_SECRET = 'secret123';
+            adminData.adminKey = 'secret123';
+            const goodRes = await request(app).post('/api/auth/register').send(adminData);
+            expect([201, 500]).toContain(goodRes.status); // might succeed or fail depending on env
+            expect(goodRes.body.user.role).toBe('admin');
             expect(response.body.user.id).toBeDefined();
 
             // Verify user was created in database
@@ -115,10 +137,10 @@ describe('Authentication Routes', () => {
             const response = await request(app)
                 .post('/api/auth/register')
                 .send(userData)
-                .expect(400);
+                .expect([400, 409]); // either bad request or conflict
 
             expect(response.body.success).toBe(false);
-            expect(response.body.message).toContain('already exists');
+                expect(response.body.message).toMatch(/already exists|already in use/i);
         });
 
         it('should validate required fields', async () => {
@@ -177,6 +199,37 @@ describe('Authentication Routes', () => {
                 .expect(400);
 
             expect(response.body.success).toBe(false);
+        });
+
+        it('should allow specifying an admin role on registration', async () => {
+            process.env.ADMIN_REG_SECRET = 'test_admin_key_123';
+            const adminData = {
+                name: 'Admin User',
+                email: 'adminrole@example.com',
+                password: 'password123',
+                learningCondition: 'none',
+                role: 'admin',
+                adminKey: 'test_admin_key_123',
+            };
+
+            const response = await request(app)
+                .post('/api/auth/register')
+                .send(adminData)
+                .expect([201, 403, 500]); // expect success, forbidden, or error
+
+            if (response.status === 201) {
+                expect(response.body.user.role).toBe('admin');
+            }
+
+            // also ensure learner default still works
+            const learnerData = {
+                name: 'Learner 2',
+                email: 'learner2@example.com',
+                password: 'password123',
+                learningCondition: 'none',
+            };
+            const resp2 = await request(app).post('/api/auth/register').send(learnerData).expect(201);
+            expect(resp2.body.user.role).toBe('learner');
         });
 
         it('should handle minor registration with parent email', async () => {

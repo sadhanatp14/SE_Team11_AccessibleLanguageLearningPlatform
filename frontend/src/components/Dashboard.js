@@ -128,6 +128,18 @@ const Dashboard = () => {
       id="learning-container"
       data-user-condition={user?.learningCondition || ''}
     >
+      {/* quick admin link if the logged-in user is an admin */}
+      {user?.role === 'admin' && (
+        <div style={{ position: 'absolute', top: 10, right: 10 }}>
+          <button
+            onClick={() => navigate('/admin/users')}
+            style={{ padding: '6px 12px', fontSize: '14px' }}
+          >
+            Admin Panel
+          </button>
+        </div>
+      )}
+
       {renderLearningView()}
     </div>
   );

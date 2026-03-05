@@ -1,14 +1,75 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import { requestInteractionHelp, submitInteraction } from '../../services/interactionService';
 import GuidedSupport from './GuidedSupport';
 import { decorateDyslexiaText, useDyslexiaContext } from '../../utils/dyslexiaSyllableMode';
+import { usePreferences } from '../../context/PreferencesContext';
+import { useI18n } from '../../utils/i18n';
+import {
+  backendTtsLangFor,
+  pickByLanguage,
+  resolveBilingualTextModeFromPreferences,
+  resolveUiLanguageFromPreferences,
+  speechSynthesisLangFor,
+} from '../../utils/languagePrefs';
+import { pickI18nString } from '../../utils/lessonI18n';
 import { Mic } from 'lucide-react';
+import BilingualText from './BilingualText';
 import './InteractionCard.css';
 
 const normalizeAnswer = (value) => {
   if (typeof value === 'boolean') return value ? 'true' : 'false';
   if (typeof value === 'number') return value.toString();
   return String(value ?? '').trim().toLowerCase();
+};
+
+const normalizeVoiceText = (value) => {
+  const raw = String(value ?? '').trim().toLowerCase();
+  if (!raw) return '';
+
+  const withoutPunctuation = raw
+    .replace(/[.,!?;:()"'{}\u005B\u005D\u201C\u201D\u2018\u2019\u2013\u2014]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  try {
+    return withoutPunctuation
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .trim();
+  } catch {
+    return withoutPunctuation;
+  }
+};
+
+const compactVoiceText = (value) => normalizeVoiceText(value).replace(/\s+/g, '');
+
+const voiceMatchesOption = (heard, option) => {
+  const heardNorm = normalizeVoiceText(heard);
+  const optionNorm = normalizeVoiceText(option);
+  if (!heardNorm || !optionNorm) return false;
+
+  if (heardNorm === optionNorm) return true;
+
+  const heardCompact = compactVoiceText(heardNorm);
+  const optionCompact = compactVoiceText(optionNorm);
+  if (heardCompact && optionCompact && heardCompact === optionCompact) return true;
+
+  // Avoid over-matching tiny terms like "a".
+  const minLen = Math.min(heardNorm.length, optionNorm.length);
+  if (minLen >= 3 && (heardNorm.includes(optionNorm) || optionNorm.includes(heardNorm))) {
+    return true;
+  }
+
+  // Helpful aliases for true/false questions.
+  if (optionNorm === 'true') {
+    return ['yes', 'yeah', 'correct', 'right'].includes(heardNorm);
+  }
+  if (optionNorm === 'false') {
+    return ['no', 'wrong', 'incorrect'].includes(heardNorm);
+  }
+
+  return false;
 };
 
 const encouragementMessages = [
@@ -29,6 +90,7 @@ const InteractionCard = ({
   lessonId,
   condition,
   interaction,
+  contentLanguage,
   onContinue,
   disableContinue = false,
   useLocalSubmission = false,
@@ -42,7 +104,13 @@ const InteractionCard = ({
   disableAutoSpeak = false,
   onAnswered,
 }) => {
+  const { preferences } = usePreferences();
+  const { t } = useI18n();
+  const uiLanguage = resolveUiLanguageFromPreferences(preferences);
+  const bilingualTextMode = resolveBilingualTextModeFromPreferences(preferences);
+  const resolvedContentLanguage = String(contentLanguage || '').trim() ? contentLanguage : uiLanguage;
   const [selectedAnswer, setSelectedAnswer] = useState('');
+  const [selectedOptionIndex, setSelectedOptionIndex] = useState(null);
   const [typedAnswer, setTypedAnswer] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState(null);
@@ -75,6 +143,7 @@ const InteractionCard = ({
 
   useEffect(() => {
     setSelectedAnswer('');
+    setSelectedOptionIndex(null);
     setTypedAnswer('');
     setResult(null);
     setError('');
@@ -88,56 +157,141 @@ const InteractionCard = ({
 
   const options =
     interaction.type === 'true_false'
-      ? ['True', 'False']
+      ? ['true', 'false']
       : interaction.options || [];
+
+  const optionItems = useMemo(() => {
+    if (interaction.type === 'true_false') {
+      return [
+        {
+          value: 'true',
+          baseText: 'True',
+          i18n: { english: 'True', tamil: 'சரி', hindi: 'सही' },
+        },
+        {
+          value: 'false',
+          baseText: 'False',
+          i18n: { english: 'False', tamil: 'தவறு', hindi: 'गलत' },
+        },
+      ];
+    }
+
+    const rawOptions = Array.isArray(interaction?.options) ? interaction.options : [];
+    const rawI18n = Array.isArray(interaction?.optionsI18n) ? interaction.optionsI18n : [];
+    return rawOptions
+      .map((opt, idx) => {
+        const optI18n = rawI18n[idx];
+        return {
+          value: opt,
+          baseText: (optI18n && typeof optI18n.english === 'string' && optI18n.english.trim()) ? optI18n.english : opt,
+          i18n: optI18n,
+        };
+      })
+      .filter((item) => typeof item.value === 'string' && item.value.trim());
+  }, [interaction?.options, interaction?.optionsI18n, interaction?.type]);
 
   const isShortAnswer = interaction.type === 'short_answer';
 
-  const instructionSteps = useMemo(() => {
+  const questionBaseText = useMemo(() => {
+    const fromI18n = interaction?.questionI18n?.english;
+    if (typeof fromI18n === 'string' && fromI18n.trim()) return fromI18n;
+    return interaction?.question || '';
+  }, [interaction?.question, interaction?.questionI18n?.english]);
+
+  const instructionStepDicts = useMemo(() => {
     // EPIC 3.7.1-3.7.4: Spoken instructions for activities that are short, replayable, and match on-screen actions.
     const steps = [];
 
     if (enableTts) {
-      steps.push('Press “Listen to Question” to hear the question.');
+      steps.push({
+        english: 'Press “Listen to Question” to hear the question.',
+        tamil: 'கேள்வியை கேட்க “Listen to Question” ஐ அழுத்துங்கள்.',
+        hindi: 'प्रश्न सुनने के लिए “Listen to Question” दबाएँ।',
+      });
     }
 
     if (interaction?.type === 'short_answer') {
-      steps.push('Type your answer in the box.');
+      steps.push({
+        english: 'Type your answer in the box.',
+        tamil: 'பெட்டியில் உங்கள் பதிலை টাইப் செய்யுங்கள்.',
+        hindi: 'अपना जवाब बॉक्स में टाइप करें।',
+      });
     } else if (interaction?.type === 'true_false') {
-      steps.push('Choose True or False.');
+      steps.push({
+        english: 'Choose True or False.',
+        tamil: 'True அல்லது False ஐ தேர்வு செய்யுங்கள்.',
+        hindi: 'True या False चुनें।',
+      });
     } else if (interaction?.type === 'click') {
-      steps.push('Tap the option that matches the question.');
+      steps.push({
+        english: 'Tap the option that matches the question.',
+        tamil: 'கேள்விக்கு பொருந்தும் விருப்பத்தைத் தட்டுங்கள்.',
+        hindi: 'प्रश्न से मिलती विकल्प पर टैप करें।',
+      });
     } else {
-      steps.push('Select one option.');
+      steps.push({
+        english: 'Select one option.',
+        tamil: 'ஒரு விருப்பத்தைத் தேர்வு செய்யுங்கள்.',
+        hindi: 'एक विकल्प चुनें।',
+      });
     }
 
-    steps.push('Then press “Submit Answer”.');
+    steps.push({
+      english: 'Then press “Submit Answer”.',
+      tamil: 'பிறகு “Submit Answer” ஐ அழுத்துங்கள்.',
+      hindi: 'फिर “Submit Answer” दबाएँ।',
+    });
 
     if (!readOnly) {
-      steps.push('If you get stuck, press “Need help?” for a hint.');
+      steps.push({
+        english: 'If you get stuck, press “Need help?” for a hint.',
+        tamil: 'உங்களுக்கு உதவி தேவைப்பட்டால் “Need help?” ஐ அழுத்துங்கள்.',
+        hindi: 'अगर अटक जाएँ, तो “Need help?” दबाएँ।',
+      });
     }
 
     if (enableTimer && !readOnly) {
-      steps.push('Keep an eye on the timer at the top.');
+      steps.push({
+        english: 'Keep an eye on the timer at the top.',
+        tamil: 'மேலே உள்ள நேரம்காட்டியை கவனியுங்கள்.',
+        hindi: 'ऊपर दिए टाइमर को देखें।',
+      });
     }
 
     return steps.slice(0, 5);
   }, [enableTts, enableTimer, interaction?.type, readOnly]);
 
+  const instructionSteps = useMemo(() => {
+    // 5.2: Instructions should display only in selected UI language.
+    return instructionStepDicts.map((step) => pickByLanguage(uiLanguage, step));
+  }, [instructionStepDicts, uiLanguage]);
+
+  const instructionHeaderDict = useMemo(
+    () => ({
+      english: 'Instructions.',
+      tamil: 'வழிமுறைகள்.',
+      hindi: 'निर्देश.',
+    }),
+    []
+  );
+
   const instructionText = useMemo(() => {
-    const header = 'Instructions.';
+    const header = pickByLanguage(uiLanguage, instructionHeaderDict);
     return [header, ...instructionSteps].join(' ');
-  }, [instructionSteps]);
+  }, [instructionHeaderDict, instructionSteps, uiLanguage]);
+
 
   const displayedInstructionText = useMemo(() => {
     if (!dyslexia.applySyllables) return instructionText;
+    if (String(uiLanguage).toLowerCase() !== 'english') return instructionText;
     return decorateDyslexiaText(instructionText);
-  }, [dyslexia.applySyllables, instructionText]);
+  }, [dyslexia.applySyllables, instructionText, uiLanguage]);
 
   const displayedInstructionSteps = useMemo(() => {
     if (!dyslexia.applySyllables) return instructionSteps;
+    if (String(uiLanguage).toLowerCase() !== 'english') return instructionSteps;
     return instructionSteps.map((step) => decorateDyslexiaText(step));
-  }, [dyslexia.applySyllables, instructionSteps]);
+  }, [dyslexia.applySyllables, instructionSteps, uiLanguage]);
 
   const stripWordPunctuation = useCallback((value) => {
     // Remove common ASCII + Unicode punctuation so word highlighting matches
@@ -232,12 +386,14 @@ const InteractionCard = ({
 
     // Try Backend TTS first
     try {
+      const ttsLanguageKey = overrides.languageKey ?? uiLanguage;
       const response = await fetch('/api/tts/speak', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text,
-          speed: overrides.rate ?? 0.85
+          speed: overrides.rate ?? 0.85,
+          lang: backendTtsLangFor(ttsLanguageKey),
         })
       });
 
@@ -248,10 +404,16 @@ const InteractionCard = ({
       const audio = new Audio(url);
       audioRef.current = audio;
       audio.playbackRate = overrides.rate ?? 0.85;
-      audio.play().catch(e => console.warn("Backend Play error", e));
+      const cleanupUrl = () => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (e) {
+          // ignore
+        }
+      };
 
       audio.onended = () => {
-        URL.revokeObjectURL(url);
+        cleanupUrl();
         if (overrides.trackWords) {
           instructionBoundaryRef.current = null;
           setInstructionsActiveWord('');
@@ -263,6 +425,22 @@ const InteractionCard = ({
         }
       };
 
+      // NOTE: audio.play() can fail due to autoplay/user-gesture policies if the
+      // fetch took long enough that the click activation expired. If it fails,
+      // fall back to browser speechSynthesis in the catch block.
+      try {
+        await audio.play();
+      } catch (playError) {
+        try {
+          audio.pause();
+        } catch (e) {
+          // ignore
+        }
+        audioRef.current = null;
+        cleanupUrl();
+        throw playError;
+      }
+
       if (overrides.trackWords) {
         startInstructionBoundaryTracking(text, overrides.rate ?? 0.85);
       }
@@ -272,7 +450,8 @@ const InteractionCard = ({
       if (typeof window !== 'undefined' && window.speechSynthesis) {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = overrides.rate ?? 0.85;
-        utterance.lang = overrides.lang ?? 'en-US';
+        const ttsLanguageKey = overrides.languageKey ?? uiLanguage;
+        utterance.lang = overrides.lang ?? speechSynthesisLangFor(ttsLanguageKey);
 
         if (overrides.trackWords) {
           utterance.onboundary = (event) => {
@@ -289,7 +468,7 @@ const InteractionCard = ({
         window.speechSynthesis.speak(utterance);
       }
     }
-  }, [enableTts, startInstructionBoundaryTracking, stripWordPunctuation]);
+  }, [enableTts, startInstructionBoundaryTracking, stripWordPunctuation, uiLanguage]);
 
   useEffect(() => {
     if (!isInstructionsOpen) return undefined;
@@ -441,15 +620,46 @@ const InteractionCard = ({
     setIsSubmitting(true);
     setError('');
 
-    const finalAnswer = selectedAnswer || typedAnswer;
+    const finalAnswer = (() => {
+      if (interaction?.type === 'true_false') {
+        if (selectedOptionIndex === 0) return true;
+        if (selectedOptionIndex === 1) return false;
+        return selectedAnswer || typedAnswer;
+      }
+
+      if (selectedOptionIndex !== null && selectedOptionIndex !== undefined) {
+        return selectedOptionIndex;
+      }
+
+      return selectedAnswer || typedAnswer;
+    })();
 
     try {
       const nextAttempts = attempts + 1;
       setAttempts(nextAttempts);
 
       if (useLocalSubmission) {
+        const localOptions = Array.isArray(interaction?.options) ? interaction.options : null;
+        let selectedForCompare = finalAnswer;
+        let correctForCompare = interaction.correctAnswer;
+
+        if (typeof correctForCompare === 'string' && interaction?.correctAnswerI18n) {
+          correctForCompare = pickI18nString(resolvedContentLanguage, correctForCompare, interaction.correctAnswerI18n);
+        }
+
+        if (localOptions && localOptions.length > 0) {
+          if (typeof correctForCompare === 'string' && typeof selectedForCompare === 'number') {
+            const mapped = localOptions[selectedForCompare];
+            if (typeof mapped === 'string') selectedForCompare = mapped;
+          }
+          if (typeof correctForCompare === 'number' && typeof selectedForCompare === 'string') {
+            const idx = localOptions.findIndex((opt) => normalizeAnswer(opt) === normalizeAnswer(selectedForCompare));
+            if (idx >= 0) selectedForCompare = idx;
+          }
+        }
+
         const isCorrect =
-          normalizeAnswer(finalAnswer) === normalizeAnswer(interaction.correctAnswer);
+          normalizeAnswer(selectedForCompare) === normalizeAnswer(correctForCompare);
         const payload = {
           isCorrect,
           feedback: isCorrect ? interaction.feedback.correct : interaction.feedback.incorrect,
@@ -458,9 +668,11 @@ const InteractionCard = ({
         if (!isCorrect) {
           if (interaction.explanation) {
             payload.explanation = interaction.explanation;
+            if (interaction.explanationI18n) payload.explanationI18n = interaction.explanationI18n;
           }
           if (interaction.hint && nextAttempts >= hintTriggerAttempts) {
             payload.hint = interaction.hint;
+            if (interaction.hintI18n) payload.hintI18n = interaction.hintI18n;
           }
           payload.encouragement = pickEncouragement();
         }
@@ -475,6 +687,7 @@ const InteractionCard = ({
           lessonId,
           interactionId: interaction.id,
           selectedAnswer: finalAnswer,
+          uiLanguage,
         });
         setResult(response);
         setGuidance(resolveGuidance(response));
@@ -496,12 +709,15 @@ const InteractionCard = ({
       setGuidance(null);
     }
     setSelectedAnswer(option);
+    const idx = Array.isArray(options) ? options.findIndex((opt) => opt === option) : -1;
+    setSelectedOptionIndex(idx >= 0 ? idx : null);
     setTypedAnswer('');
   };
 
   const handleRetry = () => {
     setResult(null);
     setSelectedAnswer('');
+    setSelectedOptionIndex(null);
     setTypedAnswer('');
     setError('');
     setGuidance(null);
@@ -517,10 +733,13 @@ const InteractionCard = ({
         const payload = {};
         if (interaction.hint && attempts >= hintTriggerAttempts) {
           payload.hint = interaction.hint;
+          if (interaction.hintI18n) payload.hintI18n = interaction.hintI18n;
         } else if (interaction.explanation) {
           payload.explanation = interaction.explanation;
+          if (interaction.explanationI18n) payload.explanationI18n = interaction.explanationI18n;
         } else if (interaction.hint) {
           payload.hint = interaction.hint;
+          if (interaction.hintI18n) payload.hintI18n = interaction.hintI18n;
         }
         payload.encouragement = pickEncouragement();
         setGuidance(resolveGuidance(payload));
@@ -528,6 +747,7 @@ const InteractionCard = ({
         const response = await requestInteractionHelp({
           lessonId,
           interactionId: interaction.id,
+          uiLanguage,
         });
         setGuidance(resolveGuidance(response));
       }
@@ -558,16 +778,24 @@ const InteractionCard = ({
   }, [result, autoAdvanceOnCorrect, onContinue, speak, disableAutoSpeak]);
 
   const guidanceMessage = guidance?.message || '';
+  const guidanceMessageI18n = guidance?.i18n || null;
   const guidanceTone = guidance?.tone || '';
 
   const handleReplayNarration = () => {
-    speak(interaction?.question);
+    speak(interaction?.question, {
+      languageKey: resolvedContentLanguage,
+    });
   };
 
   const handlePlayInstructions = () => {
     // EPIC 3.7.1-3.7.3: Provide spoken instructions + allow replay.
     setInstructionsActiveWord('');
-    speak(instructionText, { rate: 0.85, lang: 'en-US', trackWords: true });
+    speak(instructionText, {
+      rate: 0.85,
+      lang: speechSynthesisLangFor(uiLanguage),
+      languageKey: uiLanguage,
+      trackWords: true,
+    });
   };
 
   const initSpeechRecognition = () => {
@@ -575,9 +803,9 @@ const InteractionCard = ({
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return null;
     const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
+    recognition.lang = speechSynthesisLangFor(resolvedContentLanguage);
     recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+    recognition.maxAlternatives = 5;
     return recognition;
   };
 
@@ -600,18 +828,19 @@ const InteractionCard = ({
     };
 
     recognition.onresult = (event) => {
-      const transcript = event.results?.[0]?.[0]?.transcript || '';
-      const cleaned = transcript.trim();
+      const altList = Array.from(event?.results?.[0] || [])
+        .map((item) => String(item?.transcript || '').trim())
+        .filter(Boolean);
+
+      const cleaned = altList[0] || '';
       setLastTranscript(cleaned);
       
       // Always show the transcribed text in the typing field
       setTypedAnswer(cleaned);
       
-      if (options.length > 0) {
-        // loose matching
-        const matched = options.find(
-          (option) => normalizeAnswer(option) === normalizeAnswer(cleaned) ||
-            cleaned.toLowerCase().includes(option.toLowerCase())
+      if (options.length > 0 && altList.length > 0) {
+        const matched = options.find((option) =>
+          altList.some((candidate) => voiceMatchesOption(candidate, option))
         );
         if (matched) {
           setSelectedAnswer(matched);
@@ -662,38 +891,47 @@ const InteractionCard = ({
         <div className="interaction-timer" aria-live="polite">
           {enableTimer && !readOnly ? (
             <>
-              <span className="timer-label">Time</span>
+              <span className="timer-label">{t('learning.interaction.timeLabel')}</span>
               <span className={`timer-value ${timeLeft !== null && timeLeft <= 5 ? 'warn' : ''}`}>
                 {timeLeft ?? resolvedTimeLimit}s
               </span>
             </>
           ) : (
-            <span className="timer-label">No timer</span>
+            <span className="timer-label">{t('learning.interaction.noTimer')}</span>
           )}
         </div>
         <button
           type="button"
           className="narration-btn fx-pressable fx-focus"
           onClick={handleReplayNarration}
-          aria-label="Replay narration"
+          aria-label={t('learning.interaction.replayNarrationAria')}
           disabled={!enableTts}
         >
           {/* EPIC 2.1.2, 2.3.4: Learner-controlled question narration (simple control, not overwhelming). */}
-          Listen to Question
+          {t('learning.interaction.listenToQuestion')}
         </button>
 
         <button
           type="button"
           className="instructions-btn fx-pressable fx-focus"
           onClick={() => setIsInstructionsOpen(true)}
-          aria-label="Open instructions"
+          aria-label={t('learning.interaction.openInstructionsAria')}
         >
-          Instructions
+          {t('learning.interaction.instructionsButton')}
         </button>
       </div>
 
       <fieldset disabled={isLocked || readOnly}>
-        <legend className="interaction-question">{interaction.question}</legend>
+        <legend className="interaction-question">
+          <BilingualText
+            bilingualTextMode={bilingualTextMode}
+            contentLanguage={resolvedContentLanguage}
+            baseText={questionBaseText}
+            i18n={interaction?.questionI18n}
+            showLabels={true}
+            compact={false}
+          />
+        </legend>
 
         {/* Visual aid image for the question (Task 2.5.2, 2.5.4) */}
         {interaction.questionImageUrl && (
@@ -709,21 +947,28 @@ const InteractionCard = ({
 
         {interaction.type === 'click' ? (
           <div className="interaction-click-group" role="list">
-            {options.map((option) => (
+            {optionItems.map((item, idx) => (
               <button
-                key={option}
+                key={`${interaction.id || 'interaction'}-click-${idx}-${String(item.value)}`}
                 type="button"
-                className={`interaction-click fx-pressable fx-focus ${selectedAnswer === option ? 'selected' : ''}`}
-                onClick={() => handleSelect(option)}
-                aria-pressed={selectedAnswer === option}
+                className={`interaction-click fx-pressable fx-focus ${selectedAnswer === item.value ? 'selected' : ''}`}
+                onClick={() => handleSelect(item.value)}
+                aria-pressed={selectedAnswer === item.value}
               >
-                {option}
+                <BilingualText
+                  bilingualTextMode={bilingualTextMode}
+                  contentLanguage={resolvedContentLanguage}
+                  baseText={item.baseText}
+                  i18n={item.i18n}
+                  showLabels={false}
+                  compact={true}
+                />
               </button>
             ))}
           </div>
         ) : isShortAnswer ? (
           <div className="interaction-input">
-            <label htmlFor={`short-${interaction.id}`} className="sr-only">Type your answer</label>
+            <label htmlFor={`short-${interaction.id}`} className="sr-only">{t('learning.interaction.typeYourAnswer')}</label>
             <input
               id={`short-${interaction.id}`}
               type="text"
@@ -732,22 +977,31 @@ const InteractionCard = ({
                 setTypedAnswer(event.target.value);
                 setSelectedAnswer('');
               }}
-              placeholder="Type your answer here"
+              placeholder={t('learning.interaction.typeYourAnswerPlaceholder')}
               disabled={readOnly || isLocked}
             />
           </div>
         ) : (
           <div className="interaction-options" role="radiogroup" aria-label={interaction.question}>
-            {options.map((option) => (
-              <label key={option} className="interaction-option">
+            {optionItems.map((item, idx) => (
+              <label key={`${interaction.id || 'interaction'}-opt-${idx}-${String(item.value)}`} className="interaction-option">
                 <input
                   type="radio"
                   name={interaction.id}
-                  value={option}
-                  checked={selectedAnswer === option}
-                  onChange={() => handleSelect(option)}
+                  value={item.value}
+                  checked={selectedAnswer === item.value}
+                  onChange={() => handleSelect(item.value)}
                 />
-                <span>{option}</span>
+                <span>
+                  <BilingualText
+                    bilingualTextMode={bilingualTextMode}
+                    contentLanguage={resolvedContentLanguage}
+                    baseText={item.baseText}
+                    i18n={item.i18n}
+                    showLabels={false}
+                    compact={true}
+                  />
+                </span>
               </label>
             ))}
           </div>
@@ -764,11 +1018,11 @@ const InteractionCard = ({
               >
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
                   <Mic size={18} aria-hidden="true" />
-                  <span>{isListening ? 'Stop Voice' : 'Answer by Voice'}</span>
+                  <span>{isListening ? t('learning.interaction.stopVoice') : t('learning.interaction.answerByVoice')}</span>
                 </span>
               </button>
               {lastTranscript && (
-                <span className="voice-transcript">Heard: {lastTranscript}</span>
+                <span className="voice-transcript">{t('learning.interaction.heardPrefix')} {lastTranscript}</span>
               )}
             </div>
             {voiceError && <p className="interaction-feedback warning">{voiceError}</p>}
@@ -777,7 +1031,7 @@ const InteractionCard = ({
 
         {!isShortAnswer && (
           <div className="interaction-typed-fallback">
-            <label htmlFor={`typed-${interaction.id}`}>Prefer typing?</label>
+            <label htmlFor={`typed-${interaction.id}`}>{t('learning.interaction.preferTyping')}</label>
             <input
               id={`typed-${interaction.id}`}
               type="text"
@@ -786,7 +1040,7 @@ const InteractionCard = ({
                 setTypedAnswer(event.target.value);
                 setSelectedAnswer('');
               }}
-              placeholder="Type your answer"
+              placeholder={t('learning.interaction.typeYourAnswerShort')}
               disabled={readOnly || isLocked}
             />
           </div>
@@ -820,13 +1074,16 @@ const InteractionCard = ({
 
       {readOnly && (
         <p className="interaction-feedback" role="status">
-          Replay mode: interactions are read-only.
+          {t('learning.interaction.replayReadOnly')}
         </p>
       )}
 
       <GuidedSupport
         // EPIC 2.4.1-2.4.4: One-tap access to hints/explanations and encouraging messages.
         message={guidanceMessage}
+        messageI18n={guidanceMessageI18n}
+        bilingualTextMode={bilingualTextMode}
+        uiLanguage={uiLanguage}
         tone={guidanceTone}
         onHelp={handleHelp}
         isLoading={isHelping}
@@ -835,13 +1092,13 @@ const InteractionCard = ({
       <div className="interaction-actions">
         {!isAnswered ? (
           <button type="submit" className="btn-submit fx-pressable fx-focus" disabled={readOnly || !hasAnswer || isSubmitting}>
-            {isSubmitting ? 'Checking…' : 'Submit Answer'}
+            {isSubmitting ? t('learning.interaction.checking') : t('learning.interaction.submitAnswer')}
           </button>
         ) : (
           <>
             {!isCorrect && (
               <button type="button" className="btn-retry fx-pressable fx-focus" onClick={handleRetry}>
-                Try Again
+                {t('learning.interaction.tryAgain')}
               </button>
             )}
             {isCorrect && onContinue && (
@@ -851,14 +1108,14 @@ const InteractionCard = ({
                 onClick={onContinue}
                 disabled={disableContinue}
               >
-                Continue
+                {t('app.continue')}
               </button>
             )}
           </>
         )}
       </div>
 
-      {isInstructionsOpen && (
+      {isInstructionsOpen && ReactDOM.createPortal(
         <div
           className="instructions-overlay"
           role="dialog"
@@ -877,12 +1134,12 @@ const InteractionCard = ({
             onMouseDown={(e) => e.stopPropagation()}
           >
             <div className="instructions-header">
-              <h3 id="instructions-title">Instructions</h3>
+              <h3 id="instructions-title">{t('learning.interaction.instructionsTitle')}</h3>
               <button
                 type="button"
                 className="instructions-close fx-pressable fx-focus"
                 onClick={closeInstructions}
-                aria-label="Close instructions"
+                aria-label={t('learning.interaction.closeInstructionsAria')}
               >
                 ×
               </button>
@@ -893,8 +1150,12 @@ const InteractionCard = ({
             </p>
 
             <ol className="instructions-list">
-              {displayedInstructionSteps.map((step) => (
-                <li key={step}>{renderHighlightableText(step, instructionsActiveWord)}</li>
+              {displayedInstructionSteps.map((step, idx) => (
+                <li key={`${idx}-${step}`}>
+                  <div className="instructions-step-primary">
+                    {renderHighlightableText(step, instructionsActiveWord)}
+                  </div>
+                </li>
               ))}
             </ol>
 
@@ -905,20 +1166,21 @@ const InteractionCard = ({
                 onClick={handlePlayInstructions}
                 disabled={!enableTts}
               >
-                Play / Replay
+                {t('learning.interaction.playReplay')}
               </button>
               <button
                 type="button"
                 className="btn-instructions-stop fx-pressable fx-focus"
                 onClick={stopInstructionAudio}
               >
-                Stop
+                {t('learning.common.stop')}
               </button>
             </div>
 
-            <p className="instructions-muted">Tip: You can press Esc to close.</p>
+            <p className="instructions-muted">{t('learning.interaction.tipEscToClose')}</p>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </form>
   );
@@ -927,13 +1189,13 @@ const InteractionCard = ({
 const resolveGuidance = (payload) => {
   if (!payload) return null;
   if (payload.explanation) {
-    return { message: payload.explanation, tone: 'explanation' };
+    return { message: payload.explanation, i18n: payload.explanationI18n || null, tone: 'explanation' };
   }
   if (payload.hint) {
-    return { message: payload.hint, tone: 'hint' };
+    return { message: payload.hint, i18n: payload.hintI18n || null, tone: 'hint' };
   }
   if (payload.encouragement) {
-    return { message: payload.encouragement, tone: 'encouragement' };
+    return { message: payload.encouragement, i18n: null, tone: 'encouragement' };
   }
   return null;
 };

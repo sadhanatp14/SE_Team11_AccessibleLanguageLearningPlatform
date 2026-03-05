@@ -28,6 +28,15 @@ const handlers = [
             );
         }
 
+        // If requesting an admin account, require the mock key
+        if (req.body.role === 'admin') {
+            if (req.body.adminKey !== 'mock-secret') {
+                return res(
+                    ctx.status(403),
+                    ctx.json({ success: false, message: 'Invalid admin key' })
+                );
+            }
+        }
         // Successful registration
         return res(
             ctx.status(200),
@@ -41,6 +50,7 @@ const handlers = [
                     email,
                     learningCondition: req.body.learningCondition,
                     requiresParentalApproval: req.body.isMinor || false,
+                    role: req.body.role || 'learner',
                 },
             })
         );

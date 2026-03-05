@@ -1,5 +1,12 @@
 const Lesson = require('../models/Lesson');
 const { searchLessonIdsByEmbedding } = require('../services/vectorSearch');
+const {
+  normalizeUiLanguage,
+  pickI18nString,
+  applyTokenReplacements,
+  replaceQuotedSegments,
+  buildOptionTokenReplacements,
+} = require('../utils/i18n');
 
 /**
  * Lesson Controller
@@ -44,6 +51,8 @@ const { searchLessonIdsByEmbedding } = require('../services/vectorSearch');
 
 const searchLessons = async (req, res) => {
   const query = (req.query.q || '').trim();
+  const uiLanguage = normalizeUiLanguage(req.query.lang);
+  const contentLanguage = normalizeUiLanguage(req.query.contentLang || uiLanguage);
 
   if (!query) {
     return res.status(400).json({
@@ -81,11 +90,84 @@ const searchLessons = async (req, res) => {
         .limit(20);
     }
 
+    const localized = lessons.map((lesson) => {
+      const obj = typeof lesson?.toObject === 'function' ? lesson.toObject() : lesson;
+
+      const globalReplacements = Array.isArray(obj.interactions)
+        ? obj.interactions.flatMap((interaction) => {
+            const options = Array.isArray(interaction?.options) ? interaction.options : undefined;
+            const optionsI18n = Array.isArray(interaction?.optionsI18n) ? interaction.optionsI18n : undefined;
+            return buildOptionTokenReplacements(uiLanguage, contentLanguage, options, optionsI18n);
+          })
+        : [];
+
+      return {
+        ...obj,
+        title: applyTokenReplacements(pickI18nString(uiLanguage, obj.title, obj.titleI18n), globalReplacements),
+        textContent: applyTokenReplacements(pickI18nString(uiLanguage, obj.textContent, obj.textContentI18n), globalReplacements),
+        interactions: Array.isArray(obj.interactions)
+          ? obj.interactions.map((interaction) => {
+              const options = Array.isArray(interaction.options) ? interaction.options : undefined;
+              const optionsI18n = Array.isArray(interaction.optionsI18n) ? interaction.optionsI18n : undefined;
+              const tokenReplacements = buildOptionTokenReplacements(uiLanguage, contentLanguage, options, optionsI18n);
+              const localizedOptions = options
+                ? options.map((opt, idx) => pickI18nString(contentLanguage, opt, optionsI18n?.[idx]))
+                : options;
+
+              return {
+                ...interaction,
+                question: applyTokenReplacements(
+                  replaceQuotedSegments(
+                    pickI18nString(uiLanguage, interaction.question, interaction.questionI18n),
+                    pickI18nString(contentLanguage, interaction.question, interaction.questionI18n)
+                  ),
+                  tokenReplacements
+                ),
+                options: localizedOptions,
+                hint: applyTokenReplacements(
+                  replaceQuotedSegments(
+                    pickI18nString(uiLanguage, interaction.hint, interaction.hintI18n),
+                    pickI18nString(contentLanguage, interaction.hint, interaction.hintI18n)
+                  ),
+                  tokenReplacements
+                ),
+                explanation: applyTokenReplacements(
+                  replaceQuotedSegments(
+                    pickI18nString(uiLanguage, interaction.explanation, interaction.explanationI18n),
+                    pickI18nString(contentLanguage, interaction.explanation, interaction.explanationI18n)
+                  ),
+                  tokenReplacements
+                ),
+                feedback: interaction.feedback
+                  ? {
+                      ...interaction.feedback,
+                      correct: applyTokenReplacements(
+                        replaceQuotedSegments(
+                          pickI18nString(uiLanguage, interaction.feedback.correct, interaction.feedbackI18n?.correct),
+                          pickI18nString(contentLanguage, interaction.feedback.correct, interaction.feedbackI18n?.correct)
+                        ),
+                        tokenReplacements
+                      ),
+                      incorrect: applyTokenReplacements(
+                        replaceQuotedSegments(
+                          pickI18nString(uiLanguage, interaction.feedback.incorrect, interaction.feedbackI18n?.incorrect),
+                          pickI18nString(contentLanguage, interaction.feedback.incorrect, interaction.feedbackI18n?.incorrect)
+                        ),
+                        tokenReplacements
+                      ),
+                    }
+                  : interaction.feedback,
+              };
+            })
+          : obj.interactions,
+      };
+    });
+
     return res.json({
       success: true,
       query,
-      lessons,
-      count: lessons.length,
+      lessons: localized,
+      count: localized.length,
     });
   } catch (error) {
     return res.status(500).json({
@@ -107,7 +189,81 @@ const getLessonById = async (req, res) => {
       });
     }
 
-    const lessonObj = lesson.toObject();
+    const uiLanguage = normalizeUiLanguage(req.query.lang);
+    const contentLanguage = normalizeUiLanguage(req.query.contentLang || uiLanguage);
+    const lessonObjRaw = lesson.toObject();
+
+    const globalReplacements = Array.isArray(lessonObjRaw.interactions)
+      ? lessonObjRaw.interactions.flatMap((interaction) => {
+          const options = Array.isArray(interaction?.options) ? interaction.options : undefined;
+          const optionsI18n = Array.isArray(interaction?.optionsI18n) ? interaction.optionsI18n : undefined;
+          return buildOptionTokenReplacements(uiLanguage, contentLanguage, options, optionsI18n);
+        })
+      : [];
+
+    const localizedInteractions = Array.isArray(lessonObjRaw.interactions)
+      ? lessonObjRaw.interactions.map((interaction) => {
+          const options = Array.isArray(interaction.options) ? interaction.options : undefined;
+          const optionsI18n = Array.isArray(interaction.optionsI18n) ? interaction.optionsI18n : undefined;
+          const tokenReplacements = buildOptionTokenReplacements(uiLanguage, contentLanguage, options, optionsI18n);
+          const localizedOptions = options
+            ? options.map((opt, idx) => pickI18nString(contentLanguage, opt, optionsI18n?.[idx]))
+            : options;
+
+          return {
+            ...interaction,
+            question: applyTokenReplacements(
+              replaceQuotedSegments(
+                pickI18nString(uiLanguage, interaction.question, interaction.questionI18n),
+                pickI18nString(contentLanguage, interaction.question, interaction.questionI18n)
+              ),
+              tokenReplacements
+            ),
+            options: localizedOptions,
+            hint: applyTokenReplacements(
+              replaceQuotedSegments(
+                pickI18nString(uiLanguage, interaction.hint, interaction.hintI18n),
+                pickI18nString(contentLanguage, interaction.hint, interaction.hintI18n)
+              ),
+              tokenReplacements
+            ),
+            explanation: applyTokenReplacements(
+              replaceQuotedSegments(
+                pickI18nString(uiLanguage, interaction.explanation, interaction.explanationI18n),
+                pickI18nString(contentLanguage, interaction.explanation, interaction.explanationI18n)
+              ),
+              tokenReplacements
+            ),
+            feedback: interaction.feedback
+              ? {
+                  ...interaction.feedback,
+                  correct: applyTokenReplacements(
+                    replaceQuotedSegments(
+                      pickI18nString(uiLanguage, interaction.feedback.correct, interaction.feedbackI18n?.correct),
+                      pickI18nString(contentLanguage, interaction.feedback.correct, interaction.feedbackI18n?.correct)
+                    ),
+                    tokenReplacements
+                  ),
+                  incorrect: applyTokenReplacements(
+                    replaceQuotedSegments(
+                      pickI18nString(uiLanguage, interaction.feedback.incorrect, interaction.feedbackI18n?.incorrect),
+                      pickI18nString(contentLanguage, interaction.feedback.incorrect, interaction.feedbackI18n?.incorrect)
+                    ),
+                    tokenReplacements
+                  ),
+                }
+              : interaction.feedback,
+          };
+        })
+      : lessonObjRaw.interactions;
+
+    const lessonObj = {
+      ...lessonObjRaw,
+      title: applyTokenReplacements(pickI18nString(uiLanguage, lessonObjRaw.title, lessonObjRaw.titleI18n), globalReplacements),
+      textContent: applyTokenReplacements(pickI18nString(uiLanguage, lessonObjRaw.textContent, lessonObjRaw.textContentI18n), globalReplacements),
+      interactions: localizedInteractions,
+    };
+
     const textContent = lessonObj.textContent || '';
     const textLower = textContent.toLowerCase();
 

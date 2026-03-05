@@ -15,7 +15,7 @@ const TestComponent = () => {
             <div data-testid="loading">{loading ? 'Loading' : 'Not Loading'}</div>
             <div data-testid="authenticated">{isAuthenticated ? 'Yes' : 'No'}</div>
             <div data-testid="user">{user ? user.email : 'No User'}</div>
-            <button onClick={() => register({ name: 'Test', email: 'test@example.com', password: 'password123', learningCondition: 'none' })}>
+            <button onClick={() => register({ name: 'Test', email: 'test@example.com', password: 'password123', learningCondition: 'none', role: 'admin', adminKey: 'mock-secret' })}>
                 Register
             </button>
             <button onClick={() => login({ email: 'test@example.com', password: 'password123' })}>
@@ -68,7 +68,31 @@ describe('AuthContext', () => {
             'user',
             expect.stringContaining('test@example.com')
         );
+        // user object should include role
+        const saved = JSON.parse(localStorage.setItem.mock.calls.find(c => c[0] === 'user')[1]);
+        expect(saved.role).toBe('admin');
     });
+
+    it('should fail to register admin without key', async () => {
+        const user = userEvent.setup();
+        server.use(
+            rest.post('*/api/auth/register', (req, res, ctx) => {
+                return res(
+                    ctx.status(403),
+                    ctx.json({ success: false, message: 'Invalid admin key' })
+                );
+            })
+        );
+        renderWithAuth();
+
+        const registerButton = screen.getByRole('button', { name: /register/i });
+        await user.click(registerButton);
+
+        await waitFor(() => {
+            expect(screen.getByTestId('authenticated')).toHaveTextContent('No');
+        });
+    });
+
 
     it('should login user and store token', async () => {
         const user = userEvent.setup();

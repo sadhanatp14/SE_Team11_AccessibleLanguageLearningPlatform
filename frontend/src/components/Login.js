@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useI18n } from '../utils/i18n';
 import './Login.css';
 
 /**
@@ -15,6 +16,7 @@ import './Login.css';
 const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { t } = useI18n();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -46,7 +48,7 @@ const Login = () => {
       navigate('/dashboard');
     } else {
       // Keep error messages user-friendly; fall back when backend doesn't provide one.
-      setError(result.error || 'Login failed. Please try again.');
+      setError(result.error || t('auth.loginFailed'));
     }
 
     setLoading(false);
@@ -61,13 +63,13 @@ const Login = () => {
 
       <div className="login-content">
         <div className="brand-header">
-          <h1 className="app-name">LinguaEase</h1>
-          <p className="app-tagline">Language and Learning made easy for every mind</p>
+          <h1 className="app-name">{t('app.name')}</h1>
+          <p className="app-tagline">{t('app.tagline')}</p>
         </div>
 
         <div className="login-card">
-          <h2 className="login-title">Welcome Back</h2>
-          <p className="login-subtitle">Log in to continue your journey</p>
+          <h2 className="login-title">{t('auth.welcomeBack')}</h2>
+          <p className="login-subtitle">{t('auth.loginSubtitle')}</p>
 
           {error && (
             <div className="alert alert-error" role="alert">
@@ -77,7 +79,7 @@ const Login = () => {
 
           <form onSubmit={handleSubmit} className="login-form">
             <div className="form-group">
-              <label htmlFor="email">Email Address</label>
+              <label htmlFor="email">{t('auth.emailAddress')}</label>
               <input
                 type="email"
                 id="email"
@@ -88,12 +90,12 @@ const Login = () => {
                 aria-required="true"
                 aria-label="Email address"
                 autoComplete="email"
-                placeholder="Enter your email"
+                placeholder={t('auth.emailPlaceholder')}
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="password">Password</label>
+              <label htmlFor="password">{t('auth.password')}</label>
               <input
                 type="password"
                 id="password"
@@ -105,7 +107,7 @@ const Login = () => {
                 aria-label="Password"
                 autoComplete="current-password"
                 minLength={6}
-                placeholder="Enter your password"
+                placeholder={t('auth.passwordPlaceholder')}
               />
             </div>
 
@@ -114,15 +116,15 @@ const Login = () => {
               className="btn btn-primary btn-block btn-animate"
               disabled={loading}
             >
-              {loading ? <span className="spinner"></span> : 'Log In'}
+              {loading ? <span className="spinner"></span> : t('auth.logIn')}
             </button>
           </form>
 
           <div className="login-footer">
             <p>
-              Don't have an account?{' '}
+              {t('auth.dontHaveAccount')}{' '}
               <Link to="/register" className="link-primary">
-                Sign up
+                {t('auth.signUp')}
               </Link>
             </p>
           </div>

@@ -123,8 +123,22 @@ const PreferencesSchema = new mongoose.Schema(
     // Language Settings
     preferredLanguage: {
       type: String,
-      enum: ['english', 'hindi', 'tamil', 'malayalam', 'telugu', 'kannada'],
+      enum: ['english', 'hindi', 'tamil', 'english_tamil', 'english_hindi', 'malayalam', 'telugu', 'kannada'],
       default: 'english',
+    },
+
+    // EPIC 5: Separate global UI language from bilingual lesson text mode.
+    // - uiLanguage affects dashboards/progress/settings labels + general UI.
+    // - bilingualTextMode affects lesson/question screens only.
+    uiLanguage: {
+      type: String,
+      enum: ['english', 'tamil', 'hindi'],
+      default: 'english',
+    },
+    bilingualTextMode: {
+      type: String,
+      enum: ['off', 'english_tamil', 'english_hindi'],
+      default: 'off',
     },
     
     // Gamification preferences
