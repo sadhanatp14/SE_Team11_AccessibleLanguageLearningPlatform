@@ -1694,65 +1694,6 @@ const AutismView = ({ initialLessonId = null }) => {
     if (questionAnswered) stopAnswerListening();
   }, [questionAnswered, stopAnswerListening, currentStepIndex, selectedLesson]);
 
-  // EPIC 2.3.1-2.3.4: Interactive engagement with immediate feedback
-  function handleInteraction(optionIndex) {
-    if (currentStep?.interaction && !questionAnswered) {
-      setQuestionAnswered(true);
-      setTimerActive(false);
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-      }
-
-      const stepKey = `${selectedLesson}-${currentStepIndex}`;
-      if (optionIndex === currentStep.interaction.correct) {
-        setFeedback('Good job! That\'s correct!');
-        // Mark this step as answered correctly
-        setStepAnsweredCorrectly(prev => ({
-          ...prev,
-          [stepKey]: true
-        }));
-        // Reset wrong answer count on correct answer
-        setWrongAnswerCount(prev => ({
-          ...prev,
-          [stepKey]: 0
-        }));
-        
-        // EPIC 4: Track correct answer
-        setLessonPerformanceData(prev => ({
-          ...prev,
-          correctAnswers: prev.correctAnswers + 1,
-        }));
-
-        // Auto-progress to next step after 2 seconds
-        autoProgressTimerRef.current = setTimeout(() => {
-          handleNext();
-        }, 2000);
-      } else {
-        // Increment wrong answer count
-        const currentWrongCount = wrongAnswerCount[stepKey] || 0;
-        const newWrongCount = currentWrongCount + 1;
-
-        setWrongAnswerCount(prev => ({
-          ...prev,
-          [stepKey]: newWrongCount
-        }));
-
-        // EPIC 4: Track wrong answer
-        setLessonPerformanceData(prev => ({
-          ...prev,
-          wrongAnswers: prev.wrongAnswers + 1,
-        }));
-
-        if (newWrongCount >= 2) {
-          setFeedback('Try again. Use the hint if you need help, then press Retry to attempt again.');
-          setShowHint(true);
-        } else {
-          setFeedback('Try again! Press Retry to attempt again, or view the hint.');
-        }
-      }
-    }
-  }
-
   const renderDifficultyLabel = (difficulty) => {
     const normalized = difficulty || 'medium';
     const count = normalized === 'easy' ? 1 : normalized === 'medium' ? 2 : 3;

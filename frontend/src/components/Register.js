@@ -308,67 +308,6 @@ const Register = () => {
               </>
             )}
 
-            <div className="form-group">
-              <label htmlFor="learningCondition">
-                {t('auth.learningCondition')} * <span className="help-text">{t('auth.learningConditionHelp')}</span>
-              </label>
-              <select
-                id="learningCondition"
-                name="learningCondition"
-                value={formData.learningCondition}
-                onChange={handleChange}
-                required
-                aria-required="true"
-              >
-                <option value="none">{t('auth.selectLearningCondition')}</option>
-                <option value="dyslexia">Dyslexia</option>
-                <option value="adhd">ADHD</option>
-                <option value="autism">Autism Spectrum</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="age">{t('auth.ageOptional')}</label>
-              <input
-                type="number"
-                id="age"
-                name="age"
-                value={formData.age}
-                onChange={handleChange}
-                min="3"
-                max="100"
-                placeholder="Age"
-              />
-            </div>
-
-            <div className="form-group checkbox-group">
-              <label>
-                <input
-                  type="checkbox"
-                  name="isMinor"
-                  checked={formData.isMinor}
-                  onChange={handleChange}
-                />
-                <span>{t('auth.under13')}</span>
-              </label>
-            </div>
-
-            {formData.isMinor && (
-              <div className="form-group">
-                <label htmlFor="parentEmail">{t('auth.parentEmail')} *</label>
-                <input
-                  type="email"
-                  id="parentEmail"
-                  name="parentEmail"
-                  value={formData.parentEmail}
-                  onChange={handleChange}
-                  required={formData.isMinor}
-                  autoComplete="email"
-                  placeholder={t('auth.parentEmailPlaceholder')}
-                />
-              </div>
-            )}
-
             <button
               type="submit"
               className="btn btn-primary btn-block btn-animate"
