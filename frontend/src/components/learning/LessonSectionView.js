@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import InteractionCard from './InteractionCard';
 import VisualLesson from './VisualLesson';
 import { useAuth } from '../../context/AuthContext';
@@ -104,7 +104,7 @@ const getIllustration = (text) => {
   return defaultIllustration;
 };
 
-const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, onInteractionChange, uiLanguage = 'english', contentLanguage }) => {
+const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, onInteractionChange, onSectionComplete, onInteractionResult, totalInteractions: totalInteractionsProp, uiLanguage = 'english', contentLanguage }) => {
   const { user } = useAuth();
   const { preferences } = usePreferences();
   const condition = user?.learningCondition || '';
@@ -173,6 +173,14 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
   }, [section?.interactions]);
 
   const currentInteraction = interactions[activeInteractionIndex];
+
+  // Notify parent when all interactions in this section are completed
+  const sectionCompleted = interactions.length > 0 && activeInteractionIndex >= interactions.length;
+  useEffect(() => {
+    if (onSectionComplete) {
+      onSectionComplete(section?._id || section?.id, sectionCompleted);
+    }
+  }, [sectionCompleted, onSectionComplete, section?._id, section?.id]);
 
   const displayedInteraction = useMemo(() => {
     if (!currentInteraction) return null;
@@ -451,7 +459,7 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
     setCurrentTime(nextTime);
   };
 
-  const handleContinue = () => {
+  const handleContinue = useCallback(() => {
     setActiveInteractionIndex((prev) => {
       const nextIndex = Math.min(prev + 1, interactions.length);
       if (onInteractionChange && section) {
@@ -459,10 +467,16 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
       }
       return nextIndex;
     });
-  };
+  }, [interactions.length, onInteractionChange, section]);
 
-  const handleAnswered = ({ isCorrect, interactionId }) => {
+  const handleAnswered = useCallback(({ isCorrect, interactionId }) => {
     if (!lessonKey || !interactionId) return;
+    
+    // Propagate interaction result to parent for performance tracking
+    if (onInteractionResult && !isReplay) {
+      onInteractionResult({ interactionId, isCorrect });
+    }
+    
     if (isReplay) return;
 
     const existing = getLessonProgress(userKey, lessonKey);
@@ -471,12 +485,15 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
     if (isCorrect) {
       correctIds.add(interactionId);
     }
-    const correctCount = Math.min(5, correctIds.size);
-    const status = correctCount >= 5 ? 'Completed' : nextStatus;
+    // Use the actual total interactions for this lesson instead of hardcoded 5
+    const requiredCount = totalInteractionsProp || existing.totalInteractions || 5;
+    const correctCount = Math.min(requiredCount, correctIds.size);
+    const status = correctCount >= requiredCount ? 'Completed' : nextStatus;
     saveLessonProgress(userKey, lessonKey, {
       status,
       correctCount,
       correctIds: Array.from(correctIds),
+      totalInteractions: requiredCount,
     });
 
     // EPIC 3.5.4: Repeated listening does not reduce marks; scoring is based on answers only.
@@ -487,7 +504,7 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
     } catch (e) {
       // ignore
     }
-  };
+  }, [lessonKey, userKey, onInteractionResult, isReplay, totalInteractionsProp]);
 
   if (!section) return null;
   const sectionTitleBaseText =
@@ -569,6 +586,7 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
 
           {displayedInteraction && (
             <InteractionCard
+              key={displayedInteraction.id || displayedInteraction._id || activeInteractionIndex}
               // EPIC 2.3.1-2.3.4, 2.4.1-2.4.4: Simple interactions + immediate feedback + hints/explanations/encouragement.
               lessonId={lessonKey}
               condition={condition}

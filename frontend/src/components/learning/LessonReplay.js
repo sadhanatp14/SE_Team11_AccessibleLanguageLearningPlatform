@@ -5,6 +5,7 @@ import LessonSectionView from './LessonSectionView';
 import PronunciationPractice from './PronunciationPractice';
 import { getLessonSections, getLessonSectionsWithContentLang } from '../../services/lessonSectionService';
 import { getProgress, updateProgress, getSummary } from '../../services/progressService';
+import { recordLessonScore, adjustDifficulty } from '../../services/difficultyAdjustmentService';
 import lessonSectionSamples from './lessonSectionSamples';
 import { useAuth } from '../../context/AuthContext';
 import { usePreferences } from '../../context/PreferencesContext';
@@ -14,7 +15,7 @@ import './LessonReplay.css';
 import { resolveUiLanguageFromPreferences } from '../../utils/languagePrefs';
 import { localizeLessonSectionsPayload } from '../../utils/lessonI18n';
 
-const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice, onRetry, onExit }) => {
+const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice, onRetry, onExit, onComplete }) => {
   const { user } = useAuth();
   const { preferences } = usePreferences();
   const { t } = useI18n();
@@ -33,10 +34,17 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
   const [error, setError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
   const [successMessage, setSuccessMessage] = useState('');
+  // Track which sections have had all their interactions completed by the user
+  const [completedInteractionSections, setCompletedInteractionSections] = useState(new Set());
+  // Warning message shown when user tries to proceed without completing the section
+  const [incompleteWarning, setIncompleteWarning] = useState('');
 
   const [showPronunciationPractice, setShowPronunciationPractice] = useState(false);
   const [practiceDone, setPracticeDone] = useState(false);
   const pendingCompletionRef = useRef(null);
+
+  // Track interaction results for performance scoring
+  const [interactionResults, setInteractionResults] = useState({});
 
   useEffect(() => {
     let isMounted = true;
@@ -132,6 +140,15 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
     }));
   }, [sections]);
 
+  // Calculate the total number of interactions across all sections in this lesson.
+  // This is used to determine the correct completion threshold instead of a hardcoded value.
+  const totalInteractions = useMemo(() => {
+    return sections.reduce((sum, section) => {
+      const count = Array.isArray(section.interactions) ? section.interactions.length : 0;
+      return sum + count;
+    }, 0);
+  }, [sections]);
+
   const condition = user?.learningCondition || '';
   const dyslexia = useDyslexiaContext({ condition, lessonId, defaultSyllableMode: true });
   const displaySectionList = useMemo(() => {
@@ -172,6 +189,16 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
   const completeLesson = useCallback(async ({ displayedSectionId, nextCompleted }) => {
     if (!displayedSectionId) return;
 
+    // Calculate lesson score based on correct interactions
+    // Score = (correct interactions / total interactions) * 100
+    const totalInteractions = sections.reduce((sum, section) => {
+      const count = Array.isArray(section.interactions) ? section.interactions.length : 0;
+      return sum + count;
+    }, 0);
+
+    const correctInteractions = Object.values(interactionResults).filter(r => r === true).length;
+    const score = totalInteractions > 0 ? (correctInteractions / totalInteractions) * 100 : 0;
+
     if (!isSample) {
       try {
         // EPIC 6.4.1: Auto-save completion state to backend at the end of the lesson.
@@ -185,7 +212,24 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
         setProgress(updated);
 
         if (updated?.completed) {
-          setSuccessMessage(t('lessons.completedCongrats'));
+          // Record lesson score for adaptive difficulty adjustment
+          recordLessonScore(user, lessonId, score, {
+            totalInteractions,
+            correctInteractions,
+            completionDate: new Date().toISOString(),
+          });
+
+          // Check if difficulty should be adjusted
+          const difficultyResult = adjustDifficulty(user);
+
+          let msg = t('lessons.completedCongrats');
+
+          // Add difficulty adjustment feedback if it changed
+          if (difficultyResult.adjusted) {
+            msg += ` Your difficulty level has been adjusted to ${difficultyResult.newDifficulty} based on your performance!`;
+          }
+
+          setSuccessMessage(msg);
           try {
             let summary = null;
             try { summary = await getSummary(); } catch (e) { /* ignore */ }
@@ -197,7 +241,11 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
               } catch (e) {}
             }, 500);
           } catch (e) {}
-          setTimeout(() => setSuccessMessage(''), 4000);
+          // Navigate to progress page after the success message has been visible for a moment
+          setTimeout(() => {
+            setSuccessMessage('');
+            onComplete?.();
+          }, 3000);
         }
       } catch (e) {
         setError(t('lessons.unableToSaveProgress'));
@@ -213,7 +261,23 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
       completed: true,
     }));
 
-    setSuccessMessage(t('lessons.completedCongrats'));
+    // Record score for sample lessons too
+    recordLessonScore(user, lessonId, score, {
+      totalInteractions,
+      correctInteractions,
+      isSample: true,
+      completionDate: new Date().toISOString(),
+    });
+
+    // Check if difficulty should be adjusted
+    const difficultyResult = adjustDifficulty(user);
+
+    let msg = t('lessons.completedCongrats');
+    if (difficultyResult.adjusted) {
+      msg += ` Your difficulty level has been adjusted to ${difficultyResult.newDifficulty}!`;
+    }
+
+    setSuccessMessage(msg);
 
     try {
       const api = await import('../../utils/api');
@@ -235,8 +299,12 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
       }, 500);
     }
 
-    setTimeout(() => setSuccessMessage(''), 4000);
-  }, [isSample, lessonId, t]);
+    // Navigate to progress page after the success message has been visible for a moment
+    setTimeout(() => {
+      setSuccessMessage('');
+      onComplete?.();
+    }, 3000);
+  }, [isSample, lessonId, sections, interactionResults, user, onComplete, t]);
 
   const displayedSectionId = replaySectionId || activeSectionId;
   const displayedSection = displayedSectionId ? sectionMap.get(displayedSectionId) : null;
@@ -244,9 +312,52 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
   const isReplay = Boolean(replaySectionId);
   const lastCompletedSectionId = completedSections[completedSections.length - 1] || '';
 
-  const handleInteractionChange = (sectionId, interactionIndex) => {
+  // Appreciation messages shown when a section's interactions are completed
+  const sectionAppreciationMessages = [
+    '🎉 Great job! Section complete! Moving to the next one…',
+    '⭐ Well done! You nailed it! On to the next section…',
+    '🌟 Awesome work! Section finished! Let\'s keep going…',
+    '👏 Fantastic! You completed this section! Next one coming up…',
+    '💪 Amazing effort! Section done! Let\'s continue…',
+  ];
+
+  const pickAppreciation = () => sectionAppreciationMessages[Math.floor(Math.random() * sectionAppreciationMessages.length)];
+
+  // Track section that was just completed so auto-advance effect can fire
+  const [pendingAutoAdvanceSectionId, setPendingAutoAdvanceSectionId] = useState(null);
+
+  /**
+   * Handler for tracking individual interaction results for performance scoring
+   */
+  const handleInteractionResult = React.useCallback(({ interactionId, isCorrect }) => {
+    if (!interactionId) return;
+    setInteractionResults((prev) => ({
+      ...prev,
+      [interactionId]: isCorrect,
+    }));
+  }, []);
+
+  const handleSectionComplete = React.useCallback((sectionId, isComplete) => {
+    if (!sectionId) return;
+    setCompletedInteractionSections((prev) => {
+      const next = new Set(prev);
+      if (isComplete) {
+        next.add(sectionId);
+      } else {
+        next.delete(sectionId);
+      }
+      return next;
+    });
+
+    // When a section is completed (not replaying), mark it for auto-advance
+    if (isComplete) {
+      setPendingAutoAdvanceSectionId(sectionId);
+    }
+  }, []);
+
+  const handleInteractionChange = React.useCallback((sectionId, interactionIndex) => {
     setCurrentInteractionSectionId(sectionId);
-  };
+  }, []);
 
   const handleSelectSection = (sectionId) => {
     if (!sectionId) return;
@@ -280,10 +391,24 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
 
   const handleNavigate = async (direction) => {
     if (!displayedSectionId) return;
+    // Clear any previous warning when navigating
+    setIncompleteWarning('');
     const currentIndex = getSectionIndex(displayedSectionId);
     if (currentIndex < 0) return;
     const nextIndex = currentIndex + direction;
     const nextSection = sectionList[nextIndex];
+
+    // Block forward navigation if the current section's interactions are not completed
+    if (direction > 0 && !isReplay) {
+      const currentSection = sectionMap.get(displayedSectionId);
+      const hasInteractions = currentSection && Array.isArray(currentSection.interactions) && currentSection.interactions.length > 0;
+      if (hasInteractions && !completedInteractionSections.has(displayedSectionId)) {
+        setIncompleteWarning('Please complete all questions in this section before moving to the next one.');
+        // Auto-clear the warning after 5 seconds
+        setTimeout(() => setIncompleteWarning(''), 5000);
+        return;
+      }
+    }
 
     // If trying to navigate past the last section -> treat as lesson completion
     if (!nextSection && direction > 0) {
@@ -335,7 +460,11 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
           const msgs = ['Good job!', 'Lesson completed!', 'Keep going!'];
           const msg = `${msgs[Math.floor(Math.random() * msgs.length)]} You completed this lesson.`;
           setSuccessMessage(msg);
-          setTimeout(() => setSuccessMessage(''), 4000);
+          // Navigate to progress page after the success message has been visible
+          setTimeout(() => {
+            setSuccessMessage('');
+            onComplete?.();
+          }, 3000);
         }
       } catch (e) {
         setError(t('lessons.unableToSaveProgress'));
@@ -349,6 +478,31 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
     }
   };
 
+  // Section-complete effect: when a section's interactions are all done,
+  // show an appreciation message. The learner then presses Next (or Finish
+  // on the last section) at their own pace — no automatic jumping.
+  useEffect(() => {
+    if (!pendingAutoAdvanceSectionId) return;
+    // Only show appreciation if we're on the section that just finished and not in replay mode
+    if (pendingAutoAdvanceSectionId !== displayedSectionId || replaySectionId) {
+      setPendingAutoAdvanceSectionId(null);
+      return;
+    }
+
+    // Show appreciation message
+    setSuccessMessage(pickAppreciation());
+
+    // Clear the message and the pending flag after 3 s — do NOT auto-navigate.
+    // The learner uses the Next / Finish button to move forward at their own pace.
+    const timer = setTimeout(() => {
+      setSuccessMessage('');
+      setPendingAutoAdvanceSectionId(null);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingAutoAdvanceSectionId, displayedSectionId, replaySectionId]);
+
 
   const prevSection = displayedSectionId ? displaySectionList[getSectionIndex(displayedSectionId) - 1] : null;
   const nextSection = displayedSectionId ? displaySectionList[getSectionIndex(displayedSectionId) + 1] : null;
@@ -361,15 +515,17 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
   );
   const canReplay = Boolean(lastCompletedSectionId) || isReplay;
 
-  const guidanceText = successMessage
-    ? successMessage
-    : error
-      ? error
-      : notice
-        ? notice
-        : isReplay
-          ? t('lessons.replayingNotice')
-          : t('lessons.replayHint');
+  const guidanceText = incompleteWarning
+    ? incompleteWarning
+    : successMessage
+      ? successMessage
+      : error
+        ? error
+        : notice
+          ? notice
+          : isReplay
+            ? t('lessons.replayingNotice')
+            : t('lessons.replayHint');
 
   const resolvedTitle = lessonTitle || t('lessons.lesson');
   const resolvedSubtitle = lessonSubtitle || 'Move through one section at a time for steady progress.';
@@ -384,7 +540,7 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
       guidance={(
         <div className="lesson-guidance">
           <p className="lesson-guidance__label">{t('lessons.guidance')}</p>
-          <p className={`lesson-guidance__text${error ? ' is-error' : ''}`}>{guidanceText}</p>
+          <p className={`lesson-guidance__text${error ? ' is-error' : ''}${incompleteWarning ? ' is-warning' : ''}${successMessage ? ' is-success' : ''}`}>{guidanceText}</p>
           {notice && onRetry && !isSample && (
             <div style={{ marginTop: 8 }}>
               <button type="button" onClick={onRetry}>{t('lessons.retry')}</button>
@@ -487,9 +643,12 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
                   isReplay={isReplay} 
                   useLocalSubmission={isSample}
                   lessonId={lessonId}
+                  totalInteractions={totalInteractions}
                   uiLanguage={uiLanguage}
                   contentLanguage={contentLanguage}
                   onInteractionChange={handleInteractionChange}
+                  onSectionComplete={handleSectionComplete}
+                  onInteractionResult={handleInteractionResult}
                 />
               </div>
             ) : (

@@ -25,10 +25,7 @@ app.use((req, res, next) => {
 
 // Connect to MongoDB using MONGODB_URI from environment
 mongoose
-  .connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ MongoDB Connected'))
   .catch((err) => console.error('❌ MongoDB Connection Error:', err));
 
@@ -69,8 +66,29 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start the server on the specified port
-const PORT = process.env.PORT || 5002;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+// Start the server on the specified port.
+// If the configured port is busy, retry on the next port to avoid hard crashes.
+const BASE_PORT = Number(process.env.PORT) || 5002;
+const MAX_PORT_RETRIES = Number(process.env.PORT_RETRIES) || 10;
+
+const startServer = (port, retriesLeft) => {
+  const server = app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+  });
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE' && retriesLeft > 0) {
+      const nextPort = port + 1;
+      console.warn(
+        `Port ${port} is already in use. Retrying on ${nextPort} (${retriesLeft} retries left)...`
+      );
+      setTimeout(() => startServer(nextPort, retriesLeft - 1), 250);
+      return;
+    }
+
+    console.error(`Failed to start server on port ${port}:`, err.message);
+    process.exit(1);
+  });
+};
+
+startServer(BASE_PORT, MAX_PORT_RETRIES);
