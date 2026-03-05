@@ -1,0 +1,131 @@
+/* AutismRecommendationCard.css */
+/* EPIC 4.2: Next Lesson Recommendation Styling */
+
+.autism-recommendation-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  padding: 24px;
+  margin: 20px 0;
+  color: white;
+  box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.autism-recommendation-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(102, 126, 234, 0.4);
+}
+
+.autism-recommendation-card.completed {
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  text-align: center;
+}
+
+.recommendation-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.recommendation-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.recommendation-title-section {
+  flex: 1;
+}
+
+.recommendation-title-section h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.recommendation-reason {
+  margin: 4px 0 0 0;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.recommendation-content {
+  margin: 16px 0;
+}
+
+.lesson-details h4 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.lesson-language {
+  margin: 4px 0 0 0;
+  font-size: 16px;
+  opacity: 0.9;
+}
+
+.lesson-badge {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.3);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.recommendation-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.btn-start-recommended {
+  flex: 1;
+  background: white;
+  color: #667eea;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.btn-start-recommended:hover {
+  background: #f0f0f0;
+  transform: scale(1.02);
+}
+
+.btn-skip-recommended {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-skip-recommended:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.recommendation-subtitle {
+  margin-top: 8px;
+  font-size: 16px;
+  opacity: 0.9;
+}

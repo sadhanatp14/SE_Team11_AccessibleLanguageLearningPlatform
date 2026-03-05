@@ -1,0 +1,229 @@
+/* AutismLearningPath.css */
+/* EPIC 4.3 & 4.6: Learning Path and Adaptive Progression Styling */
+
+.autism-learning-path {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  margin: 20px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.learning-path-header {
+  margin-bottom: 24px;
+}
+
+.learning-path-header h3 {
+  margin: 0 0 16px 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #333;
+}
+
+.progress-indicator {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.progress-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+}
+
+.progress-bar {
+  height: 8px;
+  background: #E0E0E0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4CAF50 0%, #8BC34A 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.learning-path-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+}
+
+.lesson-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #F5F5F5;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.lesson-step:hover:not(.locked) {
+  background: #EEEEEE;
+  transform: translateX(4px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.lesson-step.completed {
+  background: #E8F5E9;
+  border-left: 4px solid #4CAF50;
+}
+
+.lesson-step.current {
+  background: #E3F2FD;
+  border-left: 4px solid #2196F3;
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.2);
+}
+
+.lesson-step.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.lesson-step-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: white;
+  border: 2px solid #DDD;
+  color: #999;
+}
+
+.lesson-step.completed .lesson-step-icon {
+  background: #4CAF50;
+  border-color: #4CAF50;
+  color: white;
+}
+
+.lesson-step.current .lesson-step-icon {
+  background: #2196F3;
+  border-color: #2196F3;
+  color: white;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(33, 150, 243, 0);
+  }
+}
+
+.lesson-step.locked .lesson-step-icon {
+  background: #BDBDBD;
+  border-color: #BDBDBD;
+  color: white;
+}
+
+.lesson-step-content {
+  flex: 1;
+}
+
+.lesson-step-content h4 {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.lesson-language {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.lesson-score,
+.lesson-difficulty {
+  font-size: 13px;
+  color: #555;
+  margin: 4px 0;
+}
+
+.lesson-difficulty span {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.difficulty-beginner {
+  background: #C8E6C9;
+  color: #2E7D32;
+}
+
+.difficulty-easy {
+  background: #BBDEFB;
+  color: #1565C0;
+}
+
+.difficulty-medium {
+  background: #FFF9C4;
+  color: #F57F17;
+}
+
+.difficulty-hard {
+  background: #FFCCBC;
+  color: #D84315;
+}
+
+.difficulty-advanced {
+  background: #F8BBD0;
+  color: #C2185B;
+}
+
+.lesson-needs-practice {
+  display: inline-block;
+  background: #FFF3E0;
+  color: #E65100;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.lesson-current-badge {
+  display: inline-block;
+  background: #2196F3;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.lesson-locked-message {
+  font-size: 12px;
+  color: #999;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+.lesson-connector {
+  position: absolute;
+  left: 36px;
+  top: 56px;
+  width: 2px;
+  height: calc(100% + 16px);
+  background: #DDD;
+  z-index: -1;
+}
+
+.lesson-step.completed + .lesson-step .lesson-connector {
+  background: #4CAF50;
+}

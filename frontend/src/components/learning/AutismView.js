@@ -34,6 +34,10 @@ import {
   Volume2,
 } from 'lucide-react';
 import PronunciationPractice from './PronunciationPractice';
+// EPIC 4: Personalized Learning Engine Components (Autism Module Only)
+import AutismRecommendationCard from './AutismRecommendationCard';
+import AutismProgressFeedback from './AutismProgressFeedback';
+import AutismLearningPath from './AutismLearningPath';
 import './AutismView.css';
 
 const AutismView = ({ initialLessonId = null }) => {
@@ -69,6 +73,20 @@ const AutismView = ({ initialLessonId = null }) => {
   const audioRef = useRef(null);
   const ttsAudioRef = useRef(null);
   const timerIntervalRef = useRef(null);
+  const autoProgressTimerRef = useRef(null);
+
+  // EPIC 4: Personalized Learning Engine State (Autism Module Only)
+  const [nextRecommendation, setNextRecommendation] = useState(null);
+  const [practiceSuggestion, setPracticeSuggestion] = useState(null);
+  const [motivation, setMotivation] = useState(null);
+  const [learningPath, setLearningPath] = useState(null);
+  const [showRecommendation, setShowRecommendation] = useState(true);
+  const [lessonPerformanceData, setLessonPerformanceData] = useState({
+    correctAnswers: 0,
+    wrongAnswers: 0,
+    hintsUsed: 0,
+    startTime: null,
+  });
 
   // Load completed lessons from backend on mount
   useEffect(() => {
@@ -91,6 +109,36 @@ const AutismView = ({ initialLessonId = null }) => {
 
     fetchCompletedLessons();
   }, []);
+
+  // EPIC 4: Load personalized learning data (Autism Module Only)
+  useEffect(() => {
+    const fetchPersonalizedData = async () => {
+      try {
+        // Fetch next recommendation
+        const recResponse = await api.get('/autism/recommendations/next');
+        if (recResponse.data.success) {
+          setNextRecommendation(recResponse.data.recommendation);
+        }
+
+        // Fetch learning path
+        const pathResponse = await api.get('/autism/recommendations/learning-path');
+        if (pathResponse.data.success) {
+          setLearningPath(pathResponse.data);
+        }
+
+        // Fetch motivational feedback
+        const motivationResponse = await api.get('/autism/recommendations/motivation');
+        if (motivationResponse.data.success) {
+          setMotivation(motivationResponse.data);
+        }
+      } catch (error) {
+        console.error('Error fetching personalized learning data:', error);
+        // Non-blocking error - continue with basic functionality
+      }
+    };
+
+    fetchPersonalizedData();
+  }, [completedLessons]); // Refetch when lessons are completed
 
   // Define lessons with multi-format content (text, audio, visuals, etc.)
   // Each lesson contains steps/questions for the user
@@ -600,6 +648,344 @@ const AutismView = ({ initialLessonId = null }) => {
           }
         }
       ]
+    },
+    {
+      id: 4,
+      title: 'Family Members',
+      language: 'Tamil',
+      Icon: Hand,
+      description: 'Learn Tamil words for family members',
+      steps: [
+        {
+          id: 1,
+          title: 'Mother',
+          content: 'அம்மா (Amma)',
+          translation: 'The word for mother in Tamil',
+          highlight: 'அம்மா',
+          image: '/images/autism-tamil-mother.svg',
+          audio: '/audio/autism-tamil-mother.mp3',
+          hint: 'அம்மா is how you call your mother. It shows love and respect.',
+          interaction: {
+            question: 'What does அம்மா mean?',
+            options: ['Mother', 'Father', 'Sister'],
+            correct: 0,
+            difficulty: 'easy'
+          }
+        },
+        {
+          id: 2,
+          title: 'Father',
+          content: 'அப்பா (Appa)',
+          translation: 'The word for father in Tamil',
+          highlight: 'அப்பா',
+          image: '/images/autism-tamil-father.svg',
+          audio: '/audio/autism-tamil-father.mp3',
+          hint: 'அப்பா is how you call your father. It shows love and respect.',
+          interaction: {
+            question: 'What does அப்பா mean?',
+            options: ['Brother', 'Father', 'Mother'],
+            correct: 1,
+            difficulty: 'easy'
+          }
+        },
+        {
+          id: 3,
+          title: 'Elder Brother',
+          content: 'அண்ணா (Anna)',
+          translation: 'The word for elder brother in Tamil',
+          highlight: 'அண்ணா',
+          image: '/images/autism-tamil-brother.svg',
+          audio: '/audio/autism-tamil-brother.mp3',
+          hint: 'அண்ணா is used for elder brother. It shows respect for age.',
+          interaction: {
+            question: 'What does அண்ணா mean?',
+            options: ['Elder brother', 'Younger brother', 'Father'],
+            correct: 0,
+            difficulty: 'medium'
+          }
+        },
+        {
+          id: 4,
+          title: 'Elder Sister',
+          content: 'அக்கா (Akka)',
+          translation: 'The word for elder sister in Tamil',
+          highlight: 'அக்கா',
+          image: '/images/autism-tamil-sister.svg',
+          audio: '/audio/autism-tamil-sister.mp3',
+          hint: 'அக்கா is used for elder sister. It shows respect for age.',
+          interaction: {
+            question: 'What does அக்கா mean?',
+            options: ['Mother', 'Elder sister', 'Younger sister'],
+            correct: 1,
+            difficulty: 'medium'
+          }
+        },
+        {
+          id: 5,
+          title: 'Younger Brother',
+          content: 'தம்பி (Thambi)',
+          translation: 'The word for younger brother in Tamil',
+          highlight: 'தம்பி',
+          image: '/images/autism-tamil-younger-brother.svg',
+          audio: '/audio/autism-tamil-younger-brother.mp3',
+          hint: 'தம்பி is used for younger brother with affection.',
+          interaction: {
+            question: 'What does தம்பி mean?',
+            options: ['Elder brother', 'Younger brother', 'Father'],
+            correct: 1,
+            difficulty: 'medium'
+          }
+        },
+        {
+          id: 6,
+          title: 'Younger Sister',
+          content: 'தங்கை (Thangai)',
+          translation: 'The word for younger sister in Tamil',
+          highlight: 'தங்கை',
+          image: '/images/autism-tamil-younger-sister.svg',
+          audio: '/audio/autism-tamil-younger-sister.mp3',
+          hint: 'தங்கை is used for younger sister with affection.',
+          interaction: {
+            question: 'What does தங்கை mean?',
+            options: ['Younger sister', 'Elder sister', 'Mother'],
+            correct: 0,
+            difficulty: 'medium'
+          }
+        },
+        {
+          id: 7,
+          title: 'Grandfather',
+          content: 'தாத்தா (Thaathaa)',
+          translation: 'The word for grandfather in Tamil',
+          highlight: 'தாத்தா',
+          image: '/images/autism-tamil-grandfather.svg',
+          audio: '/audio/autism-tamil-grandfather.mp3',
+          hint: 'தாத்தா is how you call your grandfather with respect.',
+          interaction: {
+            question: 'What does தாத்தா mean?',
+            options: ['Grandfather', 'Grandmother', 'Father'],
+            correct: 0,
+            difficulty: 'medium'
+          }
+        },
+        {
+          id: 8,
+          title: 'Grandmother',
+          content: 'பாட்டி (Paatti)',
+          translation: 'The word for grandmother in Tamil',
+          highlight: 'பாட்டி',
+          image: '/images/autism-tamil-grandmother.svg',
+          audio: '/audio/autism-tamil-grandmother.mp3',
+          hint: 'பாட்டி is how you call your grandmother with love.',
+          interaction: {
+            question: 'What does பாட்டி mean?',
+            options: ['Mother', 'Grandmother', 'Grandfather'],
+            correct: 1,
+            difficulty: 'medium'
+          }
+        },
+        {
+          id: 9,
+          title: 'Uncle',
+          content: 'மாமா (Maama)',
+          translation: 'The word for uncle in Tamil',
+          highlight: 'மாமா',
+          image: '/images/autism-tamil-uncle.svg',
+          audio: '/audio/autism-tamil-uncle.mp3',
+          hint: 'மாமா is used for your mother\'s brother or uncle.',
+          interaction: {
+            question: 'What does மாமா mean?',
+            options: ['Uncle', 'Aunt', 'Grandfather'],
+            correct: 0,
+            difficulty: 'hard'
+          }
+        },
+        {
+          id: 10,
+          title: 'Aunt',
+          content: 'அத்தை (Atthai)',
+          translation: 'The word for aunt in Tamil',
+          highlight: 'அத்தை',
+          image: '/images/autism-tamil-aunt.svg',
+          audio: '/audio/autism-tamil-aunt.mp3',
+          hint: 'அத்தை is used for your father\'s sister or aunt.',
+          interaction: {
+            question: 'What does அத்தை mean?',
+            options: ['Mother', 'Aunt', 'Grandmother'],
+            correct: 1,
+            difficulty: 'hard'
+          }
+        }
+      ]
+    },
+    {
+      id: 5,
+      title: 'Common Actions',
+      language: 'English',
+      Icon: BookOpen,
+      description: 'Learn everyday action words',
+      steps: [
+        {
+          id: 1,
+          title: 'Walk',
+          content: 'Walk',
+          translation: 'Moving by putting one foot in front of the other',
+          highlight: 'Walk',
+          image: '/images/autism-action-walk.svg',
+          audio: '/audio/action-walk.mp3',
+          hint: 'When you walk, you move your feet step by step.',
+          interaction: {
+            question: 'What do you do when you walk?',
+            options: ['Move your feet', 'Jump high', 'Stay still'],
+            correct: 0,
+            difficulty: 'easy'
+          }
+        },
+        {
+          id: 2,
+          title: 'Run',
+          content: 'Run',
+          translation: 'Moving quickly by moving your legs fast',
+          highlight: 'Run',
+          image: '/images/autism-action-run.svg',
+          audio: '/audio/action-run.mp3',
+          hint: 'Running is faster than walking. You move your legs quickly.',
+          interaction: {
+            question: 'Is running faster than walking?',
+            options: ['Yes', 'No', 'Same speed'],
+            correct: 0,
+            difficulty: 'easy'
+          }
+        },
+        {
+          id: 3,
+          title: 'Sit',
+          content: 'Sit',
+          translation: 'Resting on a chair or the ground',
+          highlight: 'Sit',
+          image: '/images/autism-action-sit.svg',
+          audio: '/audio/action-sit.mp3',
+          hint: 'When you sit, you rest on a chair or on the floor.',
+          interaction: {
+            question: 'Where can you sit?',
+            options: ['On a chair', 'In the air', 'On the ceiling'],
+            correct: 0,
+            difficulty: 'easy'
+          }
+        },
+        {
+          id: 4,
+          title: 'Stand',
+          content: 'Stand',
+          translation: 'Being upright on your feet',
+          highlight: 'Stand',
+          image: '/images/autism-action-stand.svg',
+          audio: '/audio/action-stand.mp3',
+          hint: 'When you stand, you are on your feet in an upright position.',
+          interaction: {
+            question: 'What do you use to stand?',
+            options: ['Your feet', 'Your hands', 'Your head'],
+            correct: 0,
+            difficulty: 'easy'
+          }
+        },
+        {
+          id: 5,
+          title: 'Eat',
+          content: 'Eat',
+          translation: 'Putting food in your mouth and chewing',
+          highlight: 'Eat',
+          image: '/images/autism-action-eat.svg',
+          audio: '/audio/action-eat.mp3',
+          hint: 'When you eat, you put food in your mouth and chew it.',
+          interaction: {
+            question: 'What do you do when you eat?',
+            options: ['Chew food', 'Sleep', 'Run'],
+            correct: 0,
+            difficulty: 'easy'
+          }
+        },
+        {
+          id: 6,
+          title: 'Drink',
+          content: 'Drink',
+          translation: 'Taking liquid into your mouth',
+          highlight: 'Drink',
+          image: '/images/autism-action-drink.svg',
+          audio: '/audio/action-drink.mp3',
+          hint: 'When you drink, you take liquid like water or juice.',
+          interaction: {
+            question: 'What can you drink?',
+            options: ['Water', 'A rock', 'A chair'],
+            correct: 0,
+            difficulty: 'easy'
+          }
+        },
+        {
+          id: 7,
+          title: 'Sleep',
+          content: 'Sleep',
+          translation: 'Resting with your eyes closed',
+          highlight: 'Sleep',
+          image: '/images/autism-action-sleep.svg',
+          audio: '/audio/action-sleep.mp3',
+          hint: 'When you sleep, you close your eyes and rest at night.',
+          interaction: {
+            question: 'When do you usually sleep?',
+            options: ['At night', 'While walking', 'While eating'],
+            correct: 0,
+            difficulty: 'medium'
+          }
+        },
+        {
+          id: 8,
+          title: 'Jump',
+          content: 'Jump',
+          translation: 'Pushing yourself off the ground',
+          highlight: 'Jump',
+          image: '/images/autism-action-jump.svg',
+          audio: '/audio/action-jump.mp3',
+          hint: 'When you jump, you push off the ground and go up in the air.',
+          interaction: {
+            question: 'What happens when you jump?',
+            options: ['You go up', 'You sit down', 'You sleep'],
+            correct: 0,
+            difficulty: 'medium'
+          }
+        },
+        {
+          id: 9,
+          title: 'Read',
+          content: 'Read',
+          translation: 'Looking at words and understanding them',
+          highlight: 'Read',
+          image: '/images/autism-action-read.svg',
+          audio: '/audio/action-read.mp3',
+          hint: 'When you read, you look at words in a book and understand them.',
+          interaction: {
+            question: 'What do you read?',
+            options: ['Books', 'Food', 'Air'],
+            correct: 0,
+            difficulty: 'medium'
+          }
+        },
+        {
+          id: 10,
+          title: 'Write',
+          content: 'Write',
+          translation: 'Making letters and words on paper',
+          highlight: 'Write',
+          image: '/images/autism-action-write.svg',
+          audio: '/audio/action-write.mp3',
+          hint: 'When you write, you use a pen or pencil to make words.',
+          interaction: {
+            question: 'What do you use to write?',
+            options: ['A pen', 'Your feet', 'Your nose'],
+            correct: 0,
+            difficulty: 'hard'
+          }
+        }
+      ]
     }
   ]), []);
 
@@ -712,6 +1098,42 @@ const AutismView = ({ initialLessonId = null }) => {
 
       // EPIC 6.1.1, 6.4.1: Store completion state and auto-save after lesson completion.
       const res = await api.post('/users/complete-lesson', { lessonKey });
+
+      // EPIC 4.1: Save performance data for difficulty adjustment
+      const endTime = Date.now();
+      const timeSpent = lessonPerformanceData.startTime 
+        ? Math.floor((endTime - lessonPerformanceData.startTime) / 1000)
+        : 0;
+
+      const totalQuestions = currentLesson?.steps?.length || 0;
+      const correctAnswers = lessonPerformanceData.correctAnswers;
+      const wrongAnswers = lessonPerformanceData.wrongAnswers;
+      const score = totalQuestions > 0 
+        ? Math.round((correctAnswers / totalQuestions) * 100)
+        : 0;
+
+      try {
+        const perfResponse = await api.post('/autism/performance', {
+          lessonId,
+          score,
+          totalQuestions,
+          correctAnswers,
+          wrongAnswers,
+          hintsUsed: lessonPerformanceData.hintsUsed,
+          timeSpent,
+        });
+
+        if (perfResponse.data.success) {
+          // EPIC 4.4: Check if practice is needed
+          const pracResponse = await api.get(`/autism/recommendations/practice/${lessonId}`);
+          if (pracResponse.data.success) {
+            setPracticeSuggestion(pracResponse.data);
+          }
+        }
+      } catch (perfError) {
+        console.error('Error saving performance:', perfError);
+        // Non-blocking - continue with completion
+      }
 
       // If backend returned a progress summary, broadcast it to update the progress bar/dashboard
       const summary = res?.data?.summary;
@@ -1153,6 +1575,13 @@ const AutismView = ({ initialLessonId = null }) => {
   // EPIC 2.4.3: Learner can request help manually (hint toggle)
   const handleShowHint = () => {
     setShowHint(!showHint);
+    // EPIC 4: Track hints used
+    if (!showHint) {
+      setLessonPerformanceData(prev => ({
+        ...prev,
+        hintsUsed: prev.hintsUsed + 1,
+      }));
+    }
   };
 
   // Timer logic for questions based on difficulty
@@ -1265,6 +1694,65 @@ const AutismView = ({ initialLessonId = null }) => {
     if (questionAnswered) stopAnswerListening();
   }, [questionAnswered, stopAnswerListening, currentStepIndex, selectedLesson]);
 
+  // EPIC 2.3.1-2.3.4: Interactive engagement with immediate feedback
+  function handleInteraction(optionIndex) {
+    if (currentStep?.interaction && !questionAnswered) {
+      setQuestionAnswered(true);
+      setTimerActive(false);
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+
+      const stepKey = `${selectedLesson}-${currentStepIndex}`;
+      if (optionIndex === currentStep.interaction.correct) {
+        setFeedback('Good job! That\'s correct!');
+        // Mark this step as answered correctly
+        setStepAnsweredCorrectly(prev => ({
+          ...prev,
+          [stepKey]: true
+        }));
+        // Reset wrong answer count on correct answer
+        setWrongAnswerCount(prev => ({
+          ...prev,
+          [stepKey]: 0
+        }));
+        
+        // EPIC 4: Track correct answer
+        setLessonPerformanceData(prev => ({
+          ...prev,
+          correctAnswers: prev.correctAnswers + 1,
+        }));
+
+        // Auto-progress to next step after 2 seconds
+        autoProgressTimerRef.current = setTimeout(() => {
+          handleNext();
+        }, 2000);
+      } else {
+        // Increment wrong answer count
+        const currentWrongCount = wrongAnswerCount[stepKey] || 0;
+        const newWrongCount = currentWrongCount + 1;
+
+        setWrongAnswerCount(prev => ({
+          ...prev,
+          [stepKey]: newWrongCount
+        }));
+
+        // EPIC 4: Track wrong answer
+        setLessonPerformanceData(prev => ({
+          ...prev,
+          wrongAnswers: prev.wrongAnswers + 1,
+        }));
+
+        if (newWrongCount >= 2) {
+          setFeedback('Try again. Use the hint if you need help, then press Retry to attempt again.');
+          setShowHint(true);
+        } else {
+          setFeedback('Try again! Press Retry to attempt again, or view the hint.');
+        }
+      }
+    }
+  }
+
   const renderDifficultyLabel = (difficulty) => {
     const normalized = difficulty || 'medium';
     const count = normalized === 'easy' ? 1 : normalized === 'medium' ? 2 : 3;
@@ -1292,6 +1780,15 @@ const AutismView = ({ initialLessonId = null }) => {
     setQuestionAnswered(false);
     setShowCompletionScreen(false);
     setShowPronunciationPractice(false);
+    
+    // EPIC 4: Initialize performance tracking
+    setLessonPerformanceData({
+      correctAnswers: 0,
+      wrongAnswers: 0,
+      hintsUsed: 0,
+      startTime: Date.now(),
+    });
+    setPracticeSuggestion(null);
   };
 
   const autoOpenedLessonRef = React.useRef(null);
@@ -1345,8 +1842,21 @@ const AutismView = ({ initialLessonId = null }) => {
       if (audio) {
         audio.pause();
       }
+      // Clear auto-progress timer
+      if (autoProgressTimerRef.current) {
+        clearTimeout(autoProgressTimerRef.current);
+      }
     };
   }, []);
+
+  // Clear auto-progress timer when changing steps or lessons
+  useEffect(() => {
+    // Clear any pending auto-progress when step or lesson changes
+    if (autoProgressTimerRef.current) {
+      clearTimeout(autoProgressTimerRef.current);
+      autoProgressTimerRef.current = null;
+    }
+  }, [currentStepIndex, selectedLesson]);
 
   // EPIC 1.6: Distraction-free mode when in lesson view
   if (selectedLesson && currentStep) {
@@ -1389,6 +1899,26 @@ const AutismView = ({ initialLessonId = null }) => {
               <div className="completion-icon">🎉</div>
               <h1 className="completion-title">Great Job!</h1>
               <p className="completion-message">You completed "{currentLesson.title}" lesson!</p>
+
+              {/* EPIC 4.4 & 4.5: Practice Suggestion and Motivation */}
+              {(practiceSuggestion || motivation) && (
+                <AutismProgressFeedback
+                  motivation={motivation}
+                  practiceSuggestion={practiceSuggestion}
+                  onPractice={() => {
+                    // Restart the same lesson for practice
+                    handleStartLesson(selectedLesson);
+                  }}
+                  onContinue={() => {
+                    // Continue to next lesson or back to lessons
+                    if (selectedLesson < lessons.length) {
+                      handleNextLesson();
+                    } else {
+                      handleBackToLessons();
+                    }
+                  }}
+                />
+              )}
 
               <div className="completion-actions">
                 {selectedLesson < lessons.length && (
@@ -1833,6 +2363,35 @@ const AutismView = ({ initialLessonId = null }) => {
           </h2>
           <p>{t('learning.autism.selectLessonToBegin')}</p>
         </div>
+
+        {/* EPIC 4.5: Motivational Feedback */}
+        {motivation && (
+          <AutismProgressFeedback
+            motivation={motivation}
+            onContinue={() => {/* Continue to lessons */}}
+          />
+        )}
+
+        {/* EPIC 4.2: Next Lesson Recommendation */}
+        {showRecommendation && nextRecommendation && (
+          <AutismRecommendationCard
+            recommendation={nextRecommendation}
+            onStart={(lessonId) => {
+              handleStartLesson(lessonId);
+              setShowRecommendation(false);
+            }}
+            onSkip={() => setShowRecommendation(false)}
+          />
+        )}
+
+        {/* EPIC 4.3: Learning Path Overview */}
+        {learningPath && (
+          <AutismLearningPath
+            learningPath={learningPath.learningPath}
+            progress={learningPath.progress}
+            onSelectLesson={(lessonId) => handleStartLesson(lessonId)}
+          />
+        )}
 
         {/* Lessons - Simple Grid */}
         <div className="lessons-container">
