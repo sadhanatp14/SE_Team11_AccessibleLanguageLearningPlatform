@@ -27,7 +27,6 @@ import {
   Hash,
   Info,
   Lightbulb,
-  MessageCircle,
   Mic,
   Pause,
   RotateCcw,
@@ -84,13 +83,18 @@ const AutismView = ({ initialLessonId = null }) => {
 
   // EPIC 4: Personalized Learning Engine State (Autism Module Only)
   const [nextRecommendation, setNextRecommendation] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [practiceSuggestion, setPracticeSuggestion] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [motivation, setMotivation] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [learningPath, setLearningPath] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [showRecommendation, setShowRecommendation] = useState(true);
   
   // FEATURE: Adaptive Difficulty for Autism
   const [currentDifficulty, setCurrentDifficulty] = useState('Beginner');
+  // eslint-disable-next-line no-unused-vars
   const [performanceSummary, setPerformanceSummary] = useState(null);
   
   const [lessonPerformanceData, setLessonPerformanceData] = useState({

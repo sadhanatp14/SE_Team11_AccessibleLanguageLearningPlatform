@@ -23,6 +23,7 @@ const ProfileSettings = ({ onClose }) => {
 
   const [activeTab, setActiveTab] = useState('profile');
   const [profileEditing, setProfileEditing] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetMessage, setResetMessage] = useState(null);
   const [profileData, setProfileData] = useState({

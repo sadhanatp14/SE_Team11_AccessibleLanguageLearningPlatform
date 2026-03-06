@@ -26,7 +26,6 @@ import {
   Headphones,
   Info,
   Lightbulb,
-  MessageCircle,
   Mic,
   Pause,
   Pencil,
@@ -79,8 +78,11 @@ const ADHDView = ({ initialLessonId = null }) => {
   // FEATURE: Personalization features (next lesson, adaptive difficulty, learning path, motivation)
   const [nextRecommendation, setNextRecommendation] = useState(null); // Next lesson recommendation
   const [currentDifficulty, setCurrentDifficulty] = useState('Beginner'); // Adaptive difficulty level
+  // eslint-disable-next-line no-unused-vars
   const [learningPath, setLearningPath] = useState(null); // Personalized learning path
+  // eslint-disable-next-line no-unused-vars
   const [motivation, setMotivation] = useState(null); // Motivational feedback
+  // eslint-disable-next-line no-unused-vars
   const [performanceSummary, setPerformanceSummary] = useState(null); // Performance summary
 
   // Track completed lessons in this session (prevents duplicate saves)
@@ -174,6 +176,7 @@ const ADHDView = ({ initialLessonId = null }) => {
     if (user?.id) {
       fetchPersonalizationData();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
   // Audio handling
