@@ -1,6 +1,6 @@
 # Accessible Language Learning Platform
 
-## Project Title & Tagline
+## LinguaEase- an accessible language learning platform for students with disabilities
 
 **Accessible Language Learning Platform** — an accessible MERN language-learning platform designed to support learners with **dyslexia, ADHD, and autism**.
 
