@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../utils/i18n';
+import PatternLockInput from './PatternLockInput';
 import './Login.css';
 
 /**
@@ -20,7 +21,9 @@ const Login = () => {
 
   const [formData, setFormData] = useState({
     email: '',
+    authMethod: 'password',
     password: '',
+    pattern: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -40,8 +43,16 @@ const Login = () => {
     setLoading(true);
     setError('');
 
+    const payload = {
+      email: formData.email,
+      authMethod: formData.authMethod,
+      ...(formData.authMethod === 'pattern'
+        ? { pattern: formData.pattern }
+        : { password: formData.password }),
+    };
+
     // EPIC 1.2.1: Authenticate user via backend and start session
-    const result = await login(formData);
+    const result = await login(payload);
 
     if (result.success) {
       // Successful session start -> route into the learning dashboard.
@@ -95,21 +106,50 @@ const Login = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="password">{t('auth.password')}</label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
+              <label htmlFor="authMethod">Authentication Method</label>
+              <select
+                id="authMethod"
+                name="authMethod"
+                value={formData.authMethod}
                 onChange={handleChange}
-                required
-                aria-required="true"
-                aria-label="Password"
-                autoComplete="current-password"
-                minLength={6}
-                placeholder={t('auth.passwordPlaceholder')}
-              />
+              >
+                <option value="password">Password</option>
+                <option value="pattern">Pattern</option>
+              </select>
             </div>
+
+            {formData.authMethod === 'password' ? (
+              <div className="form-group">
+                <label htmlFor="password">{t('auth.password')}</label>
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  aria-required="true"
+                  aria-label="Password"
+                  autoComplete="current-password"
+                  minLength={6}
+                  placeholder={t('auth.passwordPlaceholder')}
+                />
+              </div>
+            ) : (
+              <div className="form-group">
+                <label>Pattern</label>
+                <PatternLockInput
+                  id="pattern"
+                  value={formData.pattern}
+                  onChange={(pattern) => {
+                    setFormData((prev) => ({ ...prev, pattern }));
+                    setError('');
+                  }}
+                  disabled={loading}
+                  showHint={false}
+                />
+              </div>
+            )}
 
             <button
               type="submit"

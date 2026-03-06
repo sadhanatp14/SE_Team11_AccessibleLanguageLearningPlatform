@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../utils/i18n';
+import PatternLockInput from './PatternLockInput';
 import './Register.css';
 
 /**
@@ -23,8 +24,11 @@ const Register = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    authMethod: 'password',
     password: '',
     confirmPassword: '',
+    pattern: '',
+    confirmPattern: '',
     learningCondition: 'none',
     role: 'learner', // added role for admin support
     age: '',
@@ -47,14 +51,29 @@ const Register = () => {
 
   const validateForm = () => {
     // EPIC 1.1.1: Client-side registration validation for better UX (server still validates)
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return false;
-    }
+    const isPattern = formData.authMethod === 'pattern';
+    const patternParts = String(formData.pattern || '').split('-').filter(Boolean);
+    const uniquePatternParts = new Set(patternParts);
 
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
-      return false;
+    if (isPattern) {
+      if (patternParts.length < 4 || uniquePatternParts.size !== patternParts.length) {
+        setError('Pattern must include at least 4 unique dots');
+        return false;
+      }
+      if (formData.pattern !== formData.confirmPattern) {
+        setError('Patterns do not match');
+        return false;
+      }
+    } else {
+      if (formData.password !== formData.confirmPassword) {
+        setError('Passwords do not match');
+        return false;
+      }
+
+      if (formData.password.length < 6) {
+        setError('Password must be at least 6 characters long');
+        return false;
+      }
     }
 
     // If registering as admin, require admin key and skip other learner fields
@@ -97,7 +116,7 @@ const Register = () => {
     setError('');
 
     // Remove fields that the backend doesn't need.
-    const { confirmPassword, ...registrationData } = formData;
+    const { confirmPassword, confirmPattern, ...registrationData } = formData;
 
     // Ensure role is sent (defaults to learner)
     registrationData.role = registrationData.role || 'learner';
@@ -115,6 +134,13 @@ const Register = () => {
       delete registrationData.age;
       delete registrationData.isMinor;
       delete registrationData.parentEmail;
+    }
+
+    if (registrationData.authMethod === 'pattern') {
+      delete registrationData.password;
+      registrationData.pattern = registrationData.pattern || '';
+    } else {
+      delete registrationData.pattern;
     }
 
     const result = await register(registrationData);
@@ -186,38 +212,85 @@ const Register = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="password">
-                {t('auth.password')} * <span className="help-text">(Minimum 6 characters)</span>
-              </label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
+              <label htmlFor="authMethod">Authentication Method *</label>
+              <select
+                id="authMethod"
+                name="authMethod"
+                value={formData.authMethod}
                 onChange={handleChange}
                 required
                 aria-required="true"
-                minLength={6}
-                autoComplete="new-password"
-                placeholder={t('auth.passwordPlaceholder')}
-              />
+              >
+                <option value="password">Password</option>
+                <option value="pattern">Pattern</option>
+              </select>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="confirmPassword">{t('auth.confirmPassword')} *</label>
-              <input
-                type="password"
-                id="confirmPassword"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                required
-                aria-required="true"
-                minLength={6}
-                autoComplete="new-password"
-                placeholder={t('auth.confirmPasswordPlaceholder')}
-              />
-            </div>
+            {formData.authMethod === 'password' ? (
+              <>
+                <div className="form-group">
+                  <label htmlFor="password">
+                    {t('auth.password')} * <span className="help-text">(Minimum 6 characters)</span>
+                  </label>
+                  <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                    aria-required="true"
+                    minLength={6}
+                    autoComplete="new-password"
+                    placeholder={t('auth.passwordPlaceholder')}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="confirmPassword">{t('auth.confirmPassword')} *</label>
+                  <input
+                    type="password"
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    required
+                    aria-required="true"
+                    minLength={6}
+                    autoComplete="new-password"
+                    placeholder={t('auth.confirmPasswordPlaceholder')}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="form-group">
+                  <label>Pattern (connect at least 4 dots) *</label>
+                  <PatternLockInput
+                    id="pattern"
+                    value={formData.pattern}
+                    onChange={(pattern) => {
+                      setFormData((prev) => ({ ...prev, pattern }));
+                      setError('');
+                    }}
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Confirm Pattern *</label>
+                  <PatternLockInput
+                    id="confirmPattern"
+                    value={formData.confirmPattern}
+                    onChange={(confirmPattern) => {
+                      setFormData((prev) => ({ ...prev, confirmPattern }));
+                      setError('');
+                    }}
+                    disabled={loading}
+                  />
+                </div>
+              </>
+            )}
 
             <div className="form-group">
               <label htmlFor="role">{t('auth.registerRole')}</label>

@@ -31,9 +31,29 @@ const UserSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, 'Please provide a password'],
+      required: [
+        function requiredPassword() {
+          return (this.authMethod || 'password') === 'password';
+        },
+        'Please provide a password',
+      ],
       minlength: 6,
       select: false, // Don't return password by default
+    },
+    authMethod: {
+      type: String,
+      enum: ['password', 'pattern'],
+      default: 'password',
+    },
+    patternHash: {
+      type: String,
+      required: [
+        function requiredPattern() {
+          return this.authMethod === 'pattern';
+        },
+        'Please provide a pattern',
+      ],
+      select: false,
     },
     role: {
       type: String,
@@ -111,12 +131,16 @@ const UserSchema = new mongoose.Schema(
  * This ensures `password` is never stored in plaintext.
  */
 UserSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) {
-    return next();
+  if (this.isModified('password') && this.password) {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
   }
-  
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
+
+  if (this.isModified('patternHash') && this.patternHash) {
+    const salt = await bcrypt.genSalt(10);
+    this.patternHash = await bcrypt.hash(this.patternHash, salt);
+  }
+
   next();
 });
 
@@ -128,7 +152,18 @@ UserSchema.pre('save', async function (next) {
  * @returns {Promise<boolean>}
  */
 UserSchema.methods.matchPassword = async function (enteredPassword) {
+  if (!this.password) return false;
   return await bcrypt.compare(enteredPassword, this.password);
+};
+
+/**
+ * Compares candidate pattern to stored bcrypt pattern hash.
+ * @param {string} enteredPattern
+ * @returns {Promise<boolean>}
+ */
+UserSchema.methods.matchPattern = async function (enteredPattern) {
+  if (!this.patternHash) return false;
+  return await bcrypt.compare(enteredPattern, this.patternHash);
 };
 
 module.exports = mongoose.model('User', UserSchema);

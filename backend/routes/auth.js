@@ -14,6 +14,16 @@ const generateToken = (id) => {
   });
 };
 
+const normalizePattern = (raw) => String(raw || '').trim();
+
+const isValidPattern = (raw) => {
+  const parts = normalizePattern(raw).split('-').filter(Boolean);
+  if (parts.length < 4) return false;
+  const unique = new Set(parts);
+  if (unique.size !== parts.length) return false;
+  return parts.every((p) => /^[0-8]$/.test(p));
+};
+
 // @route   POST /api/auth/register
 // @desc    Register a new user (1.1)
 // @access  Public
@@ -23,9 +33,28 @@ router.post(
     // EPIC 1.1.2: Backend validation for registration inputs
     body('name').trim().notEmpty().withMessage('Name is required'),
     body('email').isEmail().withMessage('Please provide a valid email'),
+    body('authMethod')
+      .optional()
+      .isIn(['password', 'pattern'])
+      .withMessage('Invalid authentication method'),
     body('password')
-      .isLength({ min: 6 })
-      .withMessage('Password must be at least 6 characters'),
+      .custom((val, { req }) => {
+        const method = req.body.authMethod || 'password';
+        if (method === 'password') {
+          if (!val || String(val).length < 6) {
+            throw new Error('Password must be at least 6 characters');
+          }
+        }
+        return true;
+      }),
+    body('pattern')
+      .custom((val, { req }) => {
+        const method = req.body.authMethod || 'password';
+        if (method === 'pattern' && !isValidPattern(val)) {
+          throw new Error('Pattern must connect at least 4 unique dots (0-8 grid)');
+        }
+        return true;
+      }),
     body('learningCondition')
       .isIn(['dyslexia', 'adhd', 'autism', 'none'])
       .withMessage('Invalid learning condition'),
@@ -81,6 +110,8 @@ router.post(
       name,
       email,
       password,
+      authMethod: incomingAuthMethod,
+      pattern,
       learningCondition: lc,
       age,
       parentEmail,
@@ -88,6 +119,8 @@ router.post(
       role,
       adminKey,
     } = req.body;
+
+    const authMethod = incomingAuthMethod || 'password';
 
     // Admin registration requires a secret key
     if (role === 'admin') {
@@ -127,7 +160,9 @@ router.post(
       const user = await User.create({
         name,
         email,
-        password,
+        authMethod,
+        password: authMethod === 'password' ? password : undefined,
+        patternHash: authMethod === 'pattern' ? normalizePattern(pattern) : undefined,
         learningCondition,
         age: role === 'admin' ? undefined : age,
         parentEmail: role === 'admin' ? undefined : parentEmail,
@@ -171,6 +206,7 @@ router.post(
           id: user._id,
           name: user.name,
           email: user.email,
+          authMethod: user.authMethod,
           learningCondition: user.learningCondition,
           requiresParentalApproval: user.requiresParentalApproval,
           role: user.role,
@@ -199,7 +235,26 @@ router.post(
   [
     // EPIC 1.2.2: Backend credential validation for login
     body('email').isEmail().withMessage('Please provide a valid email'),
-    body('password').notEmpty().withMessage('Password is required'),
+    body('authMethod')
+      .optional()
+      .isIn(['password', 'pattern'])
+      .withMessage('Invalid authentication method'),
+    body('password')
+      .custom((val, { req }) => {
+        const method = req.body.authMethod || 'password';
+        if (method === 'password' && !val) {
+          throw new Error('Password is required');
+        }
+        return true;
+      }),
+    body('pattern')
+      .custom((val, { req }) => {
+        const method = req.body.authMethod || 'password';
+        if (method === 'pattern' && !isValidPattern(val)) {
+          throw new Error('Valid pattern is required');
+        }
+        return true;
+      }),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -210,12 +265,12 @@ router.post(
       });
     }
 
-    const { email, password } = req.body;
+    const { email, password, pattern, authMethod: incomingAuthMethod } = req.body;
 
     try {
       // Find user and include password
       const user = await User.findOne({ email })
-        .select('+password')
+        .select('+password +patternHash')
         .populate('preferences');
 
       if (!user) {
@@ -225,9 +280,24 @@ router.post(
         });
       }
 
-      // Check password
-      // EPIC 1.2.2: Compare entered password to stored bcrypt hash
-      const isMatch = await user.matchPassword(password);
+      const loginMethod = incomingAuthMethod || 'password';
+      const accountMethod = user.authMethod || 'password';
+
+      if (loginMethod !== accountMethod) {
+        return res.status(400).json({
+          success: false,
+          message: `This account uses ${accountMethod} login`,
+        });
+      }
+
+      // Check credential using selected method
+      let isMatch = false;
+      if (accountMethod === 'pattern') {
+        isMatch = await user.matchPattern(normalizePattern(pattern));
+      } else {
+        isMatch = await user.matchPassword(password);
+      }
+
       if (!isMatch) {
         return res.status(401).json({
           success: false,
@@ -258,6 +328,7 @@ router.post(
           id: user._id,
           name: user.name,
           email: user.email,
+          authMethod: user.authMethod || 'password',
           learningCondition: user.learningCondition,
           requiresParentalApproval: user.requiresParentalApproval,
           preferences: user.preferences,
@@ -289,6 +360,7 @@ router.get('/me', protect, async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        authMethod: user.authMethod || 'password',
         learningCondition: user.learningCondition,
         age: user.age,
         isMinor: user.isMinor,
