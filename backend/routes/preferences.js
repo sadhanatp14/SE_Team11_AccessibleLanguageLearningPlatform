@@ -117,7 +117,8 @@ router.patch('/accessibility', protect, async (req, res) => {
     distractionFreeMode,
     preferredLanguage,
     uiLanguage,
-    bilingualTextMode
+    bilingualTextMode,
+    simplifiedLayout
   } = req.body;
 
   try {
@@ -132,6 +133,7 @@ router.patch('/accessibility', protect, async (req, res) => {
     if (distractionFreeMode !== undefined) updateData.distractionFreeMode = distractionFreeMode;
     if (preferredLanguage !== undefined) updateData.preferredLanguage = preferredLanguage;
     if (bilingualTextMode !== undefined) updateData.bilingualTextMode = bilingualTextMode;
+    if (simplifiedLayout !== undefined) updateData.simplifiedLayout = simplifiedLayout;
 
     // Enforce: when bilingual text is enabled, uiLanguage is locked.
     // Allow changing uiLanguage only when the *effective* bilingual mode is Off.
@@ -347,6 +349,44 @@ router.delete('/reset', protect, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error resetting preferences',
+      error: error.message,
+    });
+  }
+});
+
+// @route   DELETE /api/preferences/language
+// @desc    Reset language preferences to default (Epic 5.7)
+// @access  Private
+router.delete('/language', protect, async (req, res) => {
+  // EPIC 5.7: Reset language settings to allow learner to recover from confusion
+  try {
+    const preferences = await Preferences.findOneAndUpdate(
+      { user: req.user.id },
+      {
+        uiLanguage: 'english',
+        preferredLanguage: 'english',
+        bilingualTextMode: 'off',
+        lastModified: Date.now(),
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!preferences) {
+      return res.status(404).json({
+        success: false,
+        message: 'Preferences not found',
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Language preferences reset to default',
+      preferences,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error resetting language preferences',
       error: error.message,
     });
   }

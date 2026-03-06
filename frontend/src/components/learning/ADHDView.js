@@ -1209,16 +1209,18 @@ const ADHDView = ({ initialLessonId = null }) => {
                 </div>
               ) : (
                 <>
-                  <div className="quick-stats">
-                    <div className="stat-box">
-                      <div className="stat-number">{baseLessons.length}</div>
-                      <div className="stat-text">{t('learning.common.lessons')}</div>
+                  {!preferences?.simplifiedLayout && (
+                    <div className="quick-stats">
+                      <div className="stat-box">
+                        <div className="stat-number">{baseLessons.length}</div>
+                        <div className="stat-text">{t('learning.common.lessons')}</div>
+                      </div>
+                      <div className="stat-box">
+                        <div className="stat-number">{score}</div>
+                        <div className="stat-text">{t('learning.common.pointsToday')}</div>
+                      </div>
                     </div>
-                    <div className="stat-box">
-                      <div className="stat-number">{score}</div>
-                      <div className="stat-text">{t('learning.common.pointsToday')}</div>
-                    </div>
-                  </div>
+                  )}
 
                   <div className="lesson-focus">
                     <h3>{t('learning.adhd.chooseOneLesson')}</h3>

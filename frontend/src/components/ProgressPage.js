@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { getSummary } from '../services/progressService';
 import './learning/DyslexiaView.css';
+import './learning/AutismView.css';
 import { getAllLessonProgress, normalizeUserId } from '../services/dyslexiaProgressService';
 import api from '../utils/api';
 import { BookOpen } from 'lucide-react';
@@ -199,7 +200,12 @@ const ProgressPage = () => {
     // EPIC 1.7.3: Apply stored preferences consistently outside the dashboard view
     const container = containerRef.current;
 
-    container.className = 'dyslexia-view progress-page motion-enabled';
+    // Apply appropriate view class based on learning condition
+    if (user?.learningCondition === 'autism') {
+      container.className = 'autism-view progress-page motion-enabled';
+    } else {
+      container.className = 'dyslexia-view progress-page motion-enabled';
+    }
 
     if (preferences.contrastTheme && preferences.contrastTheme !== 'default') {
       container.classList.add(`theme-${preferences.contrastTheme}`);
@@ -249,27 +255,27 @@ const ProgressPage = () => {
   return (
     <div
       ref={containerRef}
-      className="dyslexia-view"
+      className={user?.learningCondition === 'autism' ? 'autism-view' : 'dyslexia-view'}
       id="learning-container"
       data-user-condition={user?.learningCondition || ''}
     >
-      <nav className="navbar">
-        <div className="nav-brand">
+      <nav className={user?.learningCondition === 'autism' ? 'simple-header' : 'navbar'}>
+        <div className={user?.learningCondition === 'autism' ? 'header-left' : 'nav-brand'}>
           <h1 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <BookOpen size={22} aria-hidden="true" />
             <span>{t('progress.brand')}</span>
           </h1>
         </div>
-        <div className="nav-menu">
+        <div className={user?.learningCondition === 'autism' ? 'header-actions' : 'nav-menu'}>
           <span className="user-name">{t('progress.hello', { name: user?.name || '' })}</span>
-          <button type="button" onClick={() => navigate('/dashboard')} className="btn-settings" title={t('progress.backToLearning')}>
+          <button type="button" onClick={() => navigate('/dashboard')} className={user?.learningCondition === 'autism' ? 'btn-settings' : 'btn-settings'} title={t('progress.backToLearning')}>
             {t('app.back')}
           </button>
         </div>
       </nav>
 
-      <main className="main-content">
-        <div className="welcome-section">
+      <main className={user?.learningCondition === 'autism' ? 'main-layout' : 'main-content'}>
+        <div className={user?.learningCondition === 'autism' ? 'welcome-card' : 'welcome-section'}>
           <h2>{uiText('progress.yourProgress', 'Your Learn-ing Pro-gress')}</h2>
           <p className="subtitle">
             {uiText(
@@ -279,7 +285,7 @@ const ProgressPage = () => {
           </p>
         </div>
 
-        <div className="progress-card">
+        <div className={user?.learningCondition === 'autism' ? 'lesson-simple-card' : 'progress-card'}>
           <div className="card-header">
             <h3>{t('progress.cardTitle')}</h3>
           </div>
@@ -338,16 +344,19 @@ const ProgressPage = () => {
           </div>
         </div>
 
-        <div className="progress-card">
+        <div 
+          className={user?.learningCondition === 'autism' ? 'lesson-simple-card' : 'progress-card'}
+          style={user?.learningCondition === 'autism' ? { marginTop: '40px' } : {}}
+        >
           <div className="card-header">
             <h3>{uiText('progress.lessonStatus', 'Les-son sta-tus')}</h3>
           </div>
           <div className="card-body">
-            <div className="lessons-grid">
+            <div className={user?.learningCondition === 'autism' ? 'lessons-simple-grid' : 'lessons-grid'}>
               {lessonCards.map((l) => {
                 const statusClass = (l.status || 'Not Started').replace(/\s+/g, '-').toLowerCase();
                 return (
-                  <div key={l.id} className="lesson-card">
+                  <div key={l.id} className={user?.learningCondition === 'autism' ? 'lesson-simple-card' : 'lesson-card'}>
                     <div className="lesson-icon" aria-hidden="true"><BookOpen size={22} /></div>
                     <h4>{l.title}</h4>
                     <div className="lesson-meta">

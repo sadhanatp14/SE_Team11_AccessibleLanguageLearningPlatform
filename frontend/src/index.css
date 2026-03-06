@@ -621,3 +621,126 @@ select:focus {
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
+/* ============================================
+   EPIC 5.5: Simplified Layout Mode
+   ============================================ */
+
+/* When simplified layout mode is enabled, reduce visual complexity and focus on core content */
+.simplified-layout {
+  /* Increase base font size for better readability */
+  font-size: 1.1em;
+  line-height: 1.8;
+}
+
+/* Hide non-essential UI elements in simplified mode */
+.simplified-layout .lesson-card-stats,
+.simplified-layout .lesson-card-tags,
+.simplified-layout .lesson-card-metadata,
+.simplified-layout .advanced-options,
+.simplified-layout .decorative-element,
+.simplified-layout .extra-info {
+  display: none !important;
+}
+
+/* Simplify header - hide syllable toggle and other advanced features */
+.simplified-layout .btn-syllable-toggle,
+.simplified-layout .btn-distraction-toggle {
+  display: none !important;
+}
+
+/* Larger, clearer buttons in simplified mode */
+.simplified-layout button {
+  font-size: 1.15em;
+  padding: 12px 24px;
+  min-height: 48px;
+}
+
+/* Simplified lesson cards - larger, clearer */
+.simplified-layout .lesson-card {
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.simplified-layout .lesson-card h3 {
+  font-size: 1.5em;
+  margin-bottom: 16px;
+}
+
+/* Hide progress bars and complex visualizations */
+.simplified-layout .lesson-progress-bar,
+.simplified-layout .detailed-stats,
+.simplified-layout .advanced-metrics {
+  display: none !important;
+}
+
+/* Simplify lesson content - larger text, more spacing */
+.simplified-layout .lesson-content {
+  font-size: 1.2em;
+  line-height: 2;
+  letter-spacing: 0.02em;
+}
+
+.simplified-layout .lesson-section-content {
+  padding: 32px 24px;
+}
+
+/* Hide complex navigation elements */
+.simplified-layout .breadcrumbs,
+.simplified-layout .mini-nav,
+.simplified-layout .quick-actions {
+  display: none !important;
+}
+
+/* Larger icons for simplified mode */
+.simplified-layout svg,
+.simplified-layout .icon {
+  width: 24px;
+  height: 24px;
+}
+
+/* Reduce color complexity - simpler palette */
+.simplified-layout .lesson-card,
+.simplified-layout .section-card {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  box-shadow: none;
+}
+
+/* Hide secondary actions and advanced controls */
+.simplified-layout .secondary-action,
+.simplified-layout .advanced-control,
+.simplified-layout .optional-feature {
+  display: none !important;
+}
+
+/* Larger spacing between sections */
+.simplified-layout .section-gap {
+  margin-top: 32px;
+  margin-bottom: 32px;
+}
+
+/* Simplified step indicators */
+.simplified-layout .step-indicator-detailed {
+  display: none !important;
+}
+
+.simplified-layout .step-indicator-simple {
+  font-size: 1.3em;
+  font-weight: 600;
+  display: block !important;
+}
+
+/* Hide tooltips and help text in simplified mode */
+.simplified-layout .tooltip,
+.simplified-layout .help-text,
+.simplified-layout .info-popover {
+  display: none !important;
+}
+
+/* Larger touch targets for mobile accessibility */
+.simplified-layout .interactive-element {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+/* End Simplified Layout Mode */

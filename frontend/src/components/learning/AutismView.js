@@ -2153,14 +2153,16 @@ const AutismView = ({ initialLessonId = null }) => {
                 {/* EPIC 2.3.3: Immediate feedback */}
                 {feedback && <div className="feedback-message">{feedback}</div>}
 
-                {/* EPIC 2.4.1-2.4.4: Hint/explanation/encouragement section */}
-                <div className="hint-section">
-                  <button onClick={handleShowHint} className="btn-hint">
-                    <Lightbulb size={18} aria-hidden="true" />
-                    <span>{showHint ? 'Hide Hint' : 'Show Hint'}</span>
-                  </button>
-                  {showHint && <div className="hint-content">{currentStep.hint}</div>}
-                </div>
+                {/* EPIC 2.4.1-2.4.4: Hint/explanation/encouragement section - hide in simplified mode */}
+                {!preferences?.simplifiedLayout && (
+                  <div className="hint-section">
+                    <button onClick={handleShowHint} className="btn-hint">
+                      <Lightbulb size={18} aria-hidden="true" />
+                      <span>{showHint ? 'Hide Hint' : 'Show Hint'}</span>
+                    </button>
+                    {showHint && <div className="hint-content">{currentStep.hint}</div>}
+                  </div>
+                )}
               </div>
 
             </div>
@@ -2312,7 +2314,8 @@ const AutismView = ({ initialLessonId = null }) => {
             ) : (
               <ToggleLeft size={18} aria-hidden="true" />
             )}
-            <span>Simple</span>
+            <span className="btn-simplified-toggle__label">Simple</span>
+            <span className="btn-simplified-toggle__state">{preferences?.simplifiedLayout ? t('learning.common.on') : t('learning.common.off')}</span>
           </button>
           <button onClick={() => setShowSettings(true)} className="btn-settings" title={t('learning.common.settings')}>
             <Settings size={18} aria-hidden="true" />

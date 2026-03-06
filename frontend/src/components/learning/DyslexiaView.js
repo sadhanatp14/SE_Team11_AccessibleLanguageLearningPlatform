@@ -388,10 +388,11 @@ const DyslexiaView = () => {
           </p>
         </div>
 
-        {/* Reading Guide */}
-        <section className="guide-section" aria-label={t('learning.dyslexia.guideTitle')}>
-          <h3>{copy.guideTitle}</h3>
-          <div className="guide-grid">
+        {/* Reading Guide - only show in normal mode, hide in simplified */}
+        {!preferences?.simplifiedLayout && (
+          <section className="guide-section" aria-label={t('learning.dyslexia.guideTitle')}>
+            <h3>{copy.guideTitle}</h3>
+            <div className="guide-grid">
             <div className="guide-card">
               <div className="guide-card__title">
                 <Volume2 size={18} aria-hidden="true" />
@@ -423,6 +424,7 @@ const DyslexiaView = () => {
             </div>
           </div>
         </section>
+        )}
 
         {/* Next-Lesson Recommendation — shown prominently above the lessons grid */}
         {recommendation && (
@@ -456,7 +458,7 @@ const DyslexiaView = () => {
         <div className="lessons-section">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h3>{copy.lessonsTitle}</h3>
-            {performanceSummary && performanceSummary.totalLessons > 0 && (
+            {!preferences?.simplifiedLayout && performanceSummary && performanceSummary.totalLessons > 0 && (
               <div className="performance-indicator" style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
@@ -503,16 +505,20 @@ const DyslexiaView = () => {
                   </div>
                   <h4>{lessonTitle}</h4>
                   <p className="lesson-description">{lessonDescription}</p>
-                  <div className="lesson-meta">
-                    <span className="badge">{lessonLevel}</span>
-                    <span className={`status-pill status-${statusClass}`}>{displayStatus(progress.status)}</span>
-                  </div>
-                  <div className="lesson-progress">
-                    <div className="progress-bar-container">
-                      <div className="progress-bar-fill" style={{ width: `${percent}%` }} />
-                    </div>
-                    <span className="progress-text">{t('learning.common.percentComplete', { percent })}</span>
-                  </div>
+                  {!preferences?.simplifiedLayout && (
+                    <>
+                      <div className="lesson-meta">
+                        <span className="badge">{lessonLevel}</span>
+                        <span className={`status-pill status-${statusClass}`}>{displayStatus(progress.status)}</span>
+                      </div>
+                      <div className="lesson-progress">
+                        <div className="progress-bar-container">
+                          <div className="progress-bar-fill" style={{ width: `${percent}%` }} />
+                        </div>
+                        <span className="progress-text">{t('learning.common.percentComplete', { percent })}</span>
+                      </div>
+                    </>
+                  )}
                   <button className="btn btn-primary btn-block" onClick={() => handleStartLesson(lesson)}>
                     {copy.lessonCta}
                   </button>

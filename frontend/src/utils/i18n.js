@@ -118,6 +118,9 @@ const TRANSLATIONS = {
       distractionFree: 'Distraction-Free Mode',
       logout: 'Logout',
       logoutConfirm: 'Are you sure you want to logout?',
+      resetLanguage: 'Reset Language',
+      resetLanguageConfirm: 'Reset to default language?',
+      resetLanguageSuccess: 'Language reset to default!',
       updatedOk: 'Accessibility settings updated!',
       updatedErrPrefix: 'Error updating settings:',
       comingSoon: 'Profile update functionality coming soon!',
@@ -310,6 +313,91 @@ const TRANSLATIONS = {
         heardPrefix: 'Heard:',
       },
     },
+    // EPIC 5.5: Simplified language variants for Simple Language Mode
+    simple: {
+      dyslexia: {
+        welcomeTitle: 'Welcome',
+        welcomeBody: 'Read at your own pace. Break words into parts to make them easier.',
+        guideTitle: 'Tips',
+        guideSoundsBody: 'Say words out loud first',
+        guideBreakBodyPrefix: 'Split words:',
+        guideBreakBodySuffix: 'Go slow',
+        guideSpellingBody: 'Spelling takes practice',
+        tipBreakTitle: 'Go Step by Step',
+        tipBreakBody: 'Do one lesson at a time',
+        tipAudioTitle: 'Listen',
+        tipAudioBody: 'Use sounds to help learn',
+        tipPracticeTitle: 'Practice',
+        tipPracticeBody: 'Short practice is better',
+        lessonCta: 'Start',
+        toggleSyllableTitle: 'Split words',
+        viewProgressTitle: 'See progress',
+      },
+      adhd: {
+        toggleDistractionFreeTitle: 'Quiet mode',
+        distractionFree: 'Quiet',
+        hi: 'Hi, {name}!',
+        focusOneLesson: 'Do one lesson',
+        takeABreak: 'Rest',
+        readyToLearn: 'Ready?',
+        restMessage: 'Good job! Rest {minutes} minutes',
+        breakTime: 'Break',
+        startFocusedSession: 'Start {minutes} minutes',
+        startSession: 'Start',
+        chooseOneLesson: 'Pick a lesson',
+        generatingFocusedContent: 'Getting ready...',
+        passingScore: 'Pass:',
+        getReady: 'Get ready!',
+        congratulations: 'Great!',
+        completedLesson: 'Done: {lesson}!',
+        dontGiveUp: 'Try again!',
+        oneMoreChance: 'One more try!',
+        needPointsToPass: 'Need {points} points. Try again!',
+        returnToDashboard: 'Go back',
+        tryAgain: 'Try again',
+      },
+      autism: {
+        learningCenterTitle: 'Learning',
+        chooseYourLesson: 'Pick a lesson',
+        hello: 'Hello, {name}',
+        selectLessonToBegin: 'Click to start',
+        howItWorks: 'How it works',
+        howItWorksBody: 'Click Start. Follow steps. Ask for help if needed.',
+      },
+      common: {
+        progress: 'Progress',
+        settings: 'Settings',
+        logout: 'Exit',
+        back: 'Back',
+        start: 'Start',
+        reviewLesson: 'Review',
+        startLesson: 'Start',
+        percentComplete: '{percent}% Done',
+      },
+      interaction: {
+        submitAnswer: 'Send Answer',
+        instructionsButton: 'Help',
+        instructionsTitle: 'Help',
+        typeYourAnswerShort: 'Type here',
+        answerByVoice: 'Use Voice',
+        stopVoice: 'Stop',
+      },
+      progress: {
+        yourProgress: 'Your Progress',
+        subtitle: 'See what you finished',
+        cardTitle: 'Your Score',
+        lessonsCompleted: 'done',
+        completed: 'Done:',
+        remaining: 'Left:',
+        learningHistory: 'What you learned',
+        noneYet: 'Start a lesson!',
+        lessonStatus: 'Lessons',
+        complete: 'Done',
+        reviewInCenter: 'Review',
+        startInCenter: 'Start',
+        backToLearning: 'Go back',
+      },
+    },
   },
   tamil: {
     app: {
@@ -426,6 +514,9 @@ const TRANSLATIONS = {
       distractionFree: 'கவனச்சிதறல் இல்லா முறை',
       logout: 'வெளியேறு',
       logoutConfirm: 'நீங்கள் வெளியேற விரும்புகிறீர்களா?',
+      resetLanguage: 'மொழியை மீட்டமை',
+      resetLanguageConfirm: 'இயல்புநிலை மொழிக்கு மீட்டமைக்கவா?',
+      resetLanguageSuccess: 'மொழி இயல்புநிலைக்கு மீட்டமைக்கப்பட்டது!',
       updatedOk: 'அணுகல் அமைப்புகள் புதுப்பிக்கப்பட்டது!',
       updatedErrPrefix: 'அமைப்புகளை புதுப்பிக்க பிழை:',
       comingSoon: 'சுயவிவர புதுப்பிப்பு விரைவில்!',
@@ -729,6 +820,9 @@ const TRANSLATIONS = {
       distractionFree: 'डिस्ट्रैक्शन-फ्री मोड',
       logout: 'लॉग आउट',
       logoutConfirm: 'क्या आप लॉग आउट करना चाहते हैं?',
+      resetLanguage: 'भाषा रीसेट करें',
+      resetLanguageConfirm: 'डिफ़ॉल्ट भाषा पर रीसेट करें?',
+      resetLanguageSuccess: 'भाषा डिफ़ॉल्ट पर रीसेट हो गई!',
       updatedOk: 'एक्सेसिबिलिटी सेटिंग्स अपडेट हो गईं!',
       updatedErrPrefix: 'सेटिंग्स अपडेट करने में त्रुटि:',
       comingSoon: 'प्रोफ़ाइल अपडेट जल्द आ रहा है!',
@@ -972,10 +1066,27 @@ export const useI18n = (overrideLanguage) => {
     [preferredLanguage]
   );
 
-  const t = useCallback(
-    (key, params) => tFor(lang, key, params),
-    [lang]
+  const isSimplified = useMemo(
+    () => Boolean(preferences?.simplifiedLayout),
+    [preferences?.simplifiedLayout]
   );
 
-  return { lang, t };
+  const t = useCallback(
+    (key, params) => {
+      // EPIC 5.5: If simplified mode is enabled and simplified text exists, use it
+      if (isSimplified && lang === 'english') {
+        const simplifiedKey = 'simple.' + key.replace(/^learning\./, '');
+        const simplifiedText = tFor(lang, simplifiedKey, params);
+        // If simplified version exists (not returning the key itself), use it
+        if (simplifiedText !== simplifiedKey) {
+          return simplifiedText;
+        }
+      }
+      // Fall back to regular translation
+      return tFor(lang, key, params);
+    },
+    [lang, isSimplified]
+  );
+
+  return { lang, t, isSimplified };
 };

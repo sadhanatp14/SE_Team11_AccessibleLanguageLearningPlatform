@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { usePreferences } from '../context/PreferencesContext';
-import { Accessibility, Check, LogOut, User, X } from 'lucide-react';
+import { Accessibility, Check, LogOut, RotateCcw, User, X } from 'lucide-react';
 import { useI18n } from '../utils/i18n';
 import { resolveBilingualTextModeFromPreferences, resolveUiLanguageFromPreferences } from '../utils/languagePrefs';
 import './ProfileSettings.css';
@@ -18,11 +18,13 @@ import './ProfileSettings.css';
  */
 const ProfileSettings = ({ onClose }) => {
   const { user, logout } = useAuth();
-  const { preferences, updateAccessibilitySettings } = usePreferences();
+  const { preferences, updateAccessibilitySettings, resetLanguage } = usePreferences();
   const { t } = useI18n();
 
   const [activeTab, setActiveTab] = useState('profile');
   const [profileEditing, setProfileEditing] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetMessage, setResetMessage] = useState(null);
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -93,6 +95,23 @@ const ProfileSettings = ({ onClose }) => {
     // Confirm reduces accidental logouts from a modal.
     if (window.confirm(t('settings.logoutConfirm'))) {
       logout();
+    }
+  };
+
+  // EPIC 5.7: Reset language to default with confirmation
+  const handleResetLanguage = async () => {
+    if (!window.confirm(t('settings.resetLanguageConfirm'))) {
+      return;
+    }
+
+    const result = await resetLanguage();
+    if (result.success) {
+      setResetMessage(t('settings.resetLanguageSuccess'));
+      // Clear message after 3 seconds
+      setTimeout(() => setResetMessage(null), 3000);
+      setShowResetConfirm(false);
+    } else {
+      alert(`${t('settings.updatedErrPrefix')} ${result.error}`);
     }
   };
 
@@ -415,6 +434,26 @@ const ProfileSettings = ({ onClose }) => {
                 </button>
               </div>
             )}
+
+            {/* EPIC 5.7: Reset Language Button */}
+            <div className="setting-group" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px', marginTop: '20px' }}>
+              <label style={{ marginBottom: '12px', display: 'block' }}>Language Settings</label>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleResetLanguage}
+                title={t('settings.resetLanguageConfirm')}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}
+              >
+                <RotateCcw size={16} aria-hidden="true" />
+                <span>{t('settings.resetLanguage')}</span>
+              </button>
+              {resetMessage && (
+                <p style={{ color: 'var(--color-success, #4caf50)', marginTop: '12px', fontSize: '0.9em', textAlign: 'center' }} role="status" aria-live="polite">
+                  ✓ {resetMessage}
+                </p>
+              )}
+            </div>
 
             <div className="form-actions">
               <button
