@@ -40,7 +40,17 @@ const CONFIG = {
   // Variance threshold to detect inconsistent performance
   // If standard deviation > this value, performance is considered inconsistent
   INCONSISTENCY_THRESHOLD: 20,
+
+  // Smooth progression controls
+  MIN_LESSONS_BETWEEN_ADJUSTMENTS: 2,
+  MAX_HISTORY_LENGTH: 20,
+
+  // Pace adaptation thresholds
+  FAST_PACE_THRESHOLD: 85,
+  SLOW_PACE_THRESHOLD: 55,
 };
+
+const PACE_LEVELS = ['slow', 'standard', 'fast'];
 
 /**
  * Read performance data from localStorage
@@ -143,6 +153,13 @@ export const recordLessonScore = (user, lessonId, score, metadata = {}) => {
       currentDifficulty: 'Beginner',
       lessonHistory: [],
       difficultyHistory: [],
+      lessonCompletionStatus: {},
+      progressionState: {
+        pace: 'standard',
+        consecutiveHigh: 0,
+        consecutiveLow: 0,
+        lastAdjustmentAtLessonCount: 0,
+      },
     };
   }
   
@@ -158,10 +175,26 @@ export const recordLessonScore = (user, lessonId, score, metadata = {}) => {
   };
   
   userData.lessonHistory.push(lessonRecord);
+
+  // 4.6.1 Track lesson completion status
+  userData.lessonCompletionStatus = userData.lessonCompletionStatus || {};
+  const previousStatus = userData.lessonCompletionStatus[lessonId] || {
+    attempts: 0,
+    completed: false,
+    bestScore: 0,
+  };
+  userData.lessonCompletionStatus[lessonId] = {
+    lessonId,
+    completed: metadata.completed ?? true,
+    lastScore: lessonRecord.score,
+    bestScore: Math.max(previousStatus.bestScore || 0, lessonRecord.score),
+    attempts: (previousStatus.attempts || 0) + 1,
+    lastAttemptAt: lessonRecord.timestamp,
+  };
   
   // Keep only recent history (last 10 lessons max to prevent unbounded growth)
-  if (userData.lessonHistory.length > 10) {
-    userData.lessonHistory = userData.lessonHistory.slice(-10);
+  if (userData.lessonHistory.length > CONFIG.MAX_HISTORY_LENGTH) {
+    userData.lessonHistory = userData.lessonHistory.slice(-CONFIG.MAX_HISTORY_LENGTH);
   }
   
   store[userKey] = userData;
@@ -241,6 +274,55 @@ const analyzePerformance = (lessonHistory) => {
 };
 
 /**
+ * Determine adaptive progression pace from recent performance.
+ * 4.6.2 Adjust progression speed based on recent performance.
+ */
+const analyzeProgressionPace = (lessonHistory) => {
+  if (!Array.isArray(lessonHistory) || lessonHistory.length < 2) {
+    return {
+      paceRecommendation: 'standard',
+      recentAverage: 0,
+      trendDelta: 0,
+      reason: 'Insufficient data for pace adaptation',
+    };
+  }
+
+  const recentWindow = lessonHistory.slice(-Math.min(4, lessonHistory.length));
+  const previousWindow = lessonHistory.slice(-Math.min(8, lessonHistory.length), -Math.min(4, lessonHistory.length));
+
+  const recentAverage = calculateAverage(recentWindow.map((l) => l.score));
+  const previousAverage = previousWindow.length > 0
+    ? calculateAverage(previousWindow.map((l) => l.score))
+    : recentAverage;
+  const trendDelta = recentAverage - previousAverage;
+
+  if (recentAverage >= CONFIG.FAST_PACE_THRESHOLD && trendDelta >= 0) {
+    return {
+      paceRecommendation: 'fast',
+      recentAverage,
+      trendDelta,
+      reason: 'Strong and stable recent performance',
+    };
+  }
+
+  if (recentAverage <= CONFIG.SLOW_PACE_THRESHOLD || trendDelta <= -10) {
+    return {
+      paceRecommendation: 'slow',
+      recentAverage,
+      trendDelta,
+      reason: 'Recent performance indicates a gentler pace',
+    };
+  }
+
+  return {
+    paceRecommendation: 'standard',
+    recentAverage,
+    trendDelta,
+    reason: 'Balanced performance trend',
+  };
+};
+
+/**
  * Adjust difficulty level based on recent performance
  * Only adjusts by one level at a time (no skipping)
  * Respects minimum and maximum difficulty bounds
@@ -263,18 +345,55 @@ export const adjustDifficulty = (user) => {
   }
   
   const currentDifficulty = userData.currentDifficulty || 'Beginner';
+  userData.progressionState = userData.progressionState || {
+    pace: 'standard',
+    consecutiveHigh: 0,
+    consecutiveLow: 0,
+    lastAdjustmentAtLessonCount: 0,
+  };
   const currentIndex = getDifficultyIndex(currentDifficulty);
+  const lessonsCount = Array.isArray(userData.lessonHistory) ? userData.lessonHistory.length : 0;
   
-  // Analyze performance
+  // Analyze performance and progression pace
   const analysis = analyzePerformance(userData.lessonHistory);
+  const paceAnalysis = analyzeProgressionPace(userData.lessonHistory);
+
+  // Smoothly adapt pace: change only after repeated signals
+  if (paceAnalysis.paceRecommendation === 'fast') {
+    userData.progressionState.consecutiveHigh = (userData.progressionState.consecutiveHigh || 0) + 1;
+    userData.progressionState.consecutiveLow = 0;
+  } else if (paceAnalysis.paceRecommendation === 'slow') {
+    userData.progressionState.consecutiveLow = (userData.progressionState.consecutiveLow || 0) + 1;
+    userData.progressionState.consecutiveHigh = 0;
+  } else {
+    userData.progressionState.consecutiveHigh = 0;
+    userData.progressionState.consecutiveLow = 0;
+  }
+
+  if (userData.progressionState.consecutiveHigh >= 2) {
+    userData.progressionState.pace = 'fast';
+  } else if (userData.progressionState.consecutiveLow >= 2) {
+    userData.progressionState.pace = 'slow';
+  } else {
+    userData.progressionState.pace = 'standard';
+  }
+
+  // 4.6.3 Prevent sudden jumps in difficulty level with cooldown
+  const lessonsSinceLastAdjustment = lessonsCount - (userData.progressionState.lastAdjustmentAtLessonCount || 0);
+  const inCooldown = lessonsSinceLastAdjustment < CONFIG.MIN_LESSONS_BETWEEN_ADJUSTMENTS;
   
   // No adjustment needed
-  if (!analysis.shouldAdjust) {
+  if (!analysis.shouldAdjust || inCooldown) {
+    store[userKey] = userData;
+    writeStore(store);
     return {
       adjusted: false,
       currentDifficulty,
       newDifficulty: currentDifficulty,
       analysis,
+      pace: userData.progressionState.pace,
+      paceAnalysis,
+      inCooldown,
     };
   }
   
@@ -294,6 +413,7 @@ export const adjustDifficulty = (user) => {
   if (adjusted) {
     userData.currentDifficulty = newDifficulty;
     userData.difficultyHistory = userData.difficultyHistory || [];
+    userData.progressionState.lastAdjustmentAtLessonCount = lessonsCount;
     userData.difficultyHistory.push({
       from: currentDifficulty,
       to: newDifficulty,
@@ -310,6 +430,9 @@ export const adjustDifficulty = (user) => {
     currentDifficulty,
     newDifficulty,
     analysis,
+    pace: userData.progressionState.pace,
+    paceAnalysis,
+    inCooldown: false,
     atBoundary: !adjusted && analysis.shouldAdjust,
   };
 };
@@ -343,19 +466,62 @@ export const getPerformanceSummary = (user) => {
       averageScore: 0,
       recentAverage: 0,
       trend: 'insufficient-data',
+      pace: 'standard',
+      completionRate: 0,
     };
   }
   
   const allScores = userData.lessonHistory.map(l => l.score);
   const recentScores = userData.lessonHistory.slice(-CONFIG.HISTORY_WINDOW).map(l => l.score);
   
+  const completionEntries = Object.values(userData.lessonCompletionStatus || {});
+  const completedLessons = completionEntries.filter((entry) => entry?.completed).length;
+  const completionRate = completionEntries.length > 0
+    ? Math.round((completedLessons / completionEntries.length) * 100)
+    : 0;
+
   return {
     currentDifficulty: userData.currentDifficulty || 'Beginner',
     totalLessons: userData.lessonHistory.length,
     averageScore: calculateAverage(allScores),
     recentAverage: calculateAverage(recentScores),
     trend: analyzePerformance(userData.lessonHistory).consistency || 'unknown',
+    pace: userData.progressionState?.pace || 'standard',
+    completionRate,
     lastAdjustment: userData.difficultyHistory?.slice(-1)[0] || null,
+  };
+};
+
+/**
+ * Get adaptive progression state for UI flows.
+ * 4.6.4 Maintain a smooth and predictable learning flow.
+ */
+export const getAdaptiveProgressionState = (user) => {
+  const userKey = normalizeUserKey(user);
+  const store = readStore();
+  const userData = store[userKey];
+
+  if (!userData) {
+    return {
+      currentDifficulty: 'Beginner',
+      pace: 'standard',
+      lessonsCompleted: 0,
+      recommendedStepSize: 1,
+      flowMode: 'steady',
+    };
+  }
+
+  const pace = userData.progressionState?.pace || 'standard';
+  const completionEntries = Object.values(userData.lessonCompletionStatus || {});
+  const lessonsCompleted = completionEntries.filter((entry) => entry?.completed).length;
+
+  return {
+    currentDifficulty: userData.currentDifficulty || 'Beginner',
+    pace,
+    lessonsCompleted,
+    // Step size intentionally constrained to avoid jumps in UI sequencing.
+    recommendedStepSize: 1,
+    flowMode: pace === 'slow' ? 'gentle' : pace === 'fast' ? 'accelerated' : 'steady',
   };
 };
 
@@ -389,4 +555,4 @@ export const getLessonHistory = (user, limit = 10) => {
 };
 
 // Export difficulty levels for reference
-export { DIFFICULTY_LEVELS, CONFIG };
+export { DIFFICULTY_LEVELS, PACE_LEVELS, CONFIG };

@@ -214,6 +214,7 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
         if (updated?.completed) {
           // Record lesson score for adaptive difficulty adjustment
           recordLessonScore(user, lessonId, score, {
+            module: 'dyslexia',
             totalInteractions,
             correctInteractions,
             completionDate: new Date().toISOString(),
@@ -227,6 +228,8 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
           // Add difficulty adjustment feedback if it changed
           if (difficultyResult.adjusted) {
             msg += ` Your difficulty level has been adjusted to ${difficultyResult.newDifficulty} based on your performance!`;
+          } else if (difficultyResult.inCooldown) {
+            msg += ' Great consistency! Difficulty will update after a couple more lessons to keep progression smooth.';
           }
 
           setSuccessMessage(msg);
@@ -263,6 +266,7 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
 
     // Record score for sample lessons too
     recordLessonScore(user, lessonId, score, {
+      module: 'dyslexia',
       totalInteractions,
       correctInteractions,
       isSample: true,
@@ -275,6 +279,8 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
     let msg = t('lessons.completedCongrats');
     if (difficultyResult.adjusted) {
       msg += ` Your difficulty level has been adjusted to ${difficultyResult.newDifficulty}!`;
+    } else if (difficultyResult.inCooldown) {
+      msg += ' Keep going! We are pacing difficulty changes gradually for a steady learning flow.';
     }
 
     setSuccessMessage(msg);

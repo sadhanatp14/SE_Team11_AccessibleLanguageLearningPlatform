@@ -9,6 +9,7 @@ import { usePreferences } from '../../context/PreferencesContext';
 import ProfileSettings from '../ProfileSettings';
 import api from '../../utils/api';
 import { adjustDifficulty, getCurrentDifficulty, getPerformanceSummary, recordLessonScore } from '../../services/difficultyAdjustmentService';
+import { getReviewBasedRecommendation } from '../../services/reviewRecommendationService';
 import NextLessonCard from './NextLessonCard';
 import {
   backendTtsLangFor,
@@ -992,51 +993,23 @@ const AutismView = ({ initialLessonId = null }) => {
   // UI language should not hide lessons; it only controls scaffolding/chrome text.
   const displayedLessons = lessons;
 
-  // EPIC 4.2.1-4.2.2: Recommend the next available Autism lesson by order.
+  // EPIC 4.7.1-4.7.4: Recommend one follow-up lesson from review + trend data.
   useEffect(() => {
-    const ordered = [...displayedLessons].sort((a, b) => a.id - b.id);
-    if (ordered.length === 0) {
+    const recommendation = getReviewBasedRecommendation({
+      user,
+      module: 'autism',
+      lessons: displayedLessons,
+      completedLessonIds: completedLessons,
+    });
+
+    if (!recommendation) {
       setNextRecommendation(null);
       return;
     }
 
-    const completedSet = new Set(completedLessons);
-    let lastCompleted = null;
-    let recommendedLesson = null;
-    let completedCount = 0;
-
-    for (const lesson of ordered) {
-      if (completedSet.has(lesson.id)) {
-        lastCompleted = lesson;
-        completedCount += 1;
-      } else if (!recommendedLesson) {
-        recommendedLesson = lesson;
-      }
-    }
-
-    if (!recommendedLesson) {
-      setNextRecommendation({
-        allCompleted: true,
-        reason: 'Great work! You completed all available Autism lessons.',
-        totalLessons: ordered.length,
-      });
-      setShowRecommendation(true);
-      return;
-    }
-
-    const position = ordered.findIndex((l) => l.id === recommendedLesson.id) + 1;
-    setNextRecommendation({
-      allCompleted: false,
-      lesson: recommendedLesson,
-      position,
-      totalLessons: ordered.length,
-      completedCount,
-      reason: lastCompleted
-        ? `You finished "${lastCompleted.title}". Up next:`
-        : 'Start your Autism learning journey:',
-    });
+    setNextRecommendation(recommendation);
     setShowRecommendation(true);
-  }, [completedLessons, displayedLessons]);
+  }, [completedLessons, displayedLessons, user]);
 
   // Get current step data
   const currentLesson = displayedLessons.find(l => l.id === selectedLesson) || lessons.find(l => l.id === selectedLesson);
@@ -2522,6 +2495,7 @@ const AutismView = ({ initialLessonId = null }) => {
           <div style={{
             display: 'flex',
             alignItems: 'center',
+            flexWrap: 'wrap',
             gap: '12px',
             padding: '12px 16px',
             background: 'linear-gradient(135deg, #e8f5e9, #c8e6c9)',
@@ -2538,6 +2512,12 @@ const AutismView = ({ initialLessonId = null }) => {
                   ({performanceSummary.recentAverage.toFixed(0)}% avg)
                 </span>
               )}
+            {performanceSummary?.pace && (
+              <span style={{ opacity: 0.85 }}>• Pace: {performanceSummary.pace}</span>
+            )}
+            {typeof performanceSummary?.completionRate === 'number' && performanceSummary.completionRate > 0 && (
+              <span style={{ opacity: 0.8 }}>• Completion: {performanceSummary.completionRate}%</span>
+            )}
           </div>
         )}
 
@@ -2557,7 +2537,7 @@ const AutismView = ({ initialLessonId = null }) => {
                 <NextLessonCard
                   variant="autism"
                   recommendation={{
-                    title: `Next: ${nextRecommendation.lesson.title}`,
+                    title: `${nextRecommendation.recommendationType === 'review' ? 'Review' : 'Next'}: ${nextRecommendation.lesson.title}`,
                     description: nextRecommendation.lesson.description,
                     position: nextRecommendation.position,
                   }}

@@ -15,6 +15,7 @@ import MotivationReward from './MotivationReward';
 import ReactConfetti from 'react-confetti';
 import { getSummary } from '../../services/progressService';
 import { adjustDifficulty, getCurrentDifficulty, getPerformanceSummary, recordLessonScore } from '../../services/difficultyAdjustmentService';
+import { getReviewBasedRecommendation } from '../../services/reviewRecommendationService';
 import api from '../../utils/api';
 import { useI18n } from '../../utils/i18n';
 // Icon imports for UI elements
@@ -199,51 +200,23 @@ const ADHDView = ({ initialLessonId = null }) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  // EPIC 4.2.1-4.2.2: Identify last completed and recommend the next available lesson by order.
+  // EPIC 4.7.1-4.7.4: Build one clear review-based recommendation using past performance trends.
   useEffect(() => {
-    const ordered = [...baseLessons].sort((a, b) => a.id - b.id);
-    if (ordered.length === 0) {
+    const recommendation = getReviewBasedRecommendation({
+      user,
+      module: 'adhd',
+      lessons: baseLessons,
+      completedLessonIds: completedLessons,
+    });
+
+    if (!recommendation) {
       setNextRecommendation(null);
       return;
     }
 
-    const completedSet = new Set(completedLessons);
-    let lastCompleted = null;
-    let recommendedLesson = null;
-    let completedCount = 0;
+    setNextRecommendation(recommendation);
 
-    for (const lesson of ordered) {
-      if (completedSet.has(lesson.id)) {
-        lastCompleted = lesson;
-        completedCount += 1;
-      } else if (!recommendedLesson) {
-        recommendedLesson = lesson;
-      }
-    }
-
-    if (!recommendedLesson) {
-      setNextRecommendation({
-        allCompleted: true,
-        reason: 'Great work! You completed all available ADHD lessons.',
-        totalLessons: ordered.length,
-      });
-      return;
-    }
-
-    const position = ordered.findIndex((l) => l.id === recommendedLesson.id) + 1;
-
-    setNextRecommendation({
-      allCompleted: false,
-      lesson: recommendedLesson,
-      position,
-      totalLessons: ordered.length,
-      completedCount,
-      reason: lastCompleted
-        ? `You finished "${lastCompleted.title}". Up next:`
-        : 'Start your ADHD learning journey:',
-    });
-
-    const recommendationKey = String(recommendedLesson.id);
+    const recommendationKey = recommendation.recommendationKey || String(recommendation.lesson?.id || '');
     if (skippedRecommendationId && skippedRecommendationId !== recommendationKey) {
       try {
         window.sessionStorage.removeItem('adhd-next-lesson-skipped');
@@ -253,7 +226,7 @@ const ADHDView = ({ initialLessonId = null }) => {
       setSkippedRecommendationId(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [completedLessons]);
+  }, [completedLessons, user]);
 
   // Audio handling
   // Audio handling
@@ -1434,6 +1407,7 @@ const ADHDView = ({ initialLessonId = null }) => {
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',
+                      flexWrap: 'wrap',
                       gap: '12px',
                       padding: '12px 16px',
                       background: 'linear-gradient(135deg, #e8f5e9, #c8e6c9)',
@@ -1450,6 +1424,12 @@ const ADHDView = ({ initialLessonId = null }) => {
                           ({performanceSummary.recentAverage.toFixed(0)}% avg)
                         </span>
                       )}
+                      {performanceSummary?.pace && (
+                        <span style={{ opacity: 0.85 }}>• Pace: {performanceSummary.pace}</span>
+                      )}
+                      {typeof performanceSummary?.completionRate === 'number' && performanceSummary.completionRate > 0 && (
+                        <span style={{ opacity: 0.8 }}>• Completion: {performanceSummary.completionRate}%</span>
+                      )}
                     </div>
                   )}
 
@@ -1464,10 +1444,10 @@ const ADHDView = ({ initialLessonId = null }) => {
                         />
                       ) : (
                         nextRecommendation.lesson &&
-                        skippedRecommendationId !== String(nextRecommendation.lesson.id) && (
+                        skippedRecommendationId !== (nextRecommendation.recommendationKey || String(nextRecommendation.lesson.id)) && (
                           <NextLessonCard
                             recommendation={{
-                              title: `Next: ${nextRecommendation.lesson.title}`,
+                              title: `${nextRecommendation.recommendationType === 'review' ? 'Review' : 'Next'}: ${nextRecommendation.lesson.title}`,
                               description: `Focused lesson (${nextRecommendation.lesson.duration})`,
                               position: nextRecommendation.position,
                             }}
@@ -1479,7 +1459,7 @@ const ADHDView = ({ initialLessonId = null }) => {
                               handleStartLesson(nextRecommendation.lesson);
                             }}
                             onSkip={() => {
-                              const key = String(nextRecommendation.lesson.id);
+                              const key = nextRecommendation.recommendationKey || String(nextRecommendation.lesson.id);
                               setSkippedRecommendationId(key);
                               try {
                                 window.sessionStorage.setItem('adhd-next-lesson-skipped', key);
