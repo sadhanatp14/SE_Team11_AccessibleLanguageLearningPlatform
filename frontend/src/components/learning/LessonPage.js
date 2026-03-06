@@ -76,9 +76,14 @@ const LessonPage = () => {
   const uiLanguage = resolveUiLanguageFromPreferences(preferences);
   const contentLanguage = useMemo(() => {
     const condition = String(user?.learningCondition || '').toLowerCase();
-    if (condition === 'dyslexia' || condition === 'adhd') return 'english';
+    if (condition === 'dyslexia' || condition === 'adhd') {
+      // Detect content language from the lesson ID suffix
+      if (lessonId?.endsWith('-hindi')) return 'hindi';
+      if (lessonId?.endsWith('-tamil')) return 'tamil';
+      return 'english';
+    }
     return uiLanguage;
-  }, [uiLanguage, user?.learningCondition]);
+  }, [uiLanguage, user?.learningCondition, lessonId]);
   // ----- Component State -----
   // The fully loaded lesson object (from API or local samples)
   const [lesson, setLesson] = useState(null);

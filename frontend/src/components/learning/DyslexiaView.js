@@ -95,50 +95,79 @@ const DyslexiaView = () => {
    *  - description / descriptionSyllables: short blurb about the lesson
    *  - totalSections: number of sections in the lesson (used for progress calculation)
    *  - totalInteractions: total number of interactions across all sections
+   *
+   * The apiId suffix changes based on the selected language so the correct
+   * lesson content (English / Hindi / Tamil) is loaded.
    */
+  const langSuffix = lang === 'hindi' ? '-hindi' : lang === 'tamil' ? '-tamil' : '';
+
   const lessons = [
     {
       id: 1,
       titleKey: 'learning.dyslexia.lessonGreetingsTitle',
-      title: 'Greetings',
-      titleSyllables: 'Greet-ings',
+      title: lang === 'hindi' ? 'अभिवादन' : lang === 'tamil' ? 'வாழ்த்துகள்' : 'Greetings',
+      titleSyllables: lang === 'hindi' ? 'अभिवादन' : lang === 'tamil' ? 'வாழ்த்துகள்' : 'Greet-ings',
       level: 'Beginner',
-      apiId: 'lesson-greetings',
+      apiId: `lesson-greetings${langSuffix}`,
       Icon: MessageCircle,
       color: '#ffd700',
       descriptionKey: 'learning.dyslexia.lessonGreetingsDesc',
-      description: 'Learn "Hello", "Hi", and friendly phrases',
-      descriptionSyllables: 'Learn "Hello" (Hel-lo), "Hi", and friend-ly phrases',
+      description: lang === 'hindi'
+        ? '"नमस्ते", "हाय", और दोस्ताना वाक्य सीखें'
+        : lang === 'tamil'
+          ? '"வணக்கம்", "ஹாய்", மற்றும் நட்பான சொற்றொடர்கள் கற்றுக்கொள்ளுங்கள்'
+          : 'Learn "Hello", "Hi", and friendly phrases',
+      descriptionSyllables: lang === 'hindi'
+        ? '"नमस्ते", "हाय", और दोस्ताना वाक्य सीखें'
+        : lang === 'tamil'
+          ? '"வணக்கம்", "ஹாய்", நட்பான சொற்றொடர்கள்'
+          : 'Learn "Hello" (Hel-lo), "Hi", and friend-ly phrases',
       totalSections: 2,
       totalInteractions: 8,
     },
     {
       id: 2,
       titleKey: 'learning.dyslexia.lessonBasicWordsTitle',
-      title: 'Basic Words',
-      titleSyllables: 'Ba-sic Words',
+      title: lang === 'hindi' ? 'मूल शब्द' : lang === 'tamil' ? 'அடிப்படை சொற்கள்' : 'Basic Words',
+      titleSyllables: lang === 'hindi' ? 'मूल शब्द' : lang === 'tamil' ? 'அடிப்படை சொற்கள்' : 'Ba-sic Words',
       level: 'Beginner',
-      apiId: 'lesson-vocabulary',
+      apiId: `lesson-vocabulary${langSuffix}`,
       Icon: BookOpen,
       color: '#90caf9',
       descriptionKey: 'learning.dyslexia.lessonBasicWordsDesc',
-      description: 'Everyday objects, people, and actions',
-      descriptionSyllables: 'E-ve-ry-day words like ap-ple, chair, book',
+      description: lang === 'hindi'
+        ? 'रोज़मर्रा की वस्तुएँ, लोग और क्रियाएँ'
+        : lang === 'tamil'
+          ? 'அன்றாட பொருட்கள், மக்கள், மற்றும் செயல்கள்'
+          : 'Everyday objects, people, and actions',
+      descriptionSyllables: lang === 'hindi'
+        ? 'रोज़मर्रा की वस्तुएँ जैसे कुर्सी, सेब, किताब'
+        : lang === 'tamil'
+          ? 'அன்றாட சொற்கள்: நாற்காலி, ஆப்பிள், புத்தகம்'
+          : 'E-ve-ry-day words like ap-ple, chair, book',
       totalSections: 3,
       totalInteractions: 11,
     },
     {
       id: 3,
       titleKey: 'learning.dyslexia.lessonNumbersTitle',
-      title: 'Numbers',
-      titleSyllables: 'Num-bers',
+      title: lang === 'hindi' ? 'संख्याएँ' : lang === 'tamil' ? 'எண்கள்' : 'Numbers',
+      titleSyllables: lang === 'hindi' ? 'संख्याएँ' : lang === 'tamil' ? 'எண்கள்' : 'Num-bers',
       level: 'Beginner',
-      apiId: 'lesson-numbers',
+      apiId: `lesson-numbers${langSuffix}`,
       Icon: Hash,
       color: '#a5d6a7',
       descriptionKey: 'learning.dyslexia.lessonNumbersDesc',
-      description: 'Count, match, and order numbers',
-      descriptionSyllables: 'Count, match, and or-der num-bers',
+      description: lang === 'hindi'
+        ? 'गिनें, मिलाएँ, और संख्याएँ क्रम में लगाएँ'
+        : lang === 'tamil'
+          ? 'எண்ணுங்கள், பொருத்துங்கள், மற்றும் எண்களை வரிசைப்படுத்துங்கள்'
+          : 'Count, match, and order numbers',
+      descriptionSyllables: lang === 'hindi'
+        ? 'गिनें, मिलाएँ, और क्रम में लगाएँ'
+        : lang === 'tamil'
+          ? 'எண்ணுங்கள், பொருத்துங்கள், வரிசைப்படுத்துங்கள்'
+          : 'Count, match, and or-der num-bers',
       totalSections: 3,
       totalInteractions: 11,
     },

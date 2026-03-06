@@ -1,3 +1,6 @@
+import lessonSectionSamplesHindi from './sectionSamplesHindi';
+import lessonSectionSamplesTamil from './sectionSamplesTamil';
+
 const lessonSectionSamples = {
   'lesson-greetings': [
     {
@@ -820,4 +823,4 @@ const lessonSectionSamples = {
   ],
 };
 
-export default lessonSectionSamples;
+export default { ...lessonSectionSamples, ...lessonSectionSamplesHindi, ...lessonSectionSamplesTamil };
