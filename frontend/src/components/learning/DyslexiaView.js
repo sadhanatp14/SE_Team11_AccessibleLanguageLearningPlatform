@@ -28,7 +28,7 @@ import { usePreferences } from '../../context/PreferencesContext';
 // Service for reading/writing per-user lesson progress from localStorage
 import { getAllLessonProgress, normalizeUserId } from '../../services/dyslexiaProgressService';
 // Performance-based difficulty adjustment service
-import { getCurrentDifficulty, getPerformanceSummary } from '../../services/difficultyAdjustmentService';
+import { adjustDifficulty, getCurrentDifficulty, recordLessonScore } from '../../services/difficultyAdjustmentService';
 // Next-lesson recommendation service
 import {
   getNextLessonRecommendation,
@@ -40,10 +40,11 @@ import {
 import api from '../../utils/api';
 // Next-lesson recommendation card component
 import NextLessonCard from './NextLessonCard';
+import PracticeSuggestion from './PracticeSuggestion';
 // Reusable profile/settings modal component
 import ProfileSettings from '../ProfileSettings';
 // Icon components from lucide-react used in the UI
-import { BookOpen, Hash, Info, MessageCircle, Settings, ToggleLeft, ToggleRight, Volume2, TrendingUp } from 'lucide-react';
+import { BookOpen, ChevronLeft, Hash, Info, Menu, MessageCircle, Settings, Volume2, TrendingUp, X } from 'lucide-react';
 // Custom hook that persists the syllable-mode preference in localStorage
 import { useDyslexiaSyllableMode } from '../../utils/dyslexiaSyllableMode';
 import { useI18n } from '../../utils/i18n';
@@ -61,6 +62,7 @@ const DyslexiaView = () => {
 
   // Controls whether the ProfileSettings modal is visible
   const [showSettings, setShowSettings] = useState(false);
+  const [showSideMenu, setShowSideMenu] = useState(false);
 
   // Stores a mapping of lessonApiId → { status, correctCount } loaded from localStorage
   const [lessonProgress, setLessonProgress] = useState({});
@@ -68,14 +70,14 @@ const DyslexiaView = () => {
   // Current difficulty level based on performance (adaptive learning)
   const [currentDifficulty, setCurrentDifficulty] = useState('Beginner');
 
-  // Performance summary for the user
-  const [performanceSummary, setPerformanceSummary] = useState(null);
-
   // Next-lesson recommendation state
   const [recommendation, setRecommendation] = useState(null);
 
   // Motivation feedback (FEATURE: Motivation Feedback)
   const [motivation, setMotivation] = useState(null);
+
+  // Practice suggestion state (EPIC 4.4: Extra Practice Suggestions)
+  const [showPracticeSuggestion, setShowPracticeSuggestion] = useState(false);
 
   // Syllable mode: when true, all UI text is rendered with syllable-split variants.
   // The custom hook persists the preference to localStorage so it survives page reloads.
@@ -160,15 +162,6 @@ const DyslexiaView = () => {
   };
 
   /**
-   * Navigate to the individual lesson page for the selected lesson.
-   * Uses the lesson's apiId as the URL parameter so the LessonPage
-   * component can load the correct content from the backend or local samples.
-   */
-  const handleStartLesson = (lesson) => {
-    navigate(`/lessons/${lesson.apiId}`);
-  };
-
-  /**
    * Accept the recommended next lesson — navigate directly to that lesson page.
    */
   const handleAcceptRecommendation = (lesson) => {
@@ -199,21 +192,57 @@ const DyslexiaView = () => {
     if (!key) {
       setLessonProgress({});
       setCurrentDifficulty('Beginner');
-      setPerformanceSummary(null);
       return;
     }
     
     // Load lesson progress
     const progress = getAllLessonProgress(key);
     setLessonProgress(progress || {});
+
+    // EPIC 4.1.1-4.1.4: Convert completed dyslexia lesson progress into scores,
+    // then apply one-level adaptive difficulty changes.
+    const scoreSyncKey = `dyslexia-difficulty-score-sync:${key}`;
+    let scoreSyncMap = {};
+    try {
+      scoreSyncMap = JSON.parse(window.localStorage.getItem(scoreSyncKey) || '{}');
+    } catch {
+      scoreSyncMap = {};
+    }
+
+    let hasNewScores = false;
+    Object.entries(progress || {}).forEach(([lessonId, lessonData]) => {
+      const status = String(lessonData?.status || '').toLowerCase();
+      if (!status.includes('complete')) return;
+
+      const signature = lessonData?.updatedAt || `${lessonData?.correctCount || 0}:${lessonData?.totalInteractions || 0}`;
+      const syncEntryKey = `${lessonId}:${signature}`;
+      if (scoreSyncMap[syncEntryKey]) return;
+
+      const totalInteractions = Math.max(1, Number(lessonData?.totalInteractions || 0));
+      const correctCount = Math.max(0, Number(lessonData?.correctCount || 0));
+      const score = Math.max(0, Math.min(100, Math.round((correctCount / totalInteractions) * 100)));
+
+      recordLessonScore(user, lessonId, score, {
+        module: 'dyslexia',
+        correctCount,
+        totalInteractions,
+      });
+      scoreSyncMap[syncEntryKey] = true;
+      hasNewScores = true;
+    });
+
+    if (hasNewScores) {
+      try {
+        window.localStorage.setItem(scoreSyncKey, JSON.stringify(scoreSyncMap));
+      } catch {
+        // non-blocking
+      }
+      adjustDifficulty(user);
+    }
     
     // Load current difficulty level
     const difficulty = getCurrentDifficulty(user);
     setCurrentDifficulty(difficulty);
-    
-    // Load performance summary
-    const summary = getPerformanceSummary(user);
-    setPerformanceSummary(summary);
     
     // Compute next-lesson recommendation
     const rec = getNextLessonRecommendation(user);
@@ -247,19 +276,6 @@ const DyslexiaView = () => {
   const uiText = React.useCallback(
     (normalText, syllableText) => (syllableMode && isEnglish ? syllableText : normalText),
     [syllableMode, isEnglish]
-  );
-
-  const displayStatus = React.useCallback(
-    (status) => {
-      const value = status || 'Not Started';
-      if (isEnglish) return value;
-      const normalized = String(value).toLowerCase();
-      if (normalized.includes('complete')) return t('learning.common.statusCompleted');
-      if (normalized.includes('progress')) return t('learning.common.statusInProgress');
-      if (normalized.includes('not started') || normalized.includes('not-started')) return t('learning.common.statusNotStarted');
-      return value;
-    },
-    [isEnglish, t]
   );
 
   /**
@@ -333,65 +349,120 @@ const DyslexiaView = () => {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/progress')}
+            onClick={() => navigate(-1)}
             className="btn-settings"
-            title="Progress"
-            aria-label="Progress"
+            title={t('learning.common.back')}
+            aria-label={t('learning.common.back')}
             style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
-            <Hash size={18} aria-hidden="true" />
-            <span>Progress</span>
-          </button>
-          <button
-            type="button"
-            onClick={toggleSyllableMode}
-            className="btn-settings btn-syllable-toggle"
-            title={t('learning.dyslexia.toggleSyllableTitle')}
-            aria-pressed={syllableMode}
-            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-          >
-            {syllableMode ? (
-              <ToggleRight size={18} aria-hidden="true" />
-            ) : (
-              <ToggleLeft size={18} aria-hidden="true" />
-            )}
-            <span className="btn-syllable-toggle__label">{t('learning.dyslexia.syllableMode')}</span>
-            <span className="btn-syllable-toggle__state">{syllableMode ? t('learning.common.on') : t('learning.common.off')}</span>
-          </button>
-          <button
-            type="button"
-            onClick={async () => {
-              const newValue = !preferences?.simplifiedLayout;
-              await updateAccessibilitySettings({ simplifiedLayout: newValue });
-            }}
-            className="btn-settings btn-simplified-toggle"
-            title="Toggle simple layout"
-            aria-pressed={preferences?.simplifiedLayout}
-            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-          >
-            {preferences?.simplifiedLayout ? (
-              <ToggleRight size={18} aria-hidden="true" />
-            ) : (
-              <ToggleLeft size={18} aria-hidden="true" />
-            )}
-            <span className="btn-simplified-toggle__label">Simple</span>
-            <span className="btn-simplified-toggle__state">{preferences?.simplifiedLayout ? t('learning.common.on') : t('learning.common.off')}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowSettings(true)}
-            className="btn-settings"
-            title={t('learning.common.settings')}
-            aria-label={t('learning.common.settings')}
-          >
-            <Settings size={18} aria-hidden="true" />
-            <span>Settings</span>
+            <ChevronLeft size={18} aria-hidden="true" />
+            <span>{t('learning.common.back')}</span>
           </button>
           <button onClick={logout} className="btn-logout">
             {t('learning.common.logout')}
           </button>
+          <button
+            type="button"
+            onClick={() => setShowSideMenu((prev) => !prev)}
+            className="btn-settings"
+            title="Menu"
+            aria-label="Menu"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            {showSideMenu ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
+            <span>Menu</span>
+          </button>
         </div>
       </nav>
+
+      {showSideMenu && (
+        <>
+          <div
+            onClick={() => setShowSideMenu(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.35)',
+              zIndex: 190,
+            }}
+          />
+          <aside
+            aria-label="Dyslexia side menu"
+            style={{
+              position: 'fixed',
+              top: 0,
+              right: 0,
+              width: '300px',
+              maxWidth: '88vw',
+              height: '100vh',
+              background: '#ffffff',
+              borderLeft: '1px solid #e5e7eb',
+              boxShadow: '-8px 0 24px rgba(15, 23, 42, 0.15)',
+              padding: '18px',
+              zIndex: 200,
+              overflowY: 'auto',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px' }}>Quick Controls</h3>
+              <button type="button" className="btn-settings" onClick={() => setShowSideMenu(false)}>
+                <X size={16} aria-hidden="true" />
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  navigate('/progress');
+                  setShowSideMenu(false);
+                }}
+                className="btn-settings"
+                style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: 8 }}
+              >
+                <Hash size={18} aria-hidden="true" />
+                <span>Progress</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={toggleSyllableMode}
+                className="btn-settings"
+                style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center' }}
+              >
+                <span>{t('learning.dyslexia.syllableMode')}</span>
+                <span>{syllableMode ? t('learning.common.on') : t('learning.common.off')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  const newValue = !preferences?.simplifiedLayout;
+                  await updateAccessibilitySettings({ simplifiedLayout: newValue });
+                }}
+                className="btn-settings"
+                style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center' }}
+              >
+                <span>Simple</span>
+                <span>{preferences?.simplifiedLayout ? t('learning.common.on') : t('learning.common.off')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSettings(true);
+                  setShowSideMenu(false);
+                }}
+                className="btn-settings"
+                style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: 8 }}
+              >
+                <Settings size={18} aria-hidden="true" />
+                <span>Settings</span>
+              </button>
+            </div>
+          </aside>
+        </>
+      )}
 
       {/* Conditionally render the ProfileSettings modal when the user clicks the gear icon */}
       {showSettings && (
@@ -492,6 +563,100 @@ const DyslexiaView = () => {
           </section>
         )}
 
+        {/* EPIC 4.3: Personalized Learning Path (linear, clear, low-overload) */}
+        <section
+          aria-label="Dyslexia learning path"
+          style={{
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '12px',
+            padding: '14px 16px',
+            marginBottom: '20px'
+          }}
+        >
+          <h3 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>
+            {syllableMode && isEnglish ? 'Learn-ing Path' : 'Learning Path'}
+          </h3>
+          <div style={{ display: 'grid', gap: '8px' }}>
+            {lessons.map((lesson, index) => {
+              const progressEntry = lessonProgress?.[lesson.apiId];
+              const isCompleted = String(progressEntry?.status || '').toLowerCase().includes('complete');
+              const currentApiId = recommendation?.recommendation?.apiId
+                || lessons.find((item) => !String(lessonProgress?.[item.apiId]?.status || '').toLowerCase().includes('complete'))?.apiId;
+              const isCurrent = currentApiId === lesson.apiId && !isCompleted;
+              const title = isEnglish
+                ? (syllableMode ? lesson.titleSyllables : lesson.title)
+                : t(lesson.titleKey);
+
+              return (
+                <div
+                  key={`dyslexia-path-${lesson.apiId}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: isCurrent ? '1px solid #3b82f6' : '1px solid #e5e7eb',
+                    background: isCurrent ? '#eff6ff' : '#ffffff'
+                  }}
+                >
+                  <span style={{ fontWeight: isCurrent ? 700 : 500 }}>{index + 1}. {title}</span>
+                  <span style={{ fontSize: '12px', color: isCompleted ? '#166534' : isCurrent ? '#1d4ed8' : '#6b7280' }}>
+                    {isCompleted
+                      ? (syllableMode && isEnglish ? '✓ Com-plet-ed' : '✓ Completed')
+                      : isCurrent
+                        ? (syllableMode && isEnglish ? 'Cur-rent' : 'Current')
+                        : (syllableMode && isEnglish ? 'Up-com-ing' : 'Upcoming')}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section
+          aria-label="Open all lessons page"
+          style={{
+            background: 'linear-gradient(135deg, #eef2ff, #dbeafe)',
+            border: '1px solid #bfdbfe',
+            borderRadius: '12px',
+            padding: '14px 16px',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px'
+          }}
+        >
+          <div>
+            <p style={{ margin: 0, fontWeight: 700, color: '#1e3a8a' }}>
+              {syllableMode && isEnglish ? 'Open All Les-sons Page' : 'Open All Lessons Page'}
+            </p>
+            <p style={{ margin: '4px 0 0 0', color: '#334155', fontSize: '14px' }}>
+              {syllableMode && isEnglish
+                ? 'Pick any les-son and start prac-tice from a sep-a-rate page.'
+                : 'Pick any lesson and start practice from a separate page.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/lesson-library')}
+            style={{
+              border: 'none',
+              borderRadius: '10px',
+              background: '#2563eb',
+              color: '#ffffff',
+              padding: '10px 14px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {syllableMode && isEnglish ? 'Open Les-sons' : 'Open Lessons'}
+          </button>
+        </section>
+
         {/* FEATURE: Motivation Feedback */}
         {motivation && (
           <section className="motivation-section" style={{
@@ -514,80 +679,6 @@ const DyslexiaView = () => {
             </div>
           </section>
         )}
-
-        {/* Lessons Grid – renders a card for each lesson with icon, description, progress bar, and start button */}
-        <div className="lessons-section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3>{copy.lessonsTitle}</h3>
-            {!preferences?.simplifiedLayout && performanceSummary && performanceSummary.totalLessons > 0 && (
-              <div className="performance-indicator" style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '8px', 
-                padding: '8px 16px', 
-                background: 'linear-gradient(135deg, #e8f5e9, #c8e6c9)',
-                borderRadius: '20px',
-                fontSize: '14px',
-                fontWeight: '600'
-              }}>
-                <TrendingUp size={18} aria-hidden="true" />
-                <span>Current Level: {currentDifficulty}</span>
-                {performanceSummary.recentAverage > 0 && (
-                  <span style={{ marginLeft: '8px', opacity: 0.8 }}>
-                    ({performanceSummary.recentAverage.toFixed(0)}% avg)
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="lessons-grid">
-            {lessons.map((lesson) => {
-              // Look up stored progress for this lesson; default to 'Not Started' / 0 correct
-              const progress = lessonProgress?.[lesson.apiId] || { status: 'Not Started', correctCount: 0 };
-              // Use the stored totalInteractions from progress if available, otherwise fall back to the lesson definition
-              const total = progress.totalInteractions || lesson.totalInteractions || 1;
-              // Calculate completion percentage based on the actual number of interactions in the lesson
-              const percent = Math.min(100, Math.round(((progress.correctCount || 0) / total) * 100));
-              // Convert status text to a CSS-safe class name (e.g. "Not Started" → "not-started")
-              const statusClass = (progress.status || 'Not Started').replace(/\s+/g, '-').toLowerCase();
-              // Use adaptive difficulty level instead of hardcoded "Beginner"
-              const difficultyLevel = currentDifficulty || lesson.level;
-              const lessonTitle = isEnglish
-                ? (syllableMode ? lesson.titleSyllables : lesson.title)
-                : t(lesson.titleKey);
-              const lessonDescription = isEnglish
-                ? (syllableMode ? lesson.descriptionSyllables : lesson.description)
-                : t(lesson.descriptionKey);
-              const lessonLevel = isEnglish ? difficultyLevel : t('learning.common.beginner');
-              return (
-                <div key={lesson.id} className="lesson-card">
-                  <div className="lesson-icon" style={{ background: `linear-gradient(135deg, ${lesson.color}88, ${lesson.color})` }}>
-                    <lesson.Icon size={28} aria-hidden="true" />
-                  </div>
-                  <h4>{lessonTitle}</h4>
-                  <p className="lesson-description">{lessonDescription}</p>
-                  {!preferences?.simplifiedLayout && (
-                    <>
-                      <div className="lesson-meta">
-                        <span className="badge">{lessonLevel}</span>
-                        <span className={`status-pill status-${statusClass}`}>{displayStatus(progress.status)}</span>
-                      </div>
-                      <div className="lesson-progress">
-                        <div className="progress-bar-container">
-                          <div className="progress-bar-fill" style={{ width: `${percent}%` }} />
-                        </div>
-                        <span className="progress-text">{t('learning.common.percentComplete', { percent })}</span>
-                      </div>
-                    </>
-                  )}
-                  <button className="btn btn-primary btn-block" onClick={() => handleStartLesson(lesson)}>
-                    {copy.lessonCta}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
 
         {/* Tips Section */}
         <div className="tips-section">

@@ -367,7 +367,7 @@ const TRANSLATIONS = {
       common: {
         progress: 'Progress',
         settings: 'Settings',
-        logout: 'Exit',
+        logout: 'Logout',
         back: 'Back',
         start: 'Start',
         reviewLesson: 'Review',

@@ -11,6 +11,7 @@ import LanguageSelection from './components/LanguageSelection'; // Language sele
 import Dashboard from './components/Dashboard'; // Main dashboard after login
 import ProtectedRoute from './components/ProtectedRoute'; // Wrapper for protected routes
 import LessonPage from './components/learning/LessonPage'; // Individual lesson view
+import LessonLibraryPage from './components/learning/LessonLibraryPage'; // Dedicated page to browse all lessons
 import ProgressPage from './components/ProgressPage'; // Progress tracking page
 import AdminUsersList from './components/admin/AdminUsersList';
 import AdminUserDetail from './components/admin/AdminUserDetail';
@@ -152,6 +153,15 @@ function App() {
               element={
                 <ProtectedRoute>
                   <LessonPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* Dedicated all-lessons page */}
+            <Route
+              path="/lesson-library"
+              element={
+                <ProtectedRoute>
+                  <LessonLibraryPage />
                 </ProtectedRoute>
               }
             />

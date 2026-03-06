@@ -37,11 +37,14 @@ const NextLessonCard = ({
   onSkip,
   allCompleted,
   completionMsg,
+  variant,
 }) => {
+  const variantClass = variant ? ` next-lesson-card--${variant}` : '';
+
   // All lessons completed – show a celebratory message
   if (allCompleted) {
     return (
-      <div className="next-lesson-card next-lesson-card--completed" role="region" aria-label="All lessons completed">
+      <div className={`next-lesson-card next-lesson-card--completed${variantClass}`} role="region" aria-label="All lessons completed">
         <div className="nlc-icon nlc-icon--done">
           <CheckCircle2 size={32} aria-hidden="true" />
         </div>
@@ -69,7 +72,7 @@ const NextLessonCard = ({
   const progressText = `Lesson ${recommendation.position} of ${totalLessons}`;
 
   return (
-    <div className="next-lesson-card" role="region" aria-label="Recommended next lesson">
+    <div className={`next-lesson-card${variantClass}`} role="region" aria-label="Recommended next lesson">
       <div className="nlc-icon">
         <Sparkles size={28} aria-hidden="true" />
       </div>

@@ -10,9 +10,11 @@ import ProfileSettings from '../ProfileSettings';
 import './ADHDView.css';
 import PronunciationPractice from './PronunciationPractice';
 import NextLessonCard from './NextLessonCard';
+import PracticeSuggestion from './PracticeSuggestion';
+import MotivationReward from './MotivationReward';
 import ReactConfetti from 'react-confetti';
 import { getSummary } from '../../services/progressService';
-import { getCurrentDifficulty, getPerformanceSummary } from '../../services/difficultyAdjustmentService';
+import { adjustDifficulty, getCurrentDifficulty, getPerformanceSummary, recordLessonScore } from '../../services/difficultyAdjustmentService';
 import api from '../../utils/api';
 import { useI18n } from '../../utils/i18n';
 // Icon imports for UI elements
@@ -26,6 +28,7 @@ import {
   Headphones,
   Info,
   Lightbulb,
+  Menu,
   Mic,
   Pause,
   Pencil,
@@ -35,10 +38,9 @@ import {
   Settings,
   Target,
   Timer,
-  ToggleLeft,
-  ToggleRight,
   TrendingUp,
   Volume2,
+  X,
 } from 'lucide-react';
 import { backendTtsLangFor, pickByLanguage, resolveUiLanguageFromPreferences, speechSynthesisLangFor } from '../../utils/languagePrefs';
 
@@ -54,6 +56,7 @@ const ADHDView = ({ initialLessonId = null }) => {
   const [timeRemaining, setTimeRemaining] = useState(null); // Time left in session
   const [isSessionActive, setIsSessionActive] = useState(false); // Is a lesson session active?
   const [showSettings, setShowSettings] = useState(false); // Show/hide settings panel
+  const [showSideMenu, setShowSideMenu] = useState(false);
   const [cooldownRemaining, setCooldownRemaining] = useState(0); // Cooldown timer after session
 
   // Lesson logic state
@@ -69,6 +72,8 @@ const ADHDView = ({ initialLessonId = null }) => {
   const [isTransitioning, setIsTransitioning] = useState(false); // UI transition state
   const [isLoading, setIsLoading] = useState(false); // Loading state for async actions
   const [playbackRate, setPlaybackRate] = useState(1); // Audio playback speed
+  const [showPracticeSuggestion, setShowPracticeSuggestion] = useState(false); // Show practice suggestion after low score
+  const [lessonsCompletedCount, setLessonsCompletedCount] = useState(0); // Track completed lessons for achievements
 
   // Window and UI state
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight }); // For confetti, etc.
@@ -77,12 +82,19 @@ const ADHDView = ({ initialLessonId = null }) => {
 
   // FEATURE: Personalization features (next lesson, adaptive difficulty, learning path, motivation)
   const [nextRecommendation, setNextRecommendation] = useState(null); // Next lesson recommendation
+  const [completedLessons, setCompletedLessons] = useState([]); // Completed ADHD lesson IDs
+  const [skippedRecommendationId, setSkippedRecommendationId] = useState(() => {
+    try {
+      return window.sessionStorage.getItem('adhd-next-lesson-skipped') || null;
+    } catch {
+      return null;
+    }
+  });
   const [currentDifficulty, setCurrentDifficulty] = useState('Beginner'); // Adaptive difficulty level
   // eslint-disable-next-line no-unused-vars
   const [learningPath, setLearningPath] = useState(null); // Personalized learning path
   // eslint-disable-next-line no-unused-vars
   const [motivation, setMotivation] = useState(null); // Motivational feedback
-  // eslint-disable-next-line no-unused-vars
   const [performanceSummary, setPerformanceSummary] = useState(null); // Performance summary
 
   // Track completed lessons in this session (prevents duplicate saves)
@@ -95,6 +107,7 @@ const ADHDView = ({ initialLessonId = null }) => {
 
       // EPIC 6.1.1, 6.4.1: Store completion state and auto-save after lesson completion.
       const res = await api.post('/users/complete-lesson', { lessonKey });
+      setCompletedLessons((prev) => (prev.includes(lessonId) ? prev : [...prev, lessonId]));
 
       const summaryFromBackend = res?.data?.summary;
       if (summaryFromBackend) {
@@ -116,8 +129,32 @@ const ADHDView = ({ initialLessonId = null }) => {
     }
   };
 
+  // Load completed ADHD lessons from backend (source of truth for recommendation order)
+  useEffect(() => {
+    const fetchCompletedLessons = async () => {
+      try {
+        const response = await api.get('/users/completed-lessons');
+        if (response.data?.success) {
+          const lessonIds = (response.data.completedLessons || [])
+            .filter((key) => String(key).startsWith('adhd-lesson-'))
+            .map((key) => parseInt(String(key).replace('adhd-lesson-', ''), 10))
+            .filter((id) => Number.isFinite(id));
+          setCompletedLessons(lessonIds);
+        }
+      } catch (error) {
+        console.error('Error fetching completed ADHD lessons:', error);
+      }
+    };
+
+    fetchCompletedLessons();
+  }, []);
+
   const exitLesson = () => {
     window.speechSynthesis.cancel();
+    // Increment completed lessons counter if lesson was passed (EPIC 4.5)
+    if (currentLessonScore >= 20) {
+      setLessonsCompletedCount(prev => prev + 1);
+    }
     setActiveLesson(null);
     setLessonPhase('idle');
     setSteps([]);
@@ -128,6 +165,7 @@ const ADHDView = ({ initialLessonId = null }) => {
     setIsTransitioning(false);
     setIsLoading(false);
     setCountdownValue(5);
+    setShowPracticeSuggestion(false);
   };
 
   useEffect(() => {
@@ -138,28 +176,10 @@ const ADHDView = ({ initialLessonId = null }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // FEATURE: Load all personalization features for ADHD
+  // FEATURE: Load adaptive difficulty summary for ADHD
   useEffect(() => {
     const fetchPersonalizationData = async () => {
       try {
-        // Fetch next recommendation
-        const recResponse = await api.get('/ai/adhd/recommendations/next');
-        if (recResponse.data?.success) {
-          setNextRecommendation(recResponse.data.recommendation);
-        }
-
-        // Fetch learning path
-        const pathResponse = await api.get('/ai/adhd/recommendations/learning-path');
-        if (pathResponse.data?.success) {
-          setLearningPath(pathResponse.data.learningPath);
-        }
-
-        // Fetch motivational feedback
-        const motivationResponse = await api.get('/ai/adhd/recommendations/motivation');
-        if (motivationResponse.data?.success) {
-          setMotivation(motivationResponse.data);
-        }
-
         // Load adaptive difficulty level
         const difficulty = getCurrentDifficulty(user);
         setCurrentDifficulty(difficulty);
@@ -178,6 +198,62 @@ const ADHDView = ({ initialLessonId = null }) => {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  // EPIC 4.2.1-4.2.2: Identify last completed and recommend the next available lesson by order.
+  useEffect(() => {
+    const ordered = [...baseLessons].sort((a, b) => a.id - b.id);
+    if (ordered.length === 0) {
+      setNextRecommendation(null);
+      return;
+    }
+
+    const completedSet = new Set(completedLessons);
+    let lastCompleted = null;
+    let recommendedLesson = null;
+    let completedCount = 0;
+
+    for (const lesson of ordered) {
+      if (completedSet.has(lesson.id)) {
+        lastCompleted = lesson;
+        completedCount += 1;
+      } else if (!recommendedLesson) {
+        recommendedLesson = lesson;
+      }
+    }
+
+    if (!recommendedLesson) {
+      setNextRecommendation({
+        allCompleted: true,
+        reason: 'Great work! You completed all available ADHD lessons.',
+        totalLessons: ordered.length,
+      });
+      return;
+    }
+
+    const position = ordered.findIndex((l) => l.id === recommendedLesson.id) + 1;
+
+    setNextRecommendation({
+      allCompleted: false,
+      lesson: recommendedLesson,
+      position,
+      totalLessons: ordered.length,
+      completedCount,
+      reason: lastCompleted
+        ? `You finished "${lastCompleted.title}". Up next:`
+        : 'Start your ADHD learning journey:',
+    });
+
+    const recommendationKey = String(recommendedLesson.id);
+    if (skippedRecommendationId && skippedRecommendationId !== recommendationKey) {
+      try {
+        window.sessionStorage.removeItem('adhd-next-lesson-skipped');
+      } catch {
+        // ignore
+      }
+      setSkippedRecommendationId(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [completedLessons]);
 
   // Audio handling
   // Audio handling
@@ -829,8 +905,24 @@ const ADHDView = ({ initialLessonId = null }) => {
     const key = `adhd-lesson-${activeLesson.id}`;
     if (savedCompletionRef.current.has(key)) return;
     savedCompletionRef.current.add(key);
+
+    // EPIC 4.1.1-4.1.4: Record score and adjust difficulty by one level based on consistent trend.
+    const quizStepCount = steps.filter((step) => step?.type === 'quiz').length;
+    const maxScore = Math.max(quizStepCount * 10, 20);
+    const normalizedScore = Math.max(0, Math.min(100, Math.round((currentLessonScore / maxScore) * 100)));
+
+    recordLessonScore(user, key, normalizedScore, {
+      module: 'adhd',
+      rawScore: currentLessonScore,
+      quizStepCount,
+      maxScore,
+    });
+    const adjustment = adjustDifficulty(user);
+    setCurrentDifficulty(adjustment.newDifficulty || adjustment.currentDifficulty || 'Beginner');
+    setPerformanceSummary(getPerformanceSummary(user));
+
     saveLessonCompletion(activeLesson.id);
-  }, [lessonPhase, activeLesson, currentLessonScore]);
+  }, [lessonPhase, activeLesson, currentLessonScore, steps, user]);
 
   const handlePreviousStep = () => {
     window.speechSynthesis.cancel();
@@ -1125,6 +1217,11 @@ const ADHDView = ({ initialLessonId = null }) => {
   };
 
   const currentStep = steps.length > 0 ? steps[currentStepIndex] : null;
+  const currentPathLessonId =
+    activeLesson?.id ||
+    nextRecommendation?.lesson?.id ||
+    baseLessons.find((lesson) => !completedLessons.includes(lesson.id))?.id ||
+    null;
 
   return (
     <div className="adhd-view">
@@ -1149,14 +1246,20 @@ const ADHDView = ({ initialLessonId = null }) => {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/progress')}
+            onClick={() => {
+              if (isSessionActive && !activeLesson) {
+                backToSessionStart();
+              } else {
+                navigate(-1);
+              }
+            }}
             className="btn-minimal"
-            title="Progress"
-            aria-label="Progress"
+            title={t('learning.common.back')}
+            aria-label={t('learning.common.back')}
             style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
-            <Hash size={18} aria-hidden="true" />
-            <span>Progress</span>
+            <ChevronLeft size={18} aria-hidden="true" />
+            <span>{t('learning.common.back')}</span>
           </button>
           {/* Existing controls below */}
           {isSessionActive && timeRemaining !== null && (
@@ -1165,61 +1268,111 @@ const ADHDView = ({ initialLessonId = null }) => {
               <span className="timer-text">{formatTime(timeRemaining)}</span>
             </div>
           )}
-
-          <button
-            type="button"
-            onClick={toggleDistractionFreeMode}
-            className="btn-minimal btn-distraction-toggle"
-            title={t('learning.adhd.toggleDistractionFreeTitle')}
-            aria-pressed={distractionFreeMode}
-          >
-            {distractionFreeMode ? (
-              <ToggleRight size={18} aria-hidden="true" />
-            ) : (
-              <ToggleLeft size={18} aria-hidden="true" />
-            )}
-            <span className="btn-distraction-toggle__label">{t('learning.adhd.distractionFree')}</span>
-            <span className="btn-distraction-toggle__state">{distractionFreeMode ? t('learning.common.on') : t('learning.common.off')}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={async () => {
-              const newValue = !preferences?.simplifiedLayout;
-              await updatePreferences({ simplifiedLayout: newValue });
-            }}
-            className="btn-minimal btn-simplified-toggle"
-            title="Toggle simple layout"
-            aria-pressed={preferences?.simplifiedLayout}
-          >
-            {preferences?.simplifiedLayout ? (
-              <ToggleRight size={18} aria-hidden="true" />
-            ) : (
-              <ToggleLeft size={18} aria-hidden="true" />
-            )}
-            <span className="btn-simplified-toggle__label">Simple</span>
-            <span className="btn-simplified-toggle__state">{preferences?.simplifiedLayout ? t('learning.common.on') : t('learning.common.off')}</span>
-          </button>
-
-          {isSessionActive && !activeLesson && (
-            <button
-              type="button"
-              onClick={backToSessionStart}
-              className="btn-minimal"
-              title={t('learning.adhd.backToSessionStartTitle')}
-            >
-              {t('learning.common.back')}
-            </button>
-          )}
-          <button onClick={() => setShowSettings(true)} className="btn-minimal" title={t('learning.common.settings')}>
-            <Settings size={18} aria-hidden="true" />
-            <span>Settings</span>
-          </button>
           <button type="button" onClick={logout} className="btn-logout" title={t('learning.common.logout')}>
             {t('learning.common.logout')}
           </button>
+          <button
+            type="button"
+            onClick={() => setShowSideMenu((prev) => !prev)}
+            className="btn-minimal"
+            title="Menu"
+            aria-label="Menu"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            {showSideMenu ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
+            <span>Menu</span>
+          </button>
         </div>
       </header>
+
+      {showSideMenu && (
+        <>
+          <div
+            onClick={() => setShowSideMenu(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.35)',
+              zIndex: 190,
+            }}
+          />
+          <aside
+            aria-label="ADHD side menu"
+            style={{
+              position: 'fixed',
+              top: 0,
+              right: 0,
+              width: '300px',
+              maxWidth: '88vw',
+              height: '100vh',
+              background: '#ffffff',
+              borderLeft: '1px solid #e5e7eb',
+              boxShadow: '-8px 0 24px rgba(15, 23, 42, 0.15)',
+              padding: '18px',
+              zIndex: 200,
+              overflowY: 'auto',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px' }}>Quick Controls</h3>
+              <button type="button" className="btn-minimal" onClick={() => setShowSideMenu(false)}>
+                <X size={16} aria-hidden="true" />
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  navigate('/progress');
+                  setShowSideMenu(false);
+                }}
+                className="btn-minimal"
+                style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: 8 }}
+              >
+                <Hash size={18} aria-hidden="true" />
+                <span>Progress</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={toggleDistractionFreeMode}
+                className="btn-minimal"
+                style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center' }}
+              >
+                <span>{t('learning.adhd.distractionFree')}</span>
+                <span>{distractionFreeMode ? t('learning.common.on') : t('learning.common.off')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  const newValue = !preferences?.simplifiedLayout;
+                  await updatePreferences({ simplifiedLayout: newValue });
+                }}
+                className="btn-minimal"
+                style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center' }}
+              >
+                <span>Simple</span>
+                <span>{preferences?.simplifiedLayout ? t('learning.common.on') : t('learning.common.off')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSettings(true);
+                  setShowSideMenu(false);
+                }}
+                className="btn-minimal"
+                style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: 8 }}
+              >
+                <Settings size={18} aria-hidden="true" />
+                <span>Settings</span>
+              </button>
+            </div>
+          </aside>
+        </>
+      )}
 
       {showSettings && (
         <ProfileSettings onClose={() => setShowSettings(false)} />
@@ -1292,43 +1445,128 @@ const ADHDView = ({ initialLessonId = null }) => {
                     }}>
                       <TrendingUp size={18} aria-hidden="true" />
                       <span>Current Level: {currentDifficulty}</span>
+                      {performanceSummary?.recentAverage > 0 && (
+                        <span style={{ marginLeft: '8px', opacity: 0.8 }}>
+                          ({performanceSummary.recentAverage.toFixed(0)}% avg)
+                        </span>
+                      )}
                     </div>
                   )}
 
                   {/* FEATURE: Next lesson recommendation - using NextLessonCard component */}
                   {nextRecommendation && (
                     <section className="next-lesson-recommendation" aria-label="Recommended next lesson" style={{ marginBottom: '24px' }}>
-                      <NextLessonCard
-                        recommendation={{
-                          title: nextRecommendation.lessonTitle || 'Next Lesson',
-                          description: nextRecommendation.message || 'Continue learning',
-                          position: 1
-                        }}
-                        reason="You're doing great. Up next:"
-                        completedCount={0}
-                        totalLessons={baseLessons.length}
-                        onAccept={() => {}}
-                        onSkip={() => {}}
-                      />
+                      {nextRecommendation.allCompleted ? (
+                        <NextLessonCard
+                          allCompleted
+                          completionMsg={nextRecommendation.reason}
+                          totalLessons={nextRecommendation.totalLessons}
+                        />
+                      ) : (
+                        nextRecommendation.lesson &&
+                        skippedRecommendationId !== String(nextRecommendation.lesson.id) && (
+                          <NextLessonCard
+                            recommendation={{
+                              title: `Next: ${nextRecommendation.lesson.title}`,
+                              description: `Focused lesson (${nextRecommendation.lesson.duration})`,
+                              position: nextRecommendation.position,
+                            }}
+                            reason={nextRecommendation.reason}
+                            completedCount={nextRecommendation.completedCount}
+                            totalLessons={nextRecommendation.totalLessons}
+                            onAccept={() => {
+                              if (!isSessionActive) startSession();
+                              handleStartLesson(nextRecommendation.lesson);
+                            }}
+                            onSkip={() => {
+                              const key = String(nextRecommendation.lesson.id);
+                              setSkippedRecommendationId(key);
+                              try {
+                                window.sessionStorage.setItem('adhd-next-lesson-skipped', key);
+                              } catch {
+                                // ignore
+                              }
+                            }}
+                          />
+                        )
+                      )}
                     </section>
                   )}
 
-                  <div className="lesson-focus">
-                    <h3>{t('learning.adhd.chooseOneLesson')}</h3>
-                    <div className="lesson-list">
-                      {baseLessons.map((lesson) => (
-                        <div key={lesson.id} className="lesson-item">
-                          <div className="lesson-content">
-                            <span className="lesson-emoji" aria-hidden="true"><lesson.Icon size={22} /></span>
-                            <div className="lesson-info">
-                              <h4>{lesson.title}</h4>
-                            </div>
+                  {/* EPIC 4.3: Personalized Learning Path (linear, clear, low-overload) */}
+                  <section
+                    aria-label="ADHD learning path"
+                    style={{
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      padding: '14px 16px',
+                      marginBottom: '20px'
+                    }}
+                  >
+                    <h3 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>Learning Path</h3>
+                    <div style={{ display: 'grid', gap: '8px' }}>
+                      {baseLessons.map((lesson, index) => {
+                        const isCompleted = completedLessons.includes(lesson.id);
+                        const isCurrent = currentPathLessonId === lesson.id && !isCompleted;
+                        return (
+                          <div
+                            key={`adhd-path-${lesson.id}`}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '8px 10px',
+                              borderRadius: '8px',
+                              border: isCurrent ? '1px solid #3b82f6' : '1px solid #e5e7eb',
+                              background: isCurrent ? '#eff6ff' : '#ffffff'
+                            }}
+                          >
+                            <span style={{ fontWeight: isCurrent ? 700 : 500 }}>{index + 1}. {lesson.title}</span>
+                            <span style={{ fontSize: '12px', color: isCompleted ? '#166534' : isCurrent ? '#1d4ed8' : '#6b7280' }}>
+                              {isCompleted ? '✓ Completed' : isCurrent ? 'Current' : 'Upcoming'}
+                            </span>
                           </div>
-                          <button onClick={() => handleStartLesson(lesson)} className="btn-lesson">{t('learning.common.start')}</button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
-                  </div>
+                  </section>
+
+                  <section
+                    aria-label="Open all lessons page"
+                    style={{
+                      background: 'linear-gradient(135deg, #eef2ff, #dbeafe)',
+                      border: '1px solid #bfdbfe',
+                      borderRadius: '12px',
+                      padding: '14px 16px',
+                      marginBottom: '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px'
+                    }}
+                  >
+                    <div>
+                      <p style={{ margin: 0, fontWeight: 700, color: '#1e3a8a' }}>Want all lessons in one page?</p>
+                      <p style={{ margin: '4px 0 0 0', color: '#334155', fontSize: '14px' }}>Open the lesson library and pick any lesson to complete.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/lesson-library')}
+                      style={{
+                        border: 'none',
+                        borderRadius: '10px',
+                        background: '#2563eb',
+                        color: '#ffffff',
+                        padding: '10px 14px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      Open All Lessons
+                    </button>
+                  </section>
                 </>
               )}
             </>
@@ -1437,34 +1675,61 @@ const ADHDView = ({ initialLessonId = null }) => {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                {currentLessonScore >= 20 ? (
-                  <button
-                    onClick={exitLesson}
-                    className="btn-primary"
-                    style={{
-                      padding: '1rem 2rem', fontSize: '1.1rem', borderRadius: '12px', border: 'none',
-                      background: 'var(--accent-color)', color: 'white', cursor: 'pointer', boxShadow: '0 4px 12px rgba(77, 134, 201, 0.22)'
-                    }}
-                  >
-                    {t('learning.adhd.returnToDashboard')}
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => handleStartLesson(activeLesson)}
-                    className="btn-primary"
-                    style={{
-                      padding: '1rem 2rem', fontSize: '1.1rem', borderRadius: '12px', border: 'none',
-                      background: 'var(--warning-color)', color: 'white', cursor: 'pointer', boxShadow: '0 4px 12px rgba(194, 122, 44, 0.22)'
-                    }}
-                  >
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
-                      <RotateCcw size={18} aria-hidden="true" />
-                      <span>{t('learning.adhd.tryAgain')}</span>
-                    </span>
-                  </button>
-                )}
-              </div>
+              {/* EPIC 4.5: Motivation Through Reinforcement */}
+              {currentLessonScore >= 20 && (
+                <div style={{ maxWidth: '500px', margin: '1.5rem auto', zIndex: 10, position: 'relative' }}>
+                  <MotivationReward
+                    score={currentLessonScore}
+                    maxScore={100}
+                    lesson={activeLesson}
+                    condition="adhd"
+                    totalLessonsCompleted={lessonsCompletedCount}
+                  />
+                </div>
+              )}
+
+              {!showPracticeSuggestion && currentLessonScore >= 20 && currentLessonScore < 60 && (
+                <div style={{ maxWidth: '500px', margin: '0 auto', zIndex: 10, position: 'relative' }}>
+                  <PracticeSuggestion
+                    lesson={activeLesson}
+                    score={currentLessonScore}
+                    condition="adhd"
+                    onSkip={() => exitLesson()}
+                    onStartPractice={() => setShowPracticeSuggestion(true)}
+                  />
+                </div>
+              )}
+
+              {!showPracticeSuggestion && (
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                  {currentLessonScore >= 20 ? (
+                    <button
+                      onClick={exitLesson}
+                      className="btn-primary"
+                      style={{
+                        padding: '1rem 2rem', fontSize: '1.1rem', borderRadius: '12px', border: 'none',
+                        background: 'var(--accent-color)', color: 'white', cursor: 'pointer', boxShadow: '0 4px 12px rgba(77, 134, 201, 0.22)'
+                      }}
+                    >
+                      {t('learning.adhd.returnToDashboard')}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleStartLesson(activeLesson)}
+                      className="btn-primary"
+                      style={{
+                        padding: '1rem 2rem', fontSize: '1.1rem', borderRadius: '12px', border: 'none',
+                        background: 'var(--warning-color)', color: 'white', cursor: 'pointer', boxShadow: '0 4px 12px rgba(194, 122, 44, 0.22)'
+                      }}
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
+                        <RotateCcw size={18} aria-hidden="true" />
+                        <span>{t('learning.adhd.tryAgain')}</span>
+                      </span>
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <div className="lesson-player">

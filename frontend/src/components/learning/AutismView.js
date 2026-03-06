@@ -8,7 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { usePreferences } from '../../context/PreferencesContext';
 import ProfileSettings from '../ProfileSettings';
 import api from '../../utils/api';
-import { getCurrentDifficulty, getPerformanceSummary } from '../../services/difficultyAdjustmentService';
+import { adjustDifficulty, getCurrentDifficulty, getPerformanceSummary, recordLessonScore } from '../../services/difficultyAdjustmentService';
 import NextLessonCard from './NextLessonCard';
 import {
   backendTtsLangFor,
@@ -27,18 +27,20 @@ import {
   Hash,
   Info,
   Lightbulb,
+  Menu,
   Mic,
   Pause,
   RotateCcw,
   Settings,
   Star,
   Timer,
-  ToggleLeft,
-  ToggleRight,
   TrendingUp,
   Volume2,
+  X,
 } from 'lucide-react';
 import PronunciationPractice from './PronunciationPractice';
+import PracticeSuggestion from './PracticeSuggestion';
+import MotivationReward from './MotivationReward';
 // EPIC 4: Personalized Learning Engine Components (Autism Module Only)
 // NOTE: These components are imported but not yet created. TODO: Implement these components.
 // import AutismRecommendationCard from './AutismRecommendationCard';
@@ -55,6 +57,7 @@ const AutismView = ({ initialLessonId = null }) => {
   const navigate = useNavigate();
   // UI state for settings panel
   const [showSettings, setShowSettings] = useState(false);
+  const [showSideMenu, setShowSideMenu] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
 
   // EPIC 1.6: Autism support is delivered via predictable UI and reduced motion/distraction-free styling.
@@ -89,12 +92,12 @@ const AutismView = ({ initialLessonId = null }) => {
   const [motivation, setMotivation] = useState(null);
   // eslint-disable-next-line no-unused-vars
   const [learningPath, setLearningPath] = useState(null);
-  // eslint-disable-next-line no-unused-vars
   const [showRecommendation, setShowRecommendation] = useState(true);
+  const [showPracticeSuggestion, setShowPracticeSuggestion] = useState(false);
+  const [lessonsCompletedCount, setLessonsCompletedCount] = useState(0);
   
   // FEATURE: Adaptive Difficulty for Autism
   const [currentDifficulty, setCurrentDifficulty] = useState('Beginner');
-  // eslint-disable-next-line no-unused-vars
   const [performanceSummary, setPerformanceSummary] = useState(null);
   
   const [lessonPerformanceData, setLessonPerformanceData] = useState({
@@ -126,43 +129,16 @@ const AutismView = ({ initialLessonId = null }) => {
     fetchCompletedLessons();
   }, []);
 
-  // EPIC 4: Load personalized learning data (Autism Module Only)
+  // EPIC 4: Load adaptive difficulty data (Autism Module Only)
   useEffect(() => {
-    const fetchPersonalizedData = async () => {
-      try {
-        // Fetch next recommendation
-        const recResponse = await api.get('/ai/autism/recommendations/next');
-        if (recResponse.data.success) {
-          setNextRecommendation(recResponse.data.recommendation);
-        }
+    // FEATURE: Load adaptive difficulty level
+    const difficulty = getCurrentDifficulty(user);
+    setCurrentDifficulty(difficulty);
 
-        // Fetch learning path
-        const pathResponse = await api.get('/ai/autism/recommendations/learning-path');
-        if (pathResponse.data.success) {
-          setLearningPath(pathResponse.data.learningPath);
-        }
-
-        // Fetch motivational feedback
-        const motivationResponse = await api.get('/ai/autism/recommendations/motivation');
-        if (motivationResponse.data.success) {
-          setMotivation(motivationResponse.data);
-        }
-
-        // FEATURE: Load adaptive difficulty level
-        const difficulty = getCurrentDifficulty(user);
-        setCurrentDifficulty(difficulty);
-
-        // Load performance summary
-        const summary = getPerformanceSummary(user);
-        setPerformanceSummary(summary);
-      } catch (error) {
-        console.error('Error fetching personalized learning data:', error);
-        // Non-blocking error - continue with basic functionality
-      }
-    };
-
-    fetchPersonalizedData();
-  }, [completedLessons, user]); // Refetch when lessons are completed or user changes
+    // Load performance summary
+    const summary = getPerformanceSummary(user);
+    setPerformanceSummary(summary);
+  }, [user]);
 
   // Define lessons with multi-format content (text, audio, visuals, etc.)
   // Each lesson contains steps/questions for the user
@@ -1017,10 +993,57 @@ const AutismView = ({ initialLessonId = null }) => {
   // UI language should not hide lessons; it only controls scaffolding/chrome text.
   const displayedLessons = lessons;
 
+  // EPIC 4.2.1-4.2.2: Recommend the next available Autism lesson by order.
+  useEffect(() => {
+    const ordered = [...displayedLessons].sort((a, b) => a.id - b.id);
+    if (ordered.length === 0) {
+      setNextRecommendation(null);
+      return;
+    }
+
+    const completedSet = new Set(completedLessons);
+    let lastCompleted = null;
+    let recommendedLesson = null;
+    let completedCount = 0;
+
+    for (const lesson of ordered) {
+      if (completedSet.has(lesson.id)) {
+        lastCompleted = lesson;
+        completedCount += 1;
+      } else if (!recommendedLesson) {
+        recommendedLesson = lesson;
+      }
+    }
+
+    if (!recommendedLesson) {
+      setNextRecommendation({
+        allCompleted: true,
+        reason: 'Great work! You completed all available Autism lessons.',
+        totalLessons: ordered.length,
+      });
+      setShowRecommendation(true);
+      return;
+    }
+
+    const position = ordered.findIndex((l) => l.id === recommendedLesson.id) + 1;
+    setNextRecommendation({
+      allCompleted: false,
+      lesson: recommendedLesson,
+      position,
+      totalLessons: ordered.length,
+      completedCount,
+      reason: lastCompleted
+        ? `You finished "${lastCompleted.title}". Up next:`
+        : 'Start your Autism learning journey:',
+    });
+    setShowRecommendation(true);
+  }, [completedLessons, displayedLessons]);
+
   // Get current step data
   const currentLesson = displayedLessons.find(l => l.id === selectedLesson) || lessons.find(l => l.id === selectedLesson);
   const currentStep = currentLesson?.steps[currentStepIndex];
   const totalSteps = currentLesson?.steps.length || 0;
+  const currentPathLessonId = selectedLesson || nextRecommendation?.lesson?.id || displayedLessons.find((lesson) => !completedLessons.includes(lesson.id))?.id || null;
 
   const teachingLanguage = useMemo(() => {
     return normalizePreferredLanguage(currentLesson?.language || 'english');
@@ -1135,6 +1158,19 @@ const AutismView = ({ initialLessonId = null }) => {
       const score = totalQuestions > 0 
         ? Math.round((correctAnswers / totalQuestions) * 100)
         : 0;
+
+      // EPIC 4.1.1-4.1.4: Record score and adjust difficulty one level at a time.
+      recordLessonScore(user, lessonKey, score, {
+        module: 'autism',
+        totalQuestions,
+        correctAnswers,
+        wrongAnswers,
+        hintsUsed: lessonPerformanceData.hintsUsed,
+        timeSpent,
+      });
+      const adjustment = adjustDifficulty(user);
+      setCurrentDifficulty(adjustment.newDifficulty || adjustment.currentDifficulty || 'Beginner');
+      setPerformanceSummary(getPerformanceSummary(user));
 
       try {
         const perfResponse = await api.post('/autism/performance', {
@@ -1857,6 +1893,11 @@ const AutismView = ({ initialLessonId = null }) => {
 
     // Show completion screen after finishing all steps
     if (showCompletionScreen) {
+      // Calculate normalized score (0-100) using lesson performance data
+      const correctCount = lessonPerformanceData?.correctAnswers || 0;
+      const totalCount = currentStepIndex + 1;
+      const normalizedScore = Math.round((correctCount / Math.max(1, totalCount)) * 100);
+      
       return (
         <div className="autism-view completion-screen">
           <div className="completion-container">
@@ -1864,45 +1905,53 @@ const AutismView = ({ initialLessonId = null }) => {
               <div className="completion-icon">🎉</div>
               <h1 className="completion-title">Great Job!</h1>
               <p className="completion-message">You completed "{currentLesson.title}" lesson!</p>
+              <p style={{ fontSize: '14px', color: '#556270', marginTop: '8px' }}>
+                Score: {normalizedScore}%
+              </p>
 
-              {/* EPIC 4.4 & 4.5: Practice Suggestion and Motivation */}
-              {/* NOTE: AutismProgressFeedback component not yet created
-              {(practiceSuggestion || motivation) && (
-                <AutismProgressFeedback
-                  motivation={motivation}
-                  practiceSuggestion={practiceSuggestion}
-                  onPractice={() => {
-                    // Restart the same lesson for practice
-                    handleStartLesson(selectedLesson);
-                  }}
-                  onContinue={() => {
-                    // Continue to next lesson or back to lessons
-                    if (selectedLesson < lessons.length) {
-                      handleNextLesson();
-                    } else {
-                      handleBackToLessons();
-                    }
-                  }}
-                />
+              {/* EPIC 4.5: Motivation Through Reinforcement */}
+              {normalizedScore >= 20 && (
+                <div style={{ maxWidth: '500px', margin: '20px auto' }}>
+                  <MotivationReward
+                    score={normalizedScore}
+                    maxScore={100}
+                    lesson={currentLesson}
+                    condition="autism"
+                    totalLessonsCompleted={lessonsCompletedCount}
+                  />
+                </div>
               )}
-              */}
 
-              <div className="completion-actions">
-                {selectedLesson < lessons.length && (
-                  <button onClick={handleNextLesson} className="btn-completion btn-next-lesson">
-                    <span className="btn-icon">➡️</span>
-                    Go to Next Lesson
+              {!showPracticeSuggestion && normalizedScore >= 20 && normalizedScore < 60 && (
+                <div style={{ maxWidth: '500px', margin: '20px auto' }}>
+                  <PracticeSuggestion
+                    lesson={currentLesson}
+                    score={normalizedScore}
+                    condition="autism"
+                    onSkip={() => handleBackToLessons()}
+                    onStartPractice={() => setShowPracticeSuggestion(true)}
+                  />
+                </div>
+              )}
+
+              {!showPracticeSuggestion && (
+                <div className="completion-actions">
+                  {selectedLesson < lessons.length && (
+                    <button onClick={handleNextLesson} className="btn-completion btn-next-lesson">
+                      <span className="btn-icon">➡️</span>
+                      Go to Next Lesson
+                    </button>
+                  )}
+                  <button onClick={handleBackToLessons} className="btn-completion btn-back-lessons">
+                    <span className="btn-icon">📚</span>
+                    Back to Lessons
                   </button>
-                )}
-                <button onClick={handleBackToLessons} className="btn-completion btn-back-lessons">
-                  <span className="btn-icon">📚</span>
-                  Back to Lessons
-                </button>
-                <button onClick={handleGoToProgress} className="btn-completion btn-progress">
-                  <span className="btn-icon">📊</span>
-                  View Progress
-                </button>
-              </div>
+                  <button onClick={handleGoToProgress} className="btn-completion btn-progress">
+                    <span className="btn-icon">📊</span>
+                    View Progress
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -2314,42 +2363,109 @@ const AutismView = ({ initialLessonId = null }) => {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/progress')}
+            onClick={() => navigate(-1)}
             className="btn-settings"
-            title={t('learning.common.progress')}
+            title={t('learning.common.back')}
             style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
-            <Hash size={18} aria-hidden="true" />
-            <span>Progress</span>
-          </button>
-          <button
-            type="button"
-            onClick={async () => {
-              const newValue = !preferences?.simplifiedLayout;
-              await updateAccessibilitySettings({ simplifiedLayout: newValue });
-            }}
-            className="btn-settings btn-simplified-toggle"
-            title="Toggle simple layout"
-            aria-pressed={preferences?.simplifiedLayout}
-            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-          >
-            {preferences?.simplifiedLayout ? (
-              <ToggleRight size={18} aria-hidden="true" />
-            ) : (
-              <ToggleLeft size={18} aria-hidden="true" />
-            )}
-            <span className="btn-simplified-toggle__label">Simple</span>
-            <span className="btn-simplified-toggle__state">{preferences?.simplifiedLayout ? t('learning.common.on') : t('learning.common.off')}</span>
-          </button>
-          <button onClick={() => setShowSettings(true)} className="btn-settings" title={t('learning.common.settings')}>
-            <Settings size={18} aria-hidden="true" />
-            <span>Settings</span>
+            <ChevronLeft size={18} aria-hidden="true" />
+            <span>{t('learning.common.back')}</span>
           </button>
           <button onClick={logout} className="btn-exit">
             {t('learning.common.logout')}
           </button>
+          <button
+            type="button"
+            onClick={() => setShowSideMenu((prev) => !prev)}
+            className="btn-settings"
+            title="Menu"
+            aria-label="Menu"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            {showSideMenu ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
+            <span>Menu</span>
+          </button>
         </div>
       </header>
+
+      {showSideMenu && (
+        <>
+          <div
+            onClick={() => setShowSideMenu(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.35)',
+              zIndex: 190,
+            }}
+          />
+          <aside
+            aria-label="Autism side menu"
+            style={{
+              position: 'fixed',
+              top: 0,
+              right: 0,
+              width: '300px',
+              maxWidth: '88vw',
+              height: '100vh',
+              background: '#ffffff',
+              borderLeft: '1px solid #e5e7eb',
+              boxShadow: '-8px 0 24px rgba(15, 23, 42, 0.15)',
+              padding: '18px',
+              zIndex: 200,
+              overflowY: 'auto',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px' }}>Quick Controls</h3>
+              <button type="button" className="btn-settings" onClick={() => setShowSideMenu(false)}>
+                <X size={16} aria-hidden="true" />
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  navigate('/progress');
+                  setShowSideMenu(false);
+                }}
+                className="btn-settings"
+                style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: 8 }}
+              >
+                <Hash size={18} aria-hidden="true" />
+                <span>Progress</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  const newValue = !preferences?.simplifiedLayout;
+                  await updateAccessibilitySettings({ simplifiedLayout: newValue });
+                }}
+                className="btn-settings"
+                style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center' }}
+              >
+                <span>Simple</span>
+                <span>{preferences?.simplifiedLayout ? t('learning.common.on') : t('learning.common.off')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSettings(true);
+                  setShowSideMenu(false);
+                }}
+                className="btn-settings"
+                style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: 8 }}
+              >
+                <Settings size={18} aria-hidden="true" />
+                <span>Settings</span>
+              </button>
+            </div>
+          </aside>
+        </>
+      )}
 
       {showSettings && (
         <ProfileSettings onClose={() => setShowSettings(false)} />
@@ -2418,57 +2534,119 @@ const AutismView = ({ initialLessonId = null }) => {
           }}>
             <TrendingUp size={18} aria-hidden="true" />
             <span>Current Level: {currentDifficulty}</span>
+              {performanceSummary?.recentAverage > 0 && (
+                <span style={{ marginLeft: '8px', opacity: 0.8 }}>
+                  ({performanceSummary.recentAverage.toFixed(0)}% avg)
+                </span>
+              )}
           </div>
         )}
 
         {/* FEATURE: Next lesson recommendation - using NextLessonCard component */}
         {nextRecommendation && (
           <section className="next-lesson-recommendation" aria-label="Recommended next lesson" style={{ marginBottom: '24px' }}>
-            <NextLessonCard
-              recommendation={{
-                title: nextRecommendation.lessonTitle || 'Next Lesson',
-                description: nextRecommendation.message || 'Continue learning',
-                position: 1
-              }}
-              reason="You're doing great. Up next:"
-              completedCount={completedLessons.length}
-              totalLessons={displayedLessons.length}
-              onAccept={() => {}}
-              onSkip={() => {}}
-            />
+            {nextRecommendation.allCompleted ? (
+              <NextLessonCard
+                variant="autism"
+                allCompleted
+                completionMsg={nextRecommendation.reason}
+                totalLessons={nextRecommendation.totalLessons}
+              />
+            ) : (
+              showRecommendation &&
+              nextRecommendation.lesson && (
+                <NextLessonCard
+                  variant="autism"
+                  recommendation={{
+                    title: `Next: ${nextRecommendation.lesson.title}`,
+                    description: nextRecommendation.lesson.description,
+                    position: nextRecommendation.position,
+                  }}
+                  reason={nextRecommendation.reason}
+                  completedCount={nextRecommendation.completedCount}
+                  totalLessons={nextRecommendation.totalLessons}
+                  onAccept={() => handleStartLesson(nextRecommendation.lesson.id)}
+                  onSkip={() => setShowRecommendation(false)}
+                />
+              )
+            )}
           </section>
         )}
 
-        <div className="lessons-container">
-          <div className="lessons-simple-grid">
-            {displayedLessons.map((lesson) => (
-              <div key={lesson.id} className={`lesson-simple-card ${completedLessons.includes(lesson.id) ? 'completed' : ''}`}>
-                <div className="lesson-top">
-                  <span className="lesson-large-icon" aria-hidden="true"><lesson.Icon size={40} /></span>
-                  {completedLessons.includes(lesson.id) && (
-                    <span className="completion-checkmark" aria-hidden="true"><Check size={18} /></span>
-                  )}
-                </div>
-                <div className="lesson-body">
-                  <h4>{lesson.title}</h4>
-                  <p>{lesson.description}</p>
-                  <div className="lesson-meta">
-                    <span className="lesson-steps-count">{t('learning.common.stepsCount', { count: lesson.steps.length })}</span>
-                    {completedLessons.includes(lesson.id) && (
-                      <span className="completion-badge"><Check size={14} aria-hidden="true" /> <span>{t('learning.common.statusCompleted')}</span></span>
-                    )}
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleStartLesson(lesson.id)}
-                  className="btn-lesson-start"
+        {/* EPIC 4.3: Personalized Learning Path (linear, clear, low-overload) */}
+        <section
+          aria-label="Autism learning path"
+          style={{
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '12px',
+            padding: '14px 16px',
+            marginBottom: '20px'
+          }}
+        >
+          <h3 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>Learning Path</h3>
+          <div style={{ display: 'grid', gap: '8px' }}>
+            {displayedLessons.map((lesson, index) => {
+              const isCompleted = completedLessons.includes(lesson.id);
+              const isCurrent = currentPathLessonId === lesson.id && !isCompleted;
+              return (
+                <div
+                  key={`autism-path-${lesson.id}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: isCurrent ? '1px solid #3b82f6' : '1px solid #e5e7eb',
+                    background: isCurrent ? '#eff6ff' : '#ffffff'
+                  }}
                 >
-                  {completedLessons.includes(lesson.id) ? t('learning.common.reviewLesson') : t('learning.common.startLesson')}
-                </button>
-              </div>
-            ))}
+                  <span style={{ fontWeight: isCurrent ? 700 : 500 }}>{index + 1}. {lesson.title}</span>
+                  <span style={{ fontSize: '12px', color: isCompleted ? '#166534' : isCurrent ? '#1d4ed8' : '#6b7280' }}>
+                    {isCompleted ? '✓ Completed' : isCurrent ? 'Current' : 'Upcoming'}
+                  </span>
+                </div>
+              );
+            })}
           </div>
-        </div>
+        </section>
+
+        <section
+          aria-label="Open all lessons page"
+          style={{
+            background: 'linear-gradient(135deg, #e7edf5, #c9d8e8)',
+            border: '1px solid #9fb6cc',
+            borderRadius: '12px',
+            padding: '14px 16px',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px'
+          }}
+        >
+          <div>
+            <p style={{ margin: 0, fontWeight: 700, color: '#1f3f57' }}>View all lessons in one place</p>
+            <p style={{ margin: '4px 0 0 0', color: '#334155', fontSize: '14px' }}>Go to the lesson library and choose any lesson you want to complete.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/lesson-library')}
+            style={{
+              border: 'none',
+              borderRadius: '10px',
+              background: '#27465f',
+              color: '#ffffff',
+              padding: '10px 14px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            Open All Lessons
+          </button>
+        </section>
 
         {/* Simple Help Section */}
         <div className="help-section">

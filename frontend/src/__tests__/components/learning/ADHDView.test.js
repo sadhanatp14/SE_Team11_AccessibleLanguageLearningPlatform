@@ -369,7 +369,10 @@ describe('ADHDView Component - ADHD Learning Features', () => {
         test('should toggle distraction-free mode', async () => {
             renderWithRouter(<ADHDView />);
 
-            const toggleBtn = screen.getByText('Distraction-Free');
+            const menuBtn = screen.getByRole('button', { name: /menu/i });
+            fireEvent.click(menuBtn);
+
+            const toggleBtn = screen.getByRole('button', { name: /distraction-free/i });
             fireEvent.click(toggleBtn);
 
             await waitFor(() => {
