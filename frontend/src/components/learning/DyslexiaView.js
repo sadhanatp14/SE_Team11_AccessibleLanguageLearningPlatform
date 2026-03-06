@@ -40,7 +40,6 @@ import {
 import api from '../../utils/api';
 // Next-lesson recommendation card component
 import NextLessonCard from './NextLessonCard';
-import PracticeSuggestion from './PracticeSuggestion';
 // Reusable profile/settings modal component
 import ProfileSettings from '../ProfileSettings';
 // Icon components from lucide-react used in the UI
@@ -75,9 +74,6 @@ const DyslexiaView = () => {
 
   // Motivation feedback (FEATURE: Motivation Feedback)
   const [motivation, setMotivation] = useState(null);
-
-  // Practice suggestion state (EPIC 4.4: Extra Practice Suggestions)
-  const [showPracticeSuggestion, setShowPracticeSuggestion] = useState(false);
 
   // Syllable mode: when true, all UI text is rendered with syllable-split variants.
   // The custom hook persists the preference to localStorage so it survives page reloads.

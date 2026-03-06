@@ -94,7 +94,6 @@ const AutismView = ({ initialLessonId = null }) => {
   const [learningPath, setLearningPath] = useState(null);
   const [showRecommendation, setShowRecommendation] = useState(true);
   const [showPracticeSuggestion, setShowPracticeSuggestion] = useState(false);
-  const [lessonsCompletedCount, setLessonsCompletedCount] = useState(0);
   
   // FEATURE: Adaptive Difficulty for Autism
   const [currentDifficulty, setCurrentDifficulty] = useState('Beginner');
@@ -1917,7 +1916,7 @@ const AutismView = ({ initialLessonId = null }) => {
                     maxScore={100}
                     lesson={currentLesson}
                     condition="autism"
-                    totalLessonsCompleted={lessonsCompletedCount}
+                    totalLessonsCompleted={1}
                   />
                 </div>
               )}
