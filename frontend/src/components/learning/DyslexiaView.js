@@ -360,14 +360,6 @@ const DyslexiaView = () => {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/progress')}
-            className="btn-settings"
-            title={t('learning.dyslexia.viewProgressTitle')}
-          >
-            {t('learning.common.progress')}
-          </button>
-          <button
-            type="button"
             onClick={() => setShowSettings(true)}
             className="btn-settings"
             title={t('learning.common.settings')}

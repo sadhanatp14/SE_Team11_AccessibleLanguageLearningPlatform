@@ -1157,14 +1157,6 @@ const ADHDView = ({ initialLessonId = null }) => {
               {t('learning.common.back')}
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => navigate('/progress')}
-            className="btn-minimal"
-            title={t('learning.common.progress')}
-          >
-            {t('learning.common.progress')}
-          </button>
           <button onClick={() => setShowSettings(true)} className="btn-minimal" title={t('learning.common.settings')}>
             <Settings size={18} aria-hidden="true" />
             <span>Settings</span>
