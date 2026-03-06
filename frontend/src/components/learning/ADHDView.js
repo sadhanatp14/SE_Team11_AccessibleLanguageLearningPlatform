@@ -9,8 +9,10 @@ import { usePreferences } from '../../context/PreferencesContext';
 import ProfileSettings from '../ProfileSettings';
 import './ADHDView.css';
 import PronunciationPractice from './PronunciationPractice';
+import NextLessonCard from './NextLessonCard';
 import ReactConfetti from 'react-confetti';
 import { getSummary } from '../../services/progressService';
+import { getCurrentDifficulty, getPerformanceSummary } from '../../services/difficultyAdjustmentService';
 import api from '../../utils/api';
 import { useI18n } from '../../utils/i18n';
 // Icon imports for UI elements
@@ -24,6 +26,7 @@ import {
   Headphones,
   Info,
   Lightbulb,
+  MessageCircle,
   Mic,
   Pause,
   Pencil,
@@ -35,6 +38,7 @@ import {
   Timer,
   ToggleLeft,
   ToggleRight,
+  TrendingUp,
   Volume2,
 } from 'lucide-react';
 import { backendTtsLangFor, pickByLanguage, resolveUiLanguageFromPreferences, speechSynthesisLangFor } from '../../utils/languagePrefs';
@@ -71,6 +75,13 @@ const ADHDView = ({ initialLessonId = null }) => {
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight }); // For confetti, etc.
   const [countdownValue, setCountdownValue] = useState(5); // Countdown before session starts
   const [dummyUpdate, setDummyUpdate] = useState(0); // Used to force re-renders on audio state changes
+
+  // FEATURE: Personalization features (next lesson, adaptive difficulty, learning path, motivation)
+  const [nextRecommendation, setNextRecommendation] = useState(null); // Next lesson recommendation
+  const [currentDifficulty, setCurrentDifficulty] = useState('Beginner'); // Adaptive difficulty level
+  const [learningPath, setLearningPath] = useState(null); // Personalized learning path
+  const [motivation, setMotivation] = useState(null); // Motivational feedback
+  const [performanceSummary, setPerformanceSummary] = useState(null); // Performance summary
 
   // Track completed lessons in this session (prevents duplicate saves)
   const savedCompletionRef = React.useRef(new Set());
@@ -124,6 +135,46 @@ const ADHDView = ({ initialLessonId = null }) => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // FEATURE: Load all personalization features for ADHD
+  useEffect(() => {
+    const fetchPersonalizationData = async () => {
+      try {
+        // Fetch next recommendation
+        const recResponse = await api.get('/ai/adhd/recommendations/next');
+        if (recResponse.data?.success) {
+          setNextRecommendation(recResponse.data.recommendation);
+        }
+
+        // Fetch learning path
+        const pathResponse = await api.get('/ai/adhd/recommendations/learning-path');
+        if (pathResponse.data?.success) {
+          setLearningPath(pathResponse.data.learningPath);
+        }
+
+        // Fetch motivational feedback
+        const motivationResponse = await api.get('/ai/adhd/recommendations/motivation');
+        if (motivationResponse.data?.success) {
+          setMotivation(motivationResponse.data);
+        }
+
+        // Load adaptive difficulty level
+        const difficulty = getCurrentDifficulty(user);
+        setCurrentDifficulty(difficulty);
+
+        // Load performance summary
+        const summary = getPerformanceSummary(user);
+        setPerformanceSummary(summary);
+      } catch (error) {
+        console.error('Error fetching personalization data:', error);
+        // Non-blocking error - continue with basic functionality
+      }
+    };
+
+    if (user?.id) {
+      fetchPersonalizationData();
+    }
+  }, [user?.id]);
 
   // Audio handling
   // Audio handling
@@ -1220,6 +1271,43 @@ const ADHDView = ({ initialLessonId = null }) => {
                         <div className="stat-text">{t('learning.common.pointsToday')}</div>
                       </div>
                     </div>
+                  )}
+
+                  {/* FEATURE: Display current difficulty level */}
+                  {currentDifficulty && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px 16px',
+                      background: 'linear-gradient(135deg, #e8f5e9, #c8e6c9)',
+                      borderRadius: '8px',
+                      marginBottom: '20px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#2e7d32'
+                    }}>
+                      <TrendingUp size={18} aria-hidden="true" />
+                      <span>Current Level: {currentDifficulty}</span>
+                    </div>
+                  )}
+
+                  {/* FEATURE: Next lesson recommendation - using NextLessonCard component */}
+                  {nextRecommendation && (
+                    <section className="next-lesson-recommendation" aria-label="Recommended next lesson" style={{ marginBottom: '24px' }}>
+                      <NextLessonCard
+                        recommendation={{
+                          title: nextRecommendation.lessonTitle || 'Next Lesson',
+                          description: nextRecommendation.message || 'Continue learning',
+                          position: 1
+                        }}
+                        reason="You're doing great. Up next:"
+                        completedCount={0}
+                        totalLessons={baseLessons.length}
+                        onAccept={() => {}}
+                        onSkip={() => {}}
+                      />
+                    </section>
                   )}
 
                   <div className="lesson-focus">

@@ -36,6 +36,8 @@ import {
   isRecommendationSkipped,
   clearSkipState,
 } from '../../services/nextLessonService';
+// API utility
+import api from '../../utils/api';
 // Next-lesson recommendation card component
 import NextLessonCard from './NextLessonCard';
 // Reusable profile/settings modal component
@@ -71,6 +73,9 @@ const DyslexiaView = () => {
 
   // Next-lesson recommendation state
   const [recommendation, setRecommendation] = useState(null);
+
+  // Motivation feedback (FEATURE: Motivation Feedback)
+  const [motivation, setMotivation] = useState(null);
 
   // Syllable mode: when true, all UI text is rendered with syllable-split variants.
   // The custom hook persists the preference to localStorage so it survives page reloads.
@@ -219,6 +224,20 @@ const DyslexiaView = () => {
     if (rec.recommendation && !isRecommendationSkipped(rec.recommendation.apiId)) {
       clearSkipState();
     }
+
+    // FEATURE: Fetch motivation feedback for dyslexia learners
+    const fetchMotivation = async () => {
+      try {
+        const res = await api.get('/dyslexia/recommendations/motivation');
+        if (res.data?.success && res.data?.motivation) {
+          setMotivation(res.data.motivation);
+        }
+      } catch (err) {
+        console.error('Error fetching motivation:', err);
+        // Non-blocking error
+      }
+    };
+    fetchMotivation();
   }, [user]);
 
   /**
@@ -426,6 +445,25 @@ const DyslexiaView = () => {
         </section>
         )}
 
+        {/* FEATURE: Display current difficulty level */}
+        {currentDifficulty && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '12px 16px',
+            background: 'linear-gradient(135deg, #e8f5e9, #c8e6c9)',
+            borderRadius: '8px',
+            marginBottom: '20px',
+            fontSize: '14px',
+            fontWeight: '600',
+            color: '#2e7d32'
+          }}>
+            <TrendingUp size={18} aria-hidden="true" />
+            <span>{syllableMode && isEnglish ? 'Cur-rent Le-vel: ' : 'Current Level: '}{currentDifficulty}</span>
+          </div>
+        )}
+
         {/* Next-Lesson Recommendation — shown prominently above the lessons grid */}
         {recommendation && (
           <section className="lessons-section" aria-label="Recommended next lesson">
@@ -451,6 +489,29 @@ const DyslexiaView = () => {
                 />
               )
             )}
+          </section>
+        )}
+
+        {/* FEATURE: Motivation Feedback */}
+        {motivation && (
+          <section className="motivation-section" style={{
+            background: 'linear-gradient(135deg, #fff3e0, #ffe0b2)',
+            borderLeft: '4px solid #ff9800',
+            padding: '16px 20px',
+            marginBottom: '24px',
+            borderRadius: '8px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+              <MessageCircle size={20} aria-hidden="true" style={{ flexShrink: 0, marginTop: '4px', color: '#ff9800' }} />
+              <div>
+                <p style={{ margin: 0, fontWeight: 600, color: '#e65100', marginBottom: '4px' }}>
+                  {syllableMode && isEnglish ? 'Mo-ti-va-tion-al Feed-back' : 'Motivational Feedback'}
+                </p>
+                <p style={{ margin: 0, color: '#bf360c', lineHeight: '1.5' }}>
+                  {motivation.message || 'Keep up the great work on your learning journey!'}
+                </p>
+              </div>
+            </div>
           </section>
         )}
 

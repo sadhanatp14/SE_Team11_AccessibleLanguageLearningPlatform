@@ -8,6 +8,8 @@ import { useAuth } from '../../context/AuthContext';
 import { usePreferences } from '../../context/PreferencesContext';
 import ProfileSettings from '../ProfileSettings';
 import api from '../../utils/api';
+import { getCurrentDifficulty, getPerformanceSummary } from '../../services/difficultyAdjustmentService';
+import NextLessonCard from './NextLessonCard';
 import {
   backendTtsLangFor,
   normalizePreferredLanguage,
@@ -25,6 +27,7 @@ import {
   Hash,
   Info,
   Lightbulb,
+  MessageCircle,
   Mic,
   Pause,
   RotateCcw,
@@ -33,13 +36,15 @@ import {
   Timer,
   ToggleLeft,
   ToggleRight,
+  TrendingUp,
   Volume2,
 } from 'lucide-react';
 import PronunciationPractice from './PronunciationPractice';
 // EPIC 4: Personalized Learning Engine Components (Autism Module Only)
-import AutismRecommendationCard from './AutismRecommendationCard';
-import AutismProgressFeedback from './AutismProgressFeedback';
-import AutismLearningPath from './AutismLearningPath';
+// NOTE: These components are imported but not yet created. TODO: Implement these components.
+// import AutismRecommendationCard from './AutismRecommendationCard';
+// import AutismProgressFeedback from './AutismProgressFeedback';
+// import AutismLearningPath from './AutismLearningPath';
 import './AutismView.css';
 
 const AutismView = ({ initialLessonId = null }) => {
@@ -83,6 +88,11 @@ const AutismView = ({ initialLessonId = null }) => {
   const [motivation, setMotivation] = useState(null);
   const [learningPath, setLearningPath] = useState(null);
   const [showRecommendation, setShowRecommendation] = useState(true);
+  
+  // FEATURE: Adaptive Difficulty for Autism
+  const [currentDifficulty, setCurrentDifficulty] = useState('Beginner');
+  const [performanceSummary, setPerformanceSummary] = useState(null);
+  
   const [lessonPerformanceData, setLessonPerformanceData] = useState({
     correctAnswers: 0,
     wrongAnswers: 0,
@@ -117,22 +127,30 @@ const AutismView = ({ initialLessonId = null }) => {
     const fetchPersonalizedData = async () => {
       try {
         // Fetch next recommendation
-        const recResponse = await api.get('/autism/recommendations/next');
+        const recResponse = await api.get('/ai/autism/recommendations/next');
         if (recResponse.data.success) {
           setNextRecommendation(recResponse.data.recommendation);
         }
 
         // Fetch learning path
-        const pathResponse = await api.get('/autism/recommendations/learning-path');
+        const pathResponse = await api.get('/ai/autism/recommendations/learning-path');
         if (pathResponse.data.success) {
-          setLearningPath(pathResponse.data);
+          setLearningPath(pathResponse.data.learningPath);
         }
 
         // Fetch motivational feedback
-        const motivationResponse = await api.get('/autism/recommendations/motivation');
+        const motivationResponse = await api.get('/ai/autism/recommendations/motivation');
         if (motivationResponse.data.success) {
           setMotivation(motivationResponse.data);
         }
+
+        // FEATURE: Load adaptive difficulty level
+        const difficulty = getCurrentDifficulty(user);
+        setCurrentDifficulty(difficulty);
+
+        // Load performance summary
+        const summary = getPerformanceSummary(user);
+        setPerformanceSummary(summary);
       } catch (error) {
         console.error('Error fetching personalized learning data:', error);
         // Non-blocking error - continue with basic functionality
@@ -140,7 +158,7 @@ const AutismView = ({ initialLessonId = null }) => {
     };
 
     fetchPersonalizedData();
-  }, [completedLessons]); // Refetch when lessons are completed
+  }, [completedLessons, user]); // Refetch when lessons are completed or user changes
 
   // Define lessons with multi-format content (text, audio, visuals, etc.)
   // Each lesson contains steps/questions for the user
@@ -1844,6 +1862,7 @@ const AutismView = ({ initialLessonId = null }) => {
               <p className="completion-message">You completed "{currentLesson.title}" lesson!</p>
 
               {/* EPIC 4.4 & 4.5: Practice Suggestion and Motivation */}
+              {/* NOTE: AutismProgressFeedback component not yet created
               {(practiceSuggestion || motivation) && (
                 <AutismProgressFeedback
                   motivation={motivation}
@@ -1862,6 +1881,7 @@ const AutismView = ({ initialLessonId = null }) => {
                   }}
                 />
               )}
+              */}
 
               <div className="completion-actions">
                 {selectedLesson < lessons.length && (
@@ -2343,14 +2363,17 @@ const AutismView = ({ initialLessonId = null }) => {
         </div>
 
         {/* EPIC 4.5: Motivational Feedback */}
+        {/* NOTE: AutismProgressFeedback component not yet created
         {motivation && (
           <AutismProgressFeedback
             motivation={motivation}
-            onContinue={() => {/* Continue to lessons */}}
+            onContinue={() => {/* Continue to lessons *//* }}
           />
         )}
+        */}
 
         {/* EPIC 4.2: Next Lesson Recommendation */}
+        {/* NOTE: AutismRecommendationCard component not yet created
         {showRecommendation && nextRecommendation && (
           <AutismRecommendationCard
             recommendation={nextRecommendation}
@@ -2361,8 +2384,10 @@ const AutismView = ({ initialLessonId = null }) => {
             onSkip={() => setShowRecommendation(false)}
           />
         )}
+        */}
 
         {/* EPIC 4.3: Learning Path Overview */}
+        {/* NOTE: AutismLearningPath component not yet created
         {learningPath && (
           <AutismLearningPath
             learningPath={learningPath.learningPath}
@@ -2370,8 +2395,46 @@ const AutismView = ({ initialLessonId = null }) => {
             onSelectLesson={(lessonId) => handleStartLesson(lessonId)}
           />
         )}
+        */}
 
         {/* Lessons - Simple Grid */}
+        {/* FEATURE: Display current difficulty level */}
+        {currentDifficulty && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '12px 16px',
+            background: 'linear-gradient(135deg, #e8f5e9, #c8e6c9)',
+            borderRadius: '8px',
+            marginBottom: '20px',
+            fontSize: '14px',
+            fontWeight: '600',
+            color: '#2e7d32'
+          }}>
+            <TrendingUp size={18} aria-hidden="true" />
+            <span>Current Level: {currentDifficulty}</span>
+          </div>
+        )}
+
+        {/* FEATURE: Next lesson recommendation - using NextLessonCard component */}
+        {nextRecommendation && (
+          <section className="next-lesson-recommendation" aria-label="Recommended next lesson" style={{ marginBottom: '24px' }}>
+            <NextLessonCard
+              recommendation={{
+                title: nextRecommendation.lessonTitle || 'Next Lesson',
+                description: nextRecommendation.message || 'Continue learning',
+                position: 1
+              }}
+              reason="You're doing great. Up next:"
+              completedCount={completedLessons.length}
+              totalLessons={displayedLessons.length}
+              onAccept={() => {}}
+              onSkip={() => {}}
+            />
+          </section>
+        )}
+
         <div className="lessons-container">
           <div className="lessons-simple-grid">
             {displayedLessons.map((lesson) => (
