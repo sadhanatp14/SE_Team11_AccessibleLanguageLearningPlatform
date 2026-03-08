@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../utils/i18n';
 import PatternLockInput from './PatternLockInput';
+import { isWebAuthnSupported } from '../utils/webauthn';
 import './Register.css';
 
 /**
@@ -18,8 +19,9 @@ import './Register.css';
  */
 const Register = () => {
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const { register, setupFingerprint } = useAuth();
   const { t } = useI18n();
+  const fingerprintAvailable = isWebAuthnSupported();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -37,6 +39,7 @@ const Register = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [enableFingerprint, setEnableFingerprint] = useState(false);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -146,6 +149,12 @@ const Register = () => {
     const result = await register(registrationData);
 
     if (result.success) {
+      if (enableFingerprint && fingerprintAvailable) {
+        const fpResult = await setupFingerprint();
+        if (!fpResult.success) {
+          console.warn('Fingerprint setup skipped:', fpResult.error);
+        }
+      }
       // EPIC 5.1: Let the learner pick a preferred UI language before setup.
       navigate('/language', { state: { next: '/accessibility-setup' } });
     } else {
@@ -290,6 +299,18 @@ const Register = () => {
                   />
                 </div>
               </>
+            )}
+
+            {fingerprintAvailable && (
+              <div className="form-group checkbox-group">
+                <input
+                  type="checkbox"
+                  id="enableFingerprint"
+                  checked={enableFingerprint}
+                  onChange={(e) => setEnableFingerprint(e.target.checked)}
+                />
+                <label htmlFor="enableFingerprint">Set up fingerprint login (optional)</label>
+              </div>
             )}
 
             <div className="form-group">

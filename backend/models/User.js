@@ -55,6 +55,23 @@ const UserSchema = new mongoose.Schema(
       ],
       select: false,
     },
+    fingerprintEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    webAuthnCredentials: {
+      type: [
+        new mongoose.Schema(
+          {
+            credentialId: { type: String, required: true },
+            transports: { type: [String], default: [] },
+            createdAt: { type: Date, default: Date.now },
+          },
+          { _id: false }
+        ),
+      ],
+      default: [],
+    },
     role: {
       type: String,
       enum: ['learner', 'parent', 'admin'],
