@@ -1,7 +1,15 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, BookOpen, ChevronLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+
+const LANGUAGE_KEYS = ['en', 'ta', 'hi'];
+
+const languageLabel = {
+  en: 'English',
+  ta: 'Tamil',
+  hi: 'Hindi',
+};
 
 const LESSON_LIBRARY = {
   dyslexia: [
@@ -10,30 +18,35 @@ const LESSON_LIBRARY = {
       title: 'Greetings',
       description: 'Learn "Hello", "Hi", and friendly phrases',
       apiId: 'lesson-greetings',
+      language: 'en',
     },
     {
       id: 2,
       title: 'Basic Words',
       description: 'Everyday objects, people, and actions',
       apiId: 'lesson-vocabulary',
+      language: 'en',
     },
     {
       id: 3,
       title: 'Numbers',
       description: 'Count, match, and order numbers',
       apiId: 'lesson-numbers',
+      language: 'en',
     },
     {
       id: 4,
-      title: 'Tamil Essentials',
-      description: 'Learn a few useful Tamil words and phrases',
+      title: 'Tamil Foundations: Everyday Greetings',
+      description: 'Practice greetings and polite words in Tamil',
       apiId: 'lesson-tamil-essentials',
+      language: 'ta',
     },
     {
       id: 5,
-      title: 'Hindi Essentials',
-      description: 'Learn a few useful Hindi words and phrases',
+      title: 'Hindi Foundations: Everyday Greetings',
+      description: 'Practice greetings and polite words in Hindi',
       apiId: 'lesson-hindi-essentials',
+      language: 'hi',
     },
   ],
   adhd: [
@@ -41,31 +54,37 @@ const LESSON_LIBRARY = {
       id: 1,
       title: 'Greetings',
       description: 'Focused practice with friendly greeting words',
+      language: 'en',
     },
     {
       id: 2,
       title: 'Basic Words',
       description: 'Short vocabulary tasks with one-step focus',
+      language: 'en',
     },
     {
       id: 3,
       title: 'Numbers',
       description: 'Quick number recognition and quiz exercises',
+      language: 'en',
     },
     {
       id: 4,
       title: 'Audio Stories',
       description: 'Listen and learn through guided mini stories',
+      language: 'en',
     },
     {
       id: 5,
-      title: 'Tamil Essentials',
-      description: 'Short Tamil phrase practice with focus-friendly steps',
+      title: 'Tamil Foundations: Everyday Greetings',
+      description: 'Focused greeting and polite-word practice in Tamil',
+      language: 'ta',
     },
     {
       id: 6,
-      title: 'Hindi Essentials',
-      description: 'Short Hindi phrase practice with focus-friendly steps',
+      title: 'Hindi Foundations: Everyday Greetings',
+      description: 'Focused greeting and polite-word practice in Hindi',
+      language: 'hi',
     },
   ],
   autism: [
@@ -73,26 +92,31 @@ const LESSON_LIBRARY = {
       id: 1,
       title: 'Greetings',
       description: 'Learn basic Tamil greetings',
+      language: 'ta',
     },
     {
       id: 2,
       title: 'Basic Words',
       description: 'Learn English alphabet letters',
+      language: 'en',
     },
     {
       id: 3,
       title: 'Numbers',
       description: 'Learn Hindi numbers 1 to 10',
+      language: 'hi',
     },
     {
       id: 4,
       title: 'Family Members',
       description: 'Learn Tamil words for family members',
+      language: 'ta',
     },
     {
       id: 5,
       title: 'Common Actions',
       description: 'Learn everyday action words',
+      language: 'en',
     },
   ],
 };
@@ -137,10 +161,34 @@ const LessonLibraryPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+
   const condition = String(user?.learningCondition || 'dyslexia').toLowerCase();
   const lessons = useMemo(() => LESSON_LIBRARY[condition] || LESSON_LIBRARY.dyslexia, [condition]);
   const conditionLabel = labelByCondition[condition] || 'Learning';
   const theme = themeByCondition[condition] || themeByCondition.dyslexia;
+
+  const languageAvailability = useMemo(() => {
+    const availability = { en: 0, ta: 0, hi: 0 };
+    lessons.forEach((lesson) => {
+      const key = lesson.language || 'en';
+      if (availability[key] !== undefined) {
+        availability[key] += 1;
+      }
+    });
+    return availability;
+  }, [lessons]);
+
+  const filteredLessons = useMemo(() => {
+    const safeSelectedLanguage = LANGUAGE_KEYS.includes(selectedLanguage) ? selectedLanguage : 'en';
+    return lessons.filter((lesson) => (lesson.language || 'en') === safeSelectedLanguage);
+  }, [lessons, selectedLanguage]);
+
+  React.useEffect(() => {
+    if (languageAvailability[selectedLanguage] > 0) return;
+    const firstAvailable = LANGUAGE_KEYS.find((key) => languageAvailability[key] > 0) || 'en';
+    setSelectedLanguage(firstAvailable);
+  }, [languageAvailability, selectedLanguage]);
 
   const handleOpenLesson = (lesson) => {
     if (condition === 'dyslexia') {
@@ -159,13 +207,12 @@ const LessonLibraryPage = () => {
   return (
     <div
       style={{
-        minHeight: '100vh',
         background: theme.pageBg,
         padding: '24px',
       }}
     >
       <div style={{ maxWidth: '980px', margin: '0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+        <div style={{ marginBottom: '16px' }}>
           <button
             type="button"
             onClick={() => navigate('/dashboard')}
@@ -202,10 +249,56 @@ const LessonLibraryPage = () => {
           <p style={{ margin: 0, color: theme.heroText }}>
             Choose any lesson you want and start learning directly from this page.
           </p>
+
+          <div style={{ marginTop: '14px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            {LANGUAGE_KEYS.map((langKey) => {
+              const isSelected = selectedLanguage === langKey;
+              const isDisabled = languageAvailability[langKey] === 0;
+
+              return (
+                <button
+                  key={`language-filter-${langKey}`}
+                  type="button"
+                  onClick={() => setSelectedLanguage(langKey)}
+                  disabled={isDisabled}
+                  aria-pressed={isSelected}
+                  style={{
+                    border: isSelected ? `2px solid ${theme.buttonBg}` : '1px solid #cbd5e1',
+                    background: isSelected ? '#ffffff' : '#ffffff',
+                    borderRadius: '12px',
+                    padding: '10px 14px',
+                    cursor: isDisabled ? 'not-allowed' : 'pointer',
+                    opacity: isDisabled ? 0.5 : 1,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    fontWeight: 800,
+                    color: isSelected ? theme.buttonBg : theme.heroTitle,
+                    boxShadow: isSelected ? '0 2px 10px rgba(37, 99, 235, 0.12)' : 'none',
+                  }}
+                >
+                  <span>{languageLabel[langKey] || langKey}</span>
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 800,
+                      background: isSelected ? theme.buttonBg : '#e2e8f0',
+                      color: isSelected ? '#ffffff' : '#0f172a',
+                      borderRadius: '999px',
+                      padding: '2px 8px',
+                    }}
+                    aria-label={`${languageAvailability[langKey]} lessons`}
+                  >
+                    {languageAvailability[langKey]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </section>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', maxWidth: '1200px' }}>
-          {lessons.map((lesson, index) => (
+          {filteredLessons.map((lesson, index) => (
             <article
               key={`${condition}-library-${lesson.id}`}
               style={{

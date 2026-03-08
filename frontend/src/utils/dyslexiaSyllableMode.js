@@ -121,8 +121,8 @@ export const getDyslexiaLessonTitle = (lessonId, fallbackTitle = '') => {
     'lesson-greetings': 'Greet-ings',
     'lesson-vocabulary': 'Ba-sic Words',
     'lesson-numbers': 'Num-bers',
-    'lesson-tamil-essentials': 'Ta-mil Es-sen-tials',
-    'lesson-hindi-essentials': 'Hin-di Es-sen-tials',
+    'lesson-tamil-essentials': 'Ta-mil Foun-da-tions: Eve-ry-day Greet-ings',
+    'lesson-hindi-essentials': 'Hin-di Foun-da-tions: Eve-ry-day Greet-ings',
   };
   return map[id] || fallbackTitle || id;
 };

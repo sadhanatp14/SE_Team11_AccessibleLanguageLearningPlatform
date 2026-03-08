@@ -103,8 +103,8 @@ const ProgressPage = () => {
         { id: 'lesson-greetings', title: applyDyslexiaSyllables ? getDyslexiaLessonTitle('lesson-greetings', 'Greetings') : 'Greetings', route: '/lessons/lesson-greetings' },
         { id: 'lesson-vocabulary', title: applyDyslexiaSyllables ? getDyslexiaLessonTitle('lesson-vocabulary', 'Basic Words') : 'Basic Words', route: '/lessons/lesson-vocabulary' },
         { id: 'lesson-numbers', title: applyDyslexiaSyllables ? getDyslexiaLessonTitle('lesson-numbers', 'Numbers') : 'Numbers', route: '/lessons/lesson-numbers' },
-        { id: 'lesson-tamil-essentials', title: applyDyslexiaSyllables ? getDyslexiaLessonTitle('lesson-tamil-essentials', 'Tamil Essentials') : 'Tamil Essentials', route: '/lessons/lesson-tamil-essentials' },
-        { id: 'lesson-hindi-essentials', title: applyDyslexiaSyllables ? getDyslexiaLessonTitle('lesson-hindi-essentials', 'Hindi Essentials') : 'Hindi Essentials', route: '/lessons/lesson-hindi-essentials' },
+        { id: 'lesson-tamil-essentials', title: applyDyslexiaSyllables ? getDyslexiaLessonTitle('lesson-tamil-essentials', 'Tamil Foundations: Everyday Greetings') : 'Tamil Foundations: Everyday Greetings', route: '/lessons/lesson-tamil-essentials' },
+        { id: 'lesson-hindi-essentials', title: applyDyslexiaSyllables ? getDyslexiaLessonTitle('lesson-hindi-essentials', 'Hindi Foundations: Everyday Greetings') : 'Hindi Foundations: Everyday Greetings', route: '/lessons/lesson-hindi-essentials' },
       ];
 
       return lessonDefs.map((l) => {
@@ -136,8 +136,8 @@ const ProgressPage = () => {
           2: 'Basic Words',
           3: 'Numbers',
           4: 'Audio Stories',
-          5: 'Tamil Essentials',
-          6: 'Hindi Essentials',
+          5: 'Tamil Foundations: Everyday Greetings',
+          6: 'Hindi Foundations: Everyday Greetings',
         }
       : {
           1: 'Greetings',

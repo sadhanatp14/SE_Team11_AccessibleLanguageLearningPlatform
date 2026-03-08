@@ -124,7 +124,10 @@ export const inferTtsLanguageKeyFromText = (text, fallbackLanguage = 'english') 
   // Remove whitespace + common punctuation so ratios are based on letters.
   const sample = raw
     .replace(/[\s\d]/g, '')
-    .replace(/[.,!?;:()"'\[\]{}<>\\/\\-]/g, '');
+    .replace(/[.,!?;:()"'{}<>/-]/g, '')
+    .replace(/\[/g, '')
+    .replace(/\]/g, '')
+    .replace(/\\/g, '');
 
   if (!sample) return fallback;
 

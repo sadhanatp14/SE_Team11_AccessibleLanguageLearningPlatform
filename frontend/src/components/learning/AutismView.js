@@ -2479,6 +2479,38 @@ const AutismView = ({ initialLessonId = null }) => {
           <p>{t('learning.autism.selectLessonToBegin')}</p>
         </div>
 
+        {/* FEATURE: Display current difficulty level */}
+        {currentDifficulty && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '12px',
+            padding: '12px 16px',
+            marginTop: '20px',
+            background: 'linear-gradient(135deg, #e8f5e9, #c8e6c9)',
+            borderRadius: '8px',
+            marginBottom: '20px',
+            fontSize: '14px',
+            fontWeight: '600',
+            color: '#2e7d32'
+          }}>
+            <TrendingUp size={18} aria-hidden="true" />
+            <span>Current Level: {currentDifficulty}</span>
+              {performanceSummary?.recentAverage > 0 && (
+                <span style={{ marginLeft: '8px', opacity: 0.8 }}>
+                  ({performanceSummary.recentAverage.toFixed(0)}% avg)
+                </span>
+              )}
+            {performanceSummary?.pace && (
+              <span style={{ opacity: 0.85 }}>• Pace: {performanceSummary.pace}</span>
+            )}
+            {typeof performanceSummary?.completionRate === 'number' && performanceSummary.completionRate > 0 && (
+              <span style={{ opacity: 0.8 }}>• Completion: {performanceSummary.completionRate}%</span>
+            )}
+          </div>
+        )}
+
         {/* Lessons Grid - Predictable Layout */}
         <div className="lessons-simple-grid" aria-label="Available lessons">
           {dashboardLessons.length === 0 ? (
@@ -2604,39 +2636,6 @@ const AutismView = ({ initialLessonId = null }) => {
           />
         )}
         */}
-
-        {/* Lessons - Simple Grid */}
-        {/* FEATURE: Display current difficulty level */}
-        {currentDifficulty && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '12px',
-            padding: '12px 16px',
-            marginTop: '20px',
-            background: 'linear-gradient(135deg, #e8f5e9, #c8e6c9)',
-            borderRadius: '8px',
-            marginBottom: '20px',
-            fontSize: '14px',
-            fontWeight: '600',
-            color: '#2e7d32'
-          }}>
-            <TrendingUp size={18} aria-hidden="true" />
-            <span>Current Level: {currentDifficulty}</span>
-              {performanceSummary?.recentAverage > 0 && (
-                <span style={{ marginLeft: '8px', opacity: 0.8 }}>
-                  ({performanceSummary.recentAverage.toFixed(0)}% avg)
-                </span>
-              )}
-            {performanceSummary?.pace && (
-              <span style={{ opacity: 0.85 }}>• Pace: {performanceSummary.pace}</span>
-            )}
-            {typeof performanceSummary?.completionRate === 'number' && performanceSummary.completionRate > 0 && (
-              <span style={{ opacity: 0.8 }}>• Completion: {performanceSummary.completionRate}%</span>
-            )}
-          </div>
-        )}
 
         {/* EPIC 4.3: Personalized Learning Path (linear, clear, low-overload) */}
         <section

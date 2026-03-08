@@ -860,49 +860,45 @@ const lessonSamples = {
 
   'lesson-tamil-essentials': {
     _id: 'lesson-tamil-essentials',
-    title: 'Tamil Essentials',
+    title: 'Tamil Foundations: Everyday Greetings',
     titleI18n: {
-      english: 'Tamil Essentials',
-      tamil: 'தமிழ் அடிப்படைகள்',
-      hindi: 'तमिल की मूल बातें',
+      english: 'Tamil Foundations: Everyday Greetings',
+      tamil: 'தமிழ் அடித்தளம்: தினசரி வாழ்த்துகள்',
+      hindi: 'तमिल की बुनियाद: रोज़मर्रा के अभिवादन',
     },
-    textContent:
-      'In this lesson you will practice a few useful Tamil words.
+        textContent: `In this lesson you will practice a few useful Tamil words.
 
-Try reading slowly and clearly:
-- “வணக்கம்” (Vanakkam) = Hello
-- “நன்றி” (Nandri) = Thank you
-- “தயவு செய்து” (Thayavu seithu) = Please
-- “ஆம்” (Aam) = Yes
-- “இல்லை” (Illai) = No',
+    Try reading slowly and clearly:
+    - “வணக்கம்” (Vanakkam) = Hello
+    - “நன்றி” (Nandri) = Thank you
+    - “தயவு செய்து” (Thayavu seithu) = Please
+    - “ஆம்” (Aam) = Yes
+    - “இல்லை” (Illai) = No`,
     textContentI18n: {
-      english:
-        'In this lesson you will practice a few useful Tamil words.
+      english: `In this lesson you will practice a few useful Tamil words.
 
-Try reading slowly and clearly:
-- “வணக்கம்” (Vanakkam) = Hello
-- “நன்றி” (Nandri) = Thank you
-- “தயவு செய்து” (Thayavu seithu) = Please
-- “ஆம்” (Aam) = Yes
-- “இல்லை” (Illai) = No',
-      tamil:
-        'இந்தப் பாடத்தில் சில பயனுள்ள தமிழ் சொற்களைப் பயிற்சி செய்வோம்.
+    Try reading slowly and clearly:
+    - “வணக்கம்” (Vanakkam) = Hello
+    - “நன்றி” (Nandri) = Thank you
+    - “தயவு செய்து” (Thayavu seithu) = Please
+    - “ஆம்” (Aam) = Yes
+    - “இல்லை” (Illai) = No`,
+      tamil: `இந்தப் பாடத்தில் சில பயனுள்ள தமிழ் சொற்களைப் பயிற்சி செய்வோம்.
 
-மெதுவாகவும் தெளிவாகவும் வாசிக்க முயற்சிக்கவும்:
-- “வணக்கம்” (Vanakkam) = Hello
-- “நன்றி” (Nandri) = Thank you
-- “தயவு செய்து” (Thayavu seithu) = Please
-- “ஆம்” (Aam) = Yes
-- “இல்லை” (Illai) = No',
-      hindi:
-        'इस पाठ में आप कुछ उपयोगी तमिल शब्दों का अभ्यास करेंगे।
+    மெதுவாகவும் தெளிவாகவும் வாசிக்க முயற்சிக்கவும்:
+    - “வணக்கம்” (Vanakkam) = Hello
+    - “நன்றி” (Nandri) = Thank you
+    - “தயவு செய்து” (Thayavu seithu) = Please
+    - “ஆம்” (Aam) = Yes
+    - “இல்லை” (Illai) = No`,
+      hindi: `इस पाठ में आप कुछ उपयोगी तमिल शब्दों का अभ्यास करेंगे।
 
-धीरे और साफ़ पढ़ने की कोशिश करें:
-- “வணக்கம்” (Vanakkam) = Hello
-- “நன்றி” (Nandri) = Thank you
-- “தயவு செய்து” (Thayavu seithu) = Please
-- “ஆம்” (Aam) = Yes
-- “இல்லை” (Illai) = No',
+    धीरे और साफ़ पढ़ने की कोशिश करें:
+    - “வணக்கம்” (Vanakkam) = Hello
+    - “நன்றி” (Nandri) = Thank you
+    - “தயவு செய்து” (Thayavu seithu) = Please
+    - “ஆம்” (Aam) = Yes
+    - “இல்லை” (Illai) = No`,
     },
     audioUrl: '',
     visuals: [
@@ -1175,49 +1171,45 @@ Try reading slowly and clearly:
 
   'lesson-hindi-essentials': {
     _id: 'lesson-hindi-essentials',
-    title: 'Hindi Essentials',
+    title: 'Hindi Foundations: Everyday Greetings',
     titleI18n: {
-      english: 'Hindi Essentials',
-      tamil: 'இந்தி அடிப்படைகள்',
-      hindi: 'हिंदी की मूल बातें',
+      english: 'Hindi Foundations: Everyday Greetings',
+      tamil: 'இந்தி அடித்தளம்: தினசரி வாழ்த்துகள்',
+      hindi: 'हिंदी की बुनियाद: रोज़मर्रा के अभिवादन',
     },
-    textContent:
-      'In this lesson you will practice a few useful Hindi words.
+        textContent: `In this lesson you will practice a few useful Hindi words.
 
-Try reading slowly and clearly:
-- “नमस्ते” (Namaste) = Hello
-- “धन्यवाद” (Dhanyavaad) = Thank you
-- “कृपया” (Kripya) = Please
-- “हाँ” (Haan) = Yes
-- “नहीं” (Nahin) = No',
+    Try reading slowly and clearly:
+    - “नमस्ते” (Namaste) = Hello
+    - “धन्यवाद” (Dhanyavaad) = Thank you
+    - “कृपया” (Kripya) = Please
+    - “हाँ” (Haan) = Yes
+    - “नहीं” (Nahin) = No`,
     textContentI18n: {
-      english:
-        'In this lesson you will practice a few useful Hindi words.
+      english: `In this lesson you will practice a few useful Hindi words.
 
-Try reading slowly and clearly:
-- “नमस्ते” (Namaste) = Hello
-- “धन्यवाद” (Dhanyavaad) = Thank you
-- “कृपया” (Kripya) = Please
-- “हाँ” (Haan) = Yes
-- “नहीं” (Nahin) = No',
-      tamil:
-        'இந்தப் பாடத்தில் சில பயனுள்ள இந்தி சொற்களைப் பயிற்சி செய்வோம்.
+    Try reading slowly and clearly:
+    - “नमस्ते” (Namaste) = Hello
+    - “धन्यवाद” (Dhanyavaad) = Thank you
+    - “कृपया” (Kripya) = Please
+    - “हाँ” (Haan) = Yes
+    - “नहीं” (Nahin) = No`,
+      tamil: `இந்தப் பாடத்தில் சில பயனுள்ள இந்தி சொற்களைப் பயிற்சி செய்வோம்.
 
-மெதுவாகவும் தெளிவாகவும் வாசிக்க முயற்சிக்கவும்:
-- “नमस्ते” (Namaste) = Hello
-- “धन्यवाद” (Dhanyavaad) = Thank you
-- “कृपया” (Kripya) = Please
-- “हाँ” (Haan) = Yes
-- “नहीं” (Nahin) = No',
-      hindi:
-        'इस पाठ में आप कुछ उपयोगी हिंदी शब्दों का अभ्यास करेंगे।
+    மெதுவாகவும் தெளிவாகவும் வாசிக்க முயற்சிக்கவும்:
+    - “नमस्ते” (Namaste) = Hello
+    - “धन्यवाद” (Dhanyavaad) = Thank you
+    - “कृपया” (Kripya) = Please
+    - “हाँ” (Haan) = Yes
+    - “नहीं” (Nahin) = No`,
+      hindi: `इस पाठ में आप कुछ उपयोगी हिंदी शब्दों का अभ्यास करेंगे।
 
-धीरे और साफ़ पढ़ने की कोशिश करें:
-- “नमस्ते” (Namaste) = Hello
-- “धन्यवाद” (Dhanyavaad) = Thank you
-- “कृपया” (Kripya) = Please
-- “हाँ” (Haan) = Yes
-- “नहीं” (Nahin) = No',
+    धीरे और साफ़ पढ़ने की कोशिश करें:
+    - “नमस्ते” (Namaste) = Hello
+    - “धन्यवाद” (Dhanyavaad) = Thank you
+    - “कृपया” (Kripya) = Please
+    - “हाँ” (Haan) = Yes
+    - “नहीं” (Nahin) = No`,
     },
     audioUrl: '',
     visuals: [

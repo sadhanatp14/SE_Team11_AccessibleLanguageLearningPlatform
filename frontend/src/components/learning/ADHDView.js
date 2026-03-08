@@ -811,7 +811,7 @@ const ADHDView = ({ initialLessonId = null }) => {
     ,
     {
       id: 5,
-      title: 'Tamil Essentials',
+      title: 'Tamil Foundations: Everyday Greetings',
       duration: '10 min',
       Icon: Volume2,
       ttsLang: 'tamil',
@@ -873,7 +873,7 @@ const ADHDView = ({ initialLessonId = null }) => {
     },
     {
       id: 6,
-      title: 'Hindi Essentials',
+      title: 'Hindi Foundations: Everyday Greetings',
       duration: '10 min',
       Icon: Mic,
       ttsLang: 'hindi',
@@ -1627,30 +1627,6 @@ const ADHDView = ({ initialLessonId = null }) => {
                       )}
                     </section>
                   )}
-
-                  {/* Lesson Selection: Cards */}
-                  <div className="lesson-list" aria-label="Available lessons">
-                    {baseLessons.map((lesson) => (
-                      <div key={`adhd-lesson-${lesson.id}`} className="lesson-item">
-                        <div className="lesson-emoji" aria-hidden="true">
-                          {lesson.Icon ? <lesson.Icon size={20} /> : '📘'}
-                        </div>
-                        <div className="lesson-info">
-                          <h4>{lesson.title}</h4>
-                          <p>
-                            {t('learning.common.stepsCount', { count: (lesson.steps || []).length })} • {lesson.duration}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          className="btn-lesson"
-                          onClick={() => handleStartLesson(lesson)}
-                        >
-                          {t('learning.common.start')}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
 
                   {/* EPIC 4.3: Personalized Learning Path (linear, clear, low-overload) */}
                   <section

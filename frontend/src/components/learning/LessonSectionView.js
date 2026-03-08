@@ -432,7 +432,6 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
         speakText(section.textContent || section.title || 'No text content');
       }
     } else {
-          utterance.lang = speechSynthesisLangFor(inferTtsLanguageKeyFromText(text, contentLanguage || uiLanguage));
       if (isPlaying || window.speechSynthesis.speaking) {
         window.speechSynthesis.cancel();
         setIsPlaying(false);
