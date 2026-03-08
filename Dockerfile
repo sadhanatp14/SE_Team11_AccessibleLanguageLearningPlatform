@@ -5,8 +5,13 @@ FROM node:20-bookworm-slim
 
 # Python is required for the gTTS-based TTS path.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends python3 python3-pip ca-certificates \
+  && apt-get install -y --no-install-recommends python3 python3-venv python3-pip ca-certificates \
   && rm -rf /var/lib/apt/lists/*
+
+# Create a dedicated virtualenv for Python deps (PEP-668 safe)
+ENV VENV_PATH=/opt/venv
+RUN python3 -m venv $VENV_PATH \
+  && $VENV_PATH/bin/python -m pip install --no-cache-dir --upgrade pip
 
 WORKDIR /app
 
@@ -19,12 +24,13 @@ COPY backend/python_services/requirements.txt ./backend/python_services/requirem
 RUN cd backend && npm ci --omit=dev
 
 # Install Python deps for the TTS python script.
-RUN python3 -m pip install --no-cache-dir -r backend/python_services/requirements.txt
+RUN $VENV_PATH/bin/python -m pip install --no-cache-dir -r backend/python_services/requirements.txt
 
 # Copy backend source.
 COPY backend ./backend
 
 ENV NODE_ENV=production
+ENV PYTHON_EXECUTABLE=$VENV_PATH/bin/python
 WORKDIR /app/backend
 
 # Railway provides PORT; server.js respects process.env.PORT.
