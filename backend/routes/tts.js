@@ -4,14 +4,20 @@ const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-const getPythonExecutable = () => {
-    if (process.env.PYTHON_EXECUTABLE) return process.env.PYTHON_EXECUTABLE;
+const getPythonExecutableCandidates = () => {
+    const candidates = [];
+
+    if (process.env.PYTHON_EXECUTABLE) candidates.push(process.env.PYTHON_EXECUTABLE);
 
     // Prefer the repo virtualenv if present so Python deps (like gTTS) work reliably.
     const venvPython = path.resolve(__dirname, '../../.venv/bin/python');
-    if (fs.existsSync(venvPython)) return venvPython;
+    if (fs.existsSync(venvPython)) candidates.push(venvPython);
 
-    return 'python3';
+    // Common system fallbacks (Railway images vary).
+    candidates.push('python3');
+    candidates.push('python');
+
+    return [...new Set(candidates)];
 };
 
 // Endpoint to generate audio
@@ -29,49 +35,67 @@ router.post('/speak', (req, res) => {
     // Path to python script
     const scriptPath = path.join(__dirname, '../python_services/tts_gen.py');
 
-    const pythonExe = getPythonExecutable();
+    const pythonCandidates = getPythonExecutableCandidates();
 
-    // Spawn python process
-    // args: text, speed, lang
+    // Spawn python process (args: text, speed, lang)
     const resolvedLang = (typeof lang === 'string' && lang.trim())
         ? lang.trim()
         : (typeof language === 'string' && language.trim())
             ? language.trim()
             : 'en';
 
-    const pythonProcess = spawn(pythonExe, [scriptPath, text, speed || '1.0', resolvedLang]);
-
     let sentAudio = false;
+    let stderrText = '';
+    let pythonProcess;
 
-    pythonProcess.stdout.on('data', (chunk) => {
-        if (!sentAudio) {
-            sentAudio = true;
-            if (!res.headersSent) res.setHeader('Content-Type', 'audio/mpeg');
-        }
-        res.write(chunk);
-    });
+    const startPython = (pythonExe, remainingCandidates) => {
+        pythonProcess = spawn(pythonExe, [scriptPath, text, speed || '1.0', resolvedLang]);
 
-    pythonProcess.stderr.on('data', (data) => {
-        console.error(`TTS Error: ${data}`);
-    });
-
-    pythonProcess.on('error', (err) => {
-        console.error('TTS spawn error:', err);
-        if (!res.headersSent) {
-            return res.status(500).json({ message: 'TTS service unavailable' });
-        }
-        res.end();
-    });
-
-    pythonProcess.on('close', (code) => {
-        if (code !== 0) {
-            console.error(`TTS process exited with code ${code}`);
-            if (!sentAudio && !res.headersSent) {
-                return res.status(500).json({ message: 'TTS generation failed' });
+        pythonProcess.stdout.on('data', (chunk) => {
+            if (!sentAudio) {
+                sentAudio = true;
+                if (!res.headersSent) res.setHeader('Content-Type', 'audio/mpeg');
             }
-        }
-        res.end();
-    });
+            res.write(chunk);
+        });
+
+        pythonProcess.stderr.on('data', (data) => {
+            const msg = data.toString();
+            stderrText += msg;
+            console.error(`TTS Error: ${msg}`);
+        });
+
+        pythonProcess.on('error', (err) => {
+            // If the executable doesn't exist, try the next candidate.
+            if (err && err.code === 'ENOENT' && remainingCandidates.length > 0) {
+                const next = remainingCandidates[0];
+                return startPython(next, remainingCandidates.slice(1));
+            }
+
+            console.error('TTS spawn error:', err);
+            if (!res.headersSent) {
+                return res.status(500).json({ message: 'TTS service unavailable' });
+            }
+            res.end();
+        });
+
+        pythonProcess.on('close', (code) => {
+            if (code !== 0) {
+                console.error(`TTS process exited with code ${code}`);
+                if (!sentAudio && !res.headersSent) {
+                    const payload = { message: 'TTS generation failed' };
+                    if (process.env.NODE_ENV !== 'production' && stderrText.trim()) {
+                        payload.details = stderrText.trim().slice(0, 1000);
+                    }
+                    return res.status(500).json(payload);
+                }
+            }
+            res.end();
+        });
+    };
+
+    const [firstCandidate, ...restCandidates] = pythonCandidates;
+    startPython(firstCandidate, restCandidates);
 });
 
 module.exports = router;
