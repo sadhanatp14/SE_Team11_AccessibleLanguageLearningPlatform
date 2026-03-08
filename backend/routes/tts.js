@@ -3,6 +3,7 @@ const router = express.Router();
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const googleTTS = require('google-tts-api');
 
 const isTtsDebugEnabled = () => {
     const raw = String(process.env.TTS_DEBUG || '').trim().toLowerCase();
@@ -49,6 +50,64 @@ const runPythonProbe = async (pythonCandidates, probeArgs) => {
     return { ok: false, pythonExe: null, stdout: '', stderr: '', code: null, error: 'No working python executable found' };
 };
 
+const resolveLangForGoogleTts = (value) => {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) return 'en';
+    if (raw.startsWith('ta')) return 'ta';
+    if (raw.startsWith('hi')) return 'hi';
+    if (raw.startsWith('en')) return 'en';
+    return 'en';
+};
+
+const isSlowFromSpeed = (speed) => {
+    if (speed === undefined || speed === null) return false;
+    const num = Number(speed);
+    if (!Number.isFinite(num)) return false;
+    return num < 0.8;
+};
+
+const streamGoogleTts = async ({ res, text, lang, slow }) => {
+    // google-tts-api returns a public Google Translate TTS URL.
+    // This is a pragmatic fallback when Python isn't available in the host.
+    const url = googleTTS.getAudioUrl(text, {
+        lang,
+        slow,
+        host: 'https://translate.google.com'
+    });
+
+    const upstream = await fetch(url);
+    if (!upstream.ok) {
+        throw new Error(`Upstream TTS failed: ${upstream.status}`);
+    }
+
+    if (!res.headersSent) {
+        res.setHeader('Content-Type', 'audio/mpeg');
+        // Allow browsers to play/seek better.
+        const len = upstream.headers.get('content-length');
+        if (len) res.setHeader('Content-Length', len);
+        res.setHeader('Cache-Control', 'no-store');
+    }
+
+    // Stream upstream response body to client.
+    if (upstream.body) {
+        // Node fetch gives a web ReadableStream; convert chunk-by-chunk.
+        const reader = upstream.body.getReader();
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+            // eslint-disable-next-line no-await-in-loop
+            const { done, value } = await reader.read();
+            if (done) break;
+            res.write(Buffer.from(value));
+        }
+        res.end();
+        return;
+    }
+
+    // Fallback (shouldn't happen often): buffer then send.
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    res.end(buf);
+};
+
 router.get('/health', async (req, res) => {
     try {
         const pythonCandidates = getPythonExecutableCandidates();
@@ -67,7 +126,8 @@ router.get('/health', async (req, res) => {
                 ok: false,
                 tts: 'unavailable',
                 pythonCandidates,
-                error: isTtsDebugEnabled() ? (probe.error || probe.stderr || 'probe failed') : hint
+                error: isTtsDebugEnabled() ? (probe.error || probe.stderr || 'probe failed') : hint,
+                note: 'If python is unavailable in production, /api/tts/speak will try a Node.js fallback TTS.'
             });
         }
 
@@ -108,6 +168,9 @@ router.post('/speak', (req, res) => {
             ? language.trim()
             : 'en';
 
+    const slowMode = isSlowFromSpeed(speed || '1.0');
+    const resolvedLangForGoogle = resolveLangForGoogleTts(resolvedLang);
+
     let sentAudio = false;
     let stderrText = '';
     let pythonProcess;
@@ -134,6 +197,18 @@ router.post('/speak', (req, res) => {
             if (err && err.code === 'ENOENT' && remainingCandidates.length > 0) {
                 const next = remainingCandidates[0];
                 return startPython(next, remainingCandidates.slice(1));
+            }
+
+            // No python found at all: fall back to Node-based TTS.
+            if (err && err.code === 'ENOENT' && remainingCandidates.length === 0) {
+                return streamGoogleTts({ res, text, lang: resolvedLangForGoogle, slow: slowMode })
+                    .catch((e) => {
+                        console.error('Google TTS fallback failed:', e);
+                        if (!res.headersSent) {
+                            return res.status(500).json({ message: 'TTS service unavailable' });
+                        }
+                        res.end();
+                    });
             }
 
             console.error('TTS spawn error:', err);
