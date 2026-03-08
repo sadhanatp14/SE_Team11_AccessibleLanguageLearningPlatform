@@ -336,12 +336,12 @@ const DyslexiaView = () => {
             type="button"
             onClick={() => navigate('/dashboard')}
             className="btn-settings"
-            title="Home"
-            aria-label="Home"
+            title={t('learning.common.home')}
+            aria-label={t('learning.common.home')}
             style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
             <BookOpen size={18} aria-hidden="true" />
-            <span>Home</span>
+            <span>{t('learning.common.home')}</span>
           </button>
           <button
             type="button"
@@ -361,12 +361,12 @@ const DyslexiaView = () => {
             type="button"
             onClick={() => setShowSideMenu((prev) => !prev)}
             className="btn-settings"
-            title="Menu"
-            aria-label="Menu"
+            title={t('learning.common.menu')}
+            aria-label={t('learning.common.menu')}
             style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
             {showSideMenu ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
-            <span>Menu</span>
+            <span>{t('learning.common.menu')}</span>
           </button>
         </div>
       </nav>
@@ -400,7 +400,7 @@ const DyslexiaView = () => {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px' }}>Quick Controls</h3>
+              <h3 style={{ margin: 0, fontSize: '16px' }}>{t('learning.common.quickControls')}</h3>
               <button type="button" className="btn-settings" onClick={() => setShowSideMenu(false)}>
                 <X size={16} aria-hidden="true" />
               </button>
@@ -417,7 +417,7 @@ const DyslexiaView = () => {
                 style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: 8 }}
               >
                 <Hash size={18} aria-hidden="true" />
-                <span>Progress</span>
+                <span>{t('learning.common.progress')}</span>
               </button>
 
               <button
@@ -453,7 +453,7 @@ const DyslexiaView = () => {
                 style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: 8 }}
               >
                 <Settings size={18} aria-hidden="true" />
-                <span>Settings</span>
+                <span>{t('learning.common.settings')}</span>
               </button>
             </div>
           </aside>

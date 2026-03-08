@@ -188,6 +188,9 @@ const TRANSLATIONS = {
       common: {
         brand: 'LinguaEase',
         brandLearning: 'LinguaEase Learning',
+        home: 'Home',
+        menu: 'Menu',
+        quickControls: 'Quick Controls',
         progress: 'Progress',
         settings: 'Settings',
         logout: 'Logout',
@@ -584,6 +587,9 @@ const TRANSLATIONS = {
       common: {
         brand: 'LinguaEase',
         brandLearning: 'LinguaEase Learning',
+        home: 'முகப்பு',
+        menu: 'பட்டியல்',
+        quickControls: 'விரைவு கட்டுப்பாடுகள்',
         progress: 'முன்னேற்றம்',
         settings: 'அமைப்புகள்',
         logout: 'வெளியேறு',
@@ -890,6 +896,9 @@ const TRANSLATIONS = {
       common: {
         brand: 'LinguaEase',
         brandLearning: 'LinguaEase Learning',
+        home: 'मुख्य पृष्ठ',
+        menu: 'मेनू',
+        quickControls: 'त्वरित नियंत्रण',
         progress: 'प्रगति',
         settings: 'सेटिंग्स',
         logout: 'लॉग आउट',
