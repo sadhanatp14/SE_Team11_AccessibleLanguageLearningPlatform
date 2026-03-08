@@ -94,6 +94,8 @@ If you do not want server-side TTS in production, the frontend can still use the
 
 Railway commonly builds Node services with **Nixpacks**. If your backend service is deployed from the `backend/` folder, Railway may not include Python by default, which will cause `POST /api/tts/speak` to return `500`.
 
+If `GET /api/tts/health` returns an error like `No working python executable found`, it means the deployed runtime image does not have `python3`/`python` available.
+
 This repo includes a Railway-friendly Nixpacks config at `backend/nixpacks.toml` that:
 
 - installs Node dependencies with `npm ci`
@@ -106,6 +108,13 @@ After deploy, you can verify TTS dependencies with:
 Optional debugging:
 
 - Set `TTS_DEBUG=true` on the backend to include Python stderr details in `500` responses from `/api/tts/speak`.
+
+If Railway is building from the **repo root** (instead of the `backend/` folder), either:
+
+- set the Railway service **Root Directory** to `backend`, OR
+- set `NIXPACKS_CONFIG_FILE=backend/nixpacks.toml`
+
+As a fallback, this repo also includes a root-level `nixpacks.toml` that installs Python + gTTS and starts the backend from `backend/`.
 
 ## CORS
 

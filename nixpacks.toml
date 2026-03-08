@@ -1,0 +1,21 @@
+# Railway / Nixpacks config (repo root)
+# This exists to support Railway services that use the repository root as the build root.
+# It ensures Python is available so backend TTS (/api/tts/speak) can spawn python.
+
+providers = ['...', 'python']
+
+[phases.setup]
+# Ensure Python exists in the image.
+# (Node is provided by the Node provider inferred from package.json)
+nixPkgs = ['...', 'python3']
+
+[phases.install]
+cmds = [
+  # Backend deps
+  'cd backend && npm ci',
+  # Python deps for TTS
+  'python3 -m pip install --no-cache-dir -r backend/python_services/requirements.txt'
+]
+
+[start]
+cmd = 'cd backend && npm start'
