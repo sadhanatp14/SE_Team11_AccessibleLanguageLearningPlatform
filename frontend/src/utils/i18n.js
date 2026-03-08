@@ -234,6 +234,10 @@ const TRANSLATIONS = {
         statusNotStarted: 'Not Started',
         statusInProgress: 'In Progress',
         percentComplete: '{percent}% Complete',
+        openAllLessons: 'Open All Lessons',
+        lessonsAvailableInLibrary: 'These lessons are available in Open All Lessons.',
+        useOpenAllLessons: 'Use the lesson library to choose and start any lesson.',
+        learningPathInLibrary: 'Your learning path is available in Open All Lessons.',
       },
       dyslexia: {
         greeting: 'Hello',
@@ -656,6 +660,10 @@ const TRANSLATIONS = {
         statusNotStarted: 'தொடங்கவில்லை',
         statusInProgress: 'நடந்து கொண்டிருக்கிறது',
         percentComplete: '{percent}% முடிந்தது',
+        openAllLessons: 'அனைத்து பாடங்களையும் திறக்க',
+        lessonsAvailableInLibrary: 'இந்த பாடங்கள் "அனைத்து பாடங்கள்" பகுதியில் கிடைக்கின்றன.',
+        useOpenAllLessons: 'பாட நூலகத்தில் இருந்து எந்தப் பாடத்தையும் தேர்ந்து தொடங்குங்கள்.',
+        learningPathInLibrary: 'உங்கள் கற்றல் பாதை "அனைத்து பாடங்கள்" பகுதியில் கிடைக்கிறது.',
       },
       dyslexia: {
         greeting: 'வணக்கம்',
@@ -988,6 +996,10 @@ const TRANSLATIONS = {
         statusNotStarted: 'शुरू नहीं हुआ',
         statusInProgress: 'चल रहा है',
         percentComplete: '{percent}% पूरा',
+        openAllLessons: 'सभी पाठ खोलें',
+        lessonsAvailableInLibrary: 'ये पाठ "सभी पाठ" में उपलब्ध हैं।',
+        useOpenAllLessons: 'पाठ लाइब्रेरी से कोई भी पाठ चुनकर शुरू करें।',
+        learningPathInLibrary: 'आपका लर्निंग पाथ "सभी पाठ" में उपलब्ध है।',
       },
       dyslexia: {
         greeting: 'नमस्ते',

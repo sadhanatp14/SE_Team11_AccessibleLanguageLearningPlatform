@@ -49,6 +49,14 @@ import MotivationReward from './MotivationReward';
 // import AutismLearningPath from './AutismLearningPath';
 import './AutismView.css';
 
+const AUTISM_DASHBOARD_DUPLICATE_LESSON_TITLES = new Set([
+  'Greetings',
+  'Basic Words',
+  'Numbers',
+  'Family Members',
+  'Common Actions',
+]);
+
 const joinUrl = (base, path) => {
   const baseStr = String(base || '').replace(/\/+$/, '');
   const pathStr = String(path || '');
@@ -998,6 +1006,10 @@ const AutismView = ({ initialLessonId = null }) => {
 
   // Autism lessons have a fixed teaching language per lesson (Tamil/English/Hindi).
   // UI language should not hide lessons; it only controls scaffolding/chrome text.
+  const dashboardLessons = useMemo(() => {
+    return lessons.filter((lesson) => !AUTISM_DASHBOARD_DUPLICATE_LESSON_TITLES.has(lesson.title));
+  }, [lessons]);
+
   const displayedLessons = lessons;
 
   // EPIC 4.7.1-4.7.4: Recommend one follow-up lesson from review + trend data.
@@ -1005,7 +1017,7 @@ const AutismView = ({ initialLessonId = null }) => {
     const recommendation = getReviewBasedRecommendation({
       user,
       module: 'autism',
-      lessons: displayedLessons,
+      lessons: dashboardLessons,
       completedLessonIds: completedLessons,
     });
 
@@ -1016,13 +1028,17 @@ const AutismView = ({ initialLessonId = null }) => {
 
     setNextRecommendation(recommendation);
     setShowRecommendation(true);
-  }, [completedLessons, displayedLessons, user]);
+  }, [completedLessons, dashboardLessons, user]);
 
   // Get current step data
   const currentLesson = displayedLessons.find(l => l.id === selectedLesson) || lessons.find(l => l.id === selectedLesson);
   const currentStep = currentLesson?.steps[currentStepIndex];
   const totalSteps = currentLesson?.steps.length || 0;
-  const currentPathLessonId = selectedLesson || nextRecommendation?.lesson?.id || displayedLessons.find((lesson) => !completedLessons.includes(lesson.id))?.id || null;
+  const currentPathLessonId =
+    selectedLesson ||
+    nextRecommendation?.lesson?.id ||
+    dashboardLessons.find((lesson) => !completedLessons.includes(lesson.id))?.id ||
+    null;
 
   const teachingLanguage = useMemo(() => {
     return normalizePreferredLanguage(currentLesson?.language || 'english');
@@ -2465,7 +2481,29 @@ const AutismView = ({ initialLessonId = null }) => {
 
         {/* Lessons Grid - Predictable Layout */}
         <div className="lessons-simple-grid" aria-label="Available lessons">
-          {displayedLessons.map((lesson, index) => {
+          {dashboardLessons.length === 0 ? (
+            <div
+              style={{
+                gridColumn: '1 / -1',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '16px',
+              }}
+            >
+              <p style={{ margin: 0, fontWeight: 700 }}>{t('learning.common.lessonsAvailableInLibrary')}</p>
+              <p style={{ margin: '6px 0 0 0', color: '#475569' }}>{t('learning.common.useOpenAllLessons')}</p>
+              <button
+                type="button"
+                className="btn-lesson-start"
+                style={{ marginTop: 12 }}
+                onClick={() => navigate('/lesson-library')}
+              >
+                {t('learning.common.openAllLessons')}
+              </button>
+            </div>
+          ) : (
+            dashboardLessons.map((lesson, index) => {
             const isCompleted = completedLessons.includes(lesson.id);
             const palette = [
               { accent: '#2563eb', soft: '#dbeafe', hover: '#1d4ed8' },
@@ -2512,7 +2550,8 @@ const AutismView = ({ initialLessonId = null }) => {
                 </button>
               </div>
             );
-          })}
+          })
+          )}
         </div>
 
         {/* EPIC 4.5: Motivational Feedback */}
@@ -2626,7 +2665,10 @@ const AutismView = ({ initialLessonId = null }) => {
         >
           <h3 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>Learning Path</h3>
           <div style={{ display: 'grid', gap: '8px' }}>
-            {displayedLessons.map((lesson, index) => {
+            {dashboardLessons.length === 0 ? (
+              <p style={{ margin: 0, color: '#475569' }}>{t('learning.common.learningPathInLibrary')}</p>
+            ) : (
+              dashboardLessons.map((lesson, index) => {
               const isCompleted = completedLessons.includes(lesson.id);
               const isCurrent = currentPathLessonId === lesson.id && !isCompleted;
               return (
@@ -2648,7 +2690,8 @@ const AutismView = ({ initialLessonId = null }) => {
                   </span>
                 </div>
               );
-            })}
+            })
+            )}
           </div>
         </section>
 
