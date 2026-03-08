@@ -4,6 +4,11 @@ const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
+const isTtsDebugEnabled = () => {
+    const raw = String(process.env.TTS_DEBUG || '').trim().toLowerCase();
+    return raw === '1' || raw === 'true' || raw === 'yes';
+};
+
 const getPythonExecutableCandidates = () => {
     const candidates = [];
 
@@ -19,6 +24,57 @@ const getPythonExecutableCandidates = () => {
 
     return [...new Set(candidates)];
 };
+
+const runPythonProbe = async (pythonCandidates, probeArgs) => {
+    for (const pythonExe of pythonCandidates) {
+        // eslint-disable-next-line no-await-in-loop
+        const result = await new Promise((resolve) => {
+            const child = spawn(pythonExe, probeArgs);
+            let stdout = '';
+            let stderr = '';
+
+            child.stdout.on('data', (d) => { stdout += d.toString(); });
+            child.stderr.on('data', (d) => { stderr += d.toString(); });
+            child.on('error', (err) => {
+                resolve({ ok: false, pythonExe, error: err && err.message ? err.message : String(err), stdout, stderr, code: null });
+            });
+            child.on('close', (code) => {
+                resolve({ ok: code === 0, pythonExe, stdout, stderr, code });
+            });
+        });
+
+        if (result.ok) return result;
+    }
+
+    return { ok: false, pythonExe: null, stdout: '', stderr: '', code: null, error: 'No working python executable found' };
+};
+
+router.get('/health', async (req, res) => {
+    try {
+        const pythonCandidates = getPythonExecutableCandidates();
+        const probe = await runPythonProbe(pythonCandidates, ['-c', 'import sys; import gtts; print(sys.version); print(getattr(gtts, "__version__", "unknown"))']);
+
+        if (!probe.ok) {
+            return res.status(500).json({
+                ok: false,
+                tts: 'unavailable',
+                pythonCandidates,
+                error: isTtsDebugEnabled() ? (probe.error || probe.stderr || 'probe failed') : 'probe failed'
+            });
+        }
+
+        const [pythonVersionLine, gttsVersionLine] = probe.stdout.trim().split(/\r?\n/);
+        return res.json({
+            ok: true,
+            tts: 'available',
+            pythonExe: probe.pythonExe,
+            pythonVersion: pythonVersionLine || null,
+            gttsVersion: gttsVersionLine || null
+        });
+    } catch (err) {
+        return res.status(500).json({ ok: false, tts: 'unavailable' });
+    }
+});
 
 // Endpoint to generate audio
 router.post('/speak', (req, res) => {
@@ -84,7 +140,7 @@ router.post('/speak', (req, res) => {
                 console.error(`TTS process exited with code ${code}`);
                 if (!sentAudio && !res.headersSent) {
                     const payload = { message: 'TTS generation failed' };
-                    if (process.env.NODE_ENV !== 'production' && stderrText.trim()) {
+                    if (isTtsDebugEnabled() && stderrText.trim()) {
                         payload.details = stderrText.trim().slice(0, 1000);
                     }
                     return res.status(500).json(payload);

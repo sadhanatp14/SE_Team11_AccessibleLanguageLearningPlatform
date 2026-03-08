@@ -90,6 +90,23 @@ To enable it in production:
 
 If you do not want server-side TTS in production, the frontend can still use the browser speech synthesis fallback, but user experience may differ across devices.
 
+### Railway notes (backend)
+
+Railway commonly builds Node services with **Nixpacks**. If your backend service is deployed from the `backend/` folder, Railway may not include Python by default, which will cause `POST /api/tts/speak` to return `500`.
+
+This repo includes a Railway-friendly Nixpacks config at `backend/nixpacks.toml` that:
+
+- installs Node dependencies with `npm ci`
+- installs Python dependencies from `backend/python_services/requirements.txt`
+
+After deploy, you can verify TTS dependencies with:
+
+- `GET /api/tts/health` (returns Python + gTTS versions when available)
+
+Optional debugging:
+
+- Set `TTS_DEBUG=true` on the backend to include Python stderr details in `500` responses from `/api/tts/speak`.
+
 ## CORS
 
 The backend currently uses `cors()` without restrictions.
