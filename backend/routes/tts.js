@@ -140,6 +140,51 @@ const streamUrlToResponse = (url, res, redirectBudget = 3) => {
     });
 };
 
+const probeUrlOk = (url, redirectBudget = 3) => {
+    return new Promise((resolve) => {
+        let parsed;
+        try {
+            parsed = new URL(url);
+        } catch {
+            resolve({ ok: false, status: null, error: 'Invalid URL' });
+            return;
+        }
+
+        const client = parsed.protocol === 'http:' ? http : https;
+        const req = client.request(
+            {
+                protocol: parsed.protocol,
+                hostname: parsed.hostname,
+                port: parsed.port,
+                path: `${parsed.pathname}${parsed.search}`,
+                method: 'GET',
+                headers: {
+                    'User-Agent': 'accessible-language-learning-platform/1.0',
+                    'Accept': 'audio/mpeg,audio/*;q=0.9,*/*;q=0.8',
+                },
+            },
+            (upstream) => {
+                const status = upstream.statusCode || 0;
+                const location = upstream.headers.location;
+
+                if ([301, 302, 303, 307, 308].includes(status) && location && redirectBudget > 0) {
+                    upstream.resume();
+                    const nextUrl = location.startsWith('http') ? location : new URL(location, url).toString();
+                    probeUrlOk(nextUrl, redirectBudget - 1).then(resolve);
+                    return;
+                }
+
+                // We don't need the whole body; just confirm reachability.
+                upstream.resume();
+                resolve({ ok: status >= 200 && status < 300, status });
+            }
+        );
+
+        req.on('error', (err) => resolve({ ok: false, status: null, error: err?.message ? err.message : String(err) }));
+        req.end();
+    });
+};
+
 const streamGoogleTts = async ({ res, text, lang, slow }) => {
     // google-tts-api returns a public Google Translate TTS URL.
     // This is a pragmatic fallback when Python isn't available in the host.
@@ -157,6 +202,21 @@ router.get('/health', async (req, res) => {
         const pythonCandidates = getPythonExecutableCandidates();
         const probe = await runPythonProbe(pythonCandidates, ['-c', 'import sys; import gtts; print(sys.version); print(getattr(gtts, "__version__", "unknown"))']);
 
+        const wantsGoogleProbe = String(req.query.probeGoogle || '').trim() === '1';
+        let googleProbe = null;
+        if (wantsGoogleProbe) {
+            try {
+                const url = googleTTS.getAudioUrl('health check', {
+                    lang: 'en',
+                    slow: false,
+                    host: 'https://translate.google.com'
+                });
+                googleProbe = await probeUrlOk(url);
+            } catch (e) {
+                googleProbe = { ok: false, status: null, error: e?.message ? e.message : String(e) };
+            }
+        }
+
         if (!probe.ok) {
             const combined = `${probe.error || ''}\n${probe.stderr || ''}`.toLowerCase();
             const isPythonMissing = combined.includes('enoent') || combined.includes('not found') || combined.includes('no such file');
@@ -170,6 +230,7 @@ router.get('/health', async (req, res) => {
                 ok: false,
                 tts: 'unavailable',
                 pythonCandidates,
+                googleFallback: wantsGoogleProbe ? googleProbe : undefined,
                 error: isTtsDebugEnabled() ? (probe.error || probe.stderr || 'probe failed') : hint,
                 note: 'If python is unavailable in production, /api/tts/speak will try a Node.js fallback TTS.'
             });
@@ -181,7 +242,8 @@ router.get('/health', async (req, res) => {
             tts: 'available',
             pythonExe: probe.pythonExe,
             pythonVersion: pythonVersionLine || null,
-            gttsVersion: gttsVersionLine || null
+            gttsVersion: gttsVersionLine || null,
+            googleFallback: wantsGoogleProbe ? googleProbe : undefined
         });
     } catch (err) {
         return res.status(500).json({ ok: false, tts: 'unavailable' });

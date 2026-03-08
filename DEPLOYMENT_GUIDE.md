@@ -31,6 +31,14 @@ git push origin main
 3. Railway auto-detects your setup
 4. Click **"Deploy"**
 
+⚠️ **Important (Python TTS):** Railway’s default builder (Railpack) does not include a Python runtime. If you want `/api/tts/speak` to use the Python gTTS path in production, set the backend service builder to **Dockerfile**.
+
+If your Railway service **Root Directory** is set to `backend/`, this repo includes `backend/Dockerfile` which installs:
+
+- Node dependencies
+- Python 3 + pip
+- `gTTS` from `python_services/requirements.txt`
+
 ### 2.3 Configure Environment Variables in Railway
 After deployment, go to **Variables** tab and add:
 
@@ -39,7 +47,8 @@ MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/accessible-langu
 JWT_SECRET=<generate-a-strong-random-string>
 NODE_ENV=production
 FRONTEND_URL=https://your-project.vercel.app
-GOOGLE_AI_KEY=<your-google-ai-key>
+GEMINI_API_KEY=<your-gemini-api-key>
+GEMINI_MODEL=<optional-model-name>
 ```
 
 ⚠️ **For MongoDB URI:**
@@ -73,7 +82,7 @@ GOOGLE_AI_KEY=<your-google-ai-key>
 After deployment, go to **Settings** → **Environment Variables**:
 
 ```
-REACT_APP_API_URL=https://your-backend-production-xxxx.railway.app
+REACT_APP_API_URL=https://your-backend-production-xxxx.railway.app/api
 ```
 
 Then **Redeploy** to apply the variable.

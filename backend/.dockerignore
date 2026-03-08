@@ -1,0 +1,16 @@
+# Node artifacts
+node_modules
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Tests/coverage
+coverage
+__tests__
+
+# Local env files
+.env
+.env.*
+
+# OS junk
+.DS_Store
