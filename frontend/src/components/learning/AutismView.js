@@ -1017,7 +1017,7 @@ const AutismView = ({ initialLessonId = null }) => {
     const recommendation = getReviewBasedRecommendation({
       user,
       module: 'autism',
-      lessons: dashboardLessons,
+      lessons,
       completedLessonIds: completedLessons,
     });
 
@@ -1028,7 +1028,7 @@ const AutismView = ({ initialLessonId = null }) => {
 
     setNextRecommendation(recommendation);
     setShowRecommendation(true);
-  }, [completedLessons, dashboardLessons, user]);
+  }, [completedLessons, lessons, user]);
 
   // Get current step data
   const currentLesson = displayedLessons.find(l => l.id === selectedLesson) || lessons.find(l => l.id === selectedLesson);
@@ -1037,7 +1037,7 @@ const AutismView = ({ initialLessonId = null }) => {
   const currentPathLessonId =
     selectedLesson ||
     nextRecommendation?.lesson?.id ||
-    dashboardLessons.find((lesson) => !completedLessons.includes(lesson.id))?.id ||
+    lessons.find((lesson) => !completedLessons.includes(lesson.id))?.id ||
     null;
 
   const teachingLanguage = useMemo(() => {
@@ -2482,25 +2482,41 @@ const AutismView = ({ initialLessonId = null }) => {
         {/* Lessons Grid - Predictable Layout */}
         <div className="lessons-simple-grid" aria-label="Available lessons">
           {dashboardLessons.length === 0 ? (
-            <div
-              style={{
-                gridColumn: '1 / -1',
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '12px',
-                padding: '16px',
-              }}
-            >
-              <p style={{ margin: 0, fontWeight: 700 }}>{t('learning.common.lessonsAvailableInLibrary')}</p>
-              <p style={{ margin: '6px 0 0 0', color: '#475569' }}>{t('learning.common.useOpenAllLessons')}</p>
-              <button
-                type="button"
-                className="btn-lesson-start"
-                style={{ marginTop: 12 }}
-                onClick={() => navigate('/lesson-library')}
-              >
-                {t('learning.common.openAllLessons')}
-              </button>
+            <div className="autism-dashboard-recommendation" style={{ gridColumn: '1 / -1' }}>
+              {nextRecommendation ? (
+                nextRecommendation.allCompleted ? (
+                  <NextLessonCard
+                    variant="autism"
+                    allCompleted
+                    completionMsg={nextRecommendation.reason}
+                    totalLessons={nextRecommendation.totalLessons}
+                  />
+                ) : (
+                  showRecommendation &&
+                  nextRecommendation.lesson && (
+                    <NextLessonCard
+                      variant="autism"
+                      recommendation={{
+                        ...nextRecommendation.lesson,
+                        position: nextRecommendation.position,
+                      }}
+                      reason={nextRecommendation.reason}
+                      completedCount={nextRecommendation.completedCount}
+                      totalLessons={nextRecommendation.totalLessons}
+                      onAccept={(rec) => handleStartLesson(rec.id)}
+                      onSkip={() => setShowRecommendation(false)}
+                    />
+                  )
+                )
+              ) : (
+                <button
+                  type="button"
+                  className="btn-lesson-start"
+                  onClick={() => navigate('/lesson-library')}
+                >
+                  {t('learning.common.openAllLessons')}
+                </button>
+              )}
             </div>
           ) : (
             dashboardLessons.map((lesson, index) => {
@@ -2621,37 +2637,6 @@ const AutismView = ({ initialLessonId = null }) => {
           </div>
         )}
 
-        {/* FEATURE: Next lesson recommendation - using NextLessonCard component */}
-        {nextRecommendation && (
-          <section className="next-lesson-recommendation" aria-label="Recommended next lesson" style={{ marginBottom: '24px' }}>
-            {nextRecommendation.allCompleted ? (
-              <NextLessonCard
-                variant="autism"
-                allCompleted
-                completionMsg={nextRecommendation.reason}
-                totalLessons={nextRecommendation.totalLessons}
-              />
-            ) : (
-              showRecommendation &&
-              nextRecommendation.lesson && (
-                <NextLessonCard
-                  variant="autism"
-                  recommendation={{
-                    title: `${nextRecommendation.recommendationType === 'review' ? 'Review' : 'Next'}: ${nextRecommendation.lesson.title}`,
-                    description: nextRecommendation.lesson.description,
-                    position: nextRecommendation.position,
-                  }}
-                  reason={nextRecommendation.reason}
-                  completedCount={nextRecommendation.completedCount}
-                  totalLessons={nextRecommendation.totalLessons}
-                  onAccept={() => handleStartLesson(nextRecommendation.lesson.id)}
-                  onSkip={() => setShowRecommendation(false)}
-                />
-              )
-            )}
-          </section>
-        )}
-
         {/* EPIC 4.3: Personalized Learning Path (linear, clear, low-overload) */}
         <section
           aria-label="Autism learning path"
@@ -2665,10 +2650,7 @@ const AutismView = ({ initialLessonId = null }) => {
         >
           <h3 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>Learning Path</h3>
           <div style={{ display: 'grid', gap: '8px' }}>
-            {dashboardLessons.length === 0 ? (
-              <p style={{ margin: 0, color: '#475569' }}>{t('learning.common.learningPathInLibrary')}</p>
-            ) : (
-              dashboardLessons.map((lesson, index) => {
+            {lessons.map((lesson, index) => {
               const isCompleted = completedLessons.includes(lesson.id);
               const isCurrent = currentPathLessonId === lesson.id && !isCompleted;
               return (
@@ -2690,8 +2672,7 @@ const AutismView = ({ initialLessonId = null }) => {
                   </span>
                 </div>
               );
-            })
-            )}
+            })}
           </div>
         </section>
 

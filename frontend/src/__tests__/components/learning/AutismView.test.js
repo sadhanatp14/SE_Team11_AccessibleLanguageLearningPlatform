@@ -170,6 +170,12 @@ describe('AutismView Component - Autism Learning Features', () => {
     api.get.mockResolvedValue({ data: { success: true, completedLessons: [] } });
     api.post.mockResolvedValue({ data: { success: true } });
 
+    try {
+      window.localStorage.clear();
+    } catch {
+      // non-blocking
+    }
+
     mockPreferences = {
       preferredLanguage: 'english',
     };
@@ -187,13 +193,18 @@ describe('AutismView Component - Autism Learning Features', () => {
       renderWithAuth(<AutismView />);
       
       await waitFor(() => {
-        // Lessons are now accessed via the lesson library, not duplicated on the Autism dashboard.
-        expect(screen.queryByText('Greetings')).not.toBeInTheDocument();
-        expect(screen.queryByText('Basic Words')).not.toBeInTheDocument();
-        expect(screen.queryByText('Numbers')).not.toBeInTheDocument();
-        expect(screen.queryByText('Family Members')).not.toBeInTheDocument();
-        expect(screen.queryByText('Common Actions')).not.toBeInTheDocument();
+        // Lessons are not duplicated as dashboard lesson cards.
+        expect(document.querySelectorAll('.lesson-simple-card').length).toBe(0);
       });
+
+      // The old explanatory empty-state card is removed.
+      expect(screen.queryByText(/These lessons are available in Open All Lessons\./i)).not.toBeInTheDocument();
+
+      // A prominent next-lesson recommendation card is shown instead.
+      expect(await screen.findByLabelText('Recommended next lesson')).toBeInTheDocument();
+
+      // Learning path is visible (titles may appear there).
+      expect(screen.getByText('Learning Path')).toBeInTheDocument();
 
       // Verify Open All Lessons entry point exists
       expect(screen.getAllByRole('button', { name: /open all lessons/i }).length).toBeGreaterThan(0);
@@ -994,7 +1005,9 @@ describe('AutismView Component - Autism Learning Features', () => {
         expect(screen.getByText('Choose your lesson')).toBeInTheDocument();
       });
 
-      expect(screen.queryByText('Greetings')).not.toBeInTheDocument();
+      // Dashboard shows recommendation + learning path, but no duplicated lesson cards.
+      expect(document.querySelectorAll('.lesson-simple-card').length).toBe(0);
+      expect(await screen.findByLabelText('Recommended next lesson')).toBeInTheDocument();
       expect(screen.getAllByRole('button', { name: /open all lessons/i }).length).toBeGreaterThan(0);
     });
 

@@ -177,6 +177,13 @@
   gap: 25px;
 }
 
+/* When the dashboard lesson list is intentionally empty, we show the
+   NextLessonCard inside the grid. Remove its default bottom margin so
+   spacing remains consistent with other grid items. */
+.autism-dashboard-recommendation .next-lesson-card {
+  margin-bottom: 0;
+}
+
 .lesson-simple-card {
   background: white;
   border-radius: 20px;

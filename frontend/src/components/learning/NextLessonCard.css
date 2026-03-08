@@ -63,9 +63,9 @@
 
 /* ===== Autism variant (darker, calmer tone) ===== */
 .next-lesson-card--autism {
-  background: linear-gradient(135deg, #dbe7f4 0%, #c2d6ea 50%, #a8c4e0 100%);
-  border-color: #7ea6ca;
-  box-shadow: 0 8px 30px rgba(30, 64, 89, 0.16);
+  background: linear-gradient(135deg, #d2deec 0%, #b4c7db 50%, #94afc9 100%);
+  border-color: #6e98bb;
+  box-shadow: 0 10px 34px rgba(15, 23, 42, 0.18);
 }
 
 .next-lesson-card--autism .nlc-icon {
