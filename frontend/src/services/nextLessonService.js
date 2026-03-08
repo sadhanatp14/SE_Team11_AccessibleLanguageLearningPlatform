@@ -59,6 +59,24 @@ export const LESSON_ORDER = [
     descriptionSyllables: 'Count, match, and or-der num-bers',
     totalInteractions: 11,
   },
+  {
+    id: 4,
+    apiId: 'lesson-tamil-essentials',
+    title: 'Tamil Essentials',
+    titleSyllables: 'Ta-mil Es-sen-tials',
+    description: 'Learn a few useful Tamil words and phrases',
+    descriptionSyllables: 'Learn use-ful Ta-mil words and phra-ses',
+    totalInteractions: 6,
+  },
+  {
+    id: 5,
+    apiId: 'lesson-hindi-essentials',
+    title: 'Hindi Essentials',
+    titleSyllables: 'Hin-di Es-sen-tials',
+    description: 'Learn a few useful Hindi words and phrases',
+    descriptionSyllables: 'Learn use-ful Hin-di words and phra-ses',
+    totalInteractions: 6,
+  },
 ];
 
 /**

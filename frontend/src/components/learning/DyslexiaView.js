@@ -43,7 +43,7 @@ import NextLessonCard from './NextLessonCard';
 // Reusable profile/settings modal component
 import ProfileSettings from '../ProfileSettings';
 // Icon components from lucide-react used in the UI
-import { BookOpen, ChevronLeft, Hash, Info, Menu, MessageCircle, Settings, Volume2, TrendingUp, X } from 'lucide-react';
+import { BookOpen, ChevronLeft, Hash, Info, Languages, Menu, MessageCircle, Settings, Volume2, TrendingUp, X } from 'lucide-react';
 // Custom hook that persists the syllable-mode preference in localStorage
 import { useDyslexiaSyllableMode } from '../../utils/dyslexiaSyllableMode';
 import { useI18n } from '../../utils/i18n';
@@ -144,6 +144,36 @@ const DyslexiaView = () => {
       descriptionSyllables: 'Count, match, and or-der num-bers',
       totalSections: 3,
       totalInteractions: 11,
+    },
+    {
+      id: 4,
+      titleKey: 'learning.dyslexia.lessonTamilTitle',
+      title: 'Tamil Essentials',
+      titleSyllables: 'Ta-mil Es-sen-tials',
+      level: 'Beginner',
+      apiId: 'lesson-tamil-essentials',
+      Icon: Languages,
+      color: '#f59e0b',
+      descriptionKey: 'learning.dyslexia.lessonTamilDesc',
+      description: 'Learn a few useful Tamil words and phrases',
+      descriptionSyllables: 'Learn use-ful Ta-mil words and phra-ses',
+      totalSections: 2,
+      totalInteractions: 6,
+    },
+    {
+      id: 5,
+      titleKey: 'learning.dyslexia.lessonHindiTitle',
+      title: 'Hindi Essentials',
+      titleSyllables: 'Hin-di Es-sen-tials',
+      level: 'Beginner',
+      apiId: 'lesson-hindi-essentials',
+      Icon: Languages,
+      color: '#a855f7',
+      descriptionKey: 'learning.dyslexia.lessonHindiDesc',
+      description: 'Learn a few useful Hindi words and phrases',
+      descriptionSyllables: 'Learn use-ful Hin-di words and phra-ses',
+      totalSections: 2,
+      totalInteractions: 6,
     },
   ];
 

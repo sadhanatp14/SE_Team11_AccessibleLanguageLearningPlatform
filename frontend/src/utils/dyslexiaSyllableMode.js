@@ -5,6 +5,8 @@ export const DYSLEXIA_LESSON_IDS = new Set([
   'lesson-greetings',
   'lesson-vocabulary',
   'lesson-numbers',
+  'lesson-tamil-essentials',
+  'lesson-hindi-essentials',
 ]);
 
 export const isDyslexiaLessonId = (lessonId) => {
@@ -119,6 +121,8 @@ export const getDyslexiaLessonTitle = (lessonId, fallbackTitle = '') => {
     'lesson-greetings': 'Greet-ings',
     'lesson-vocabulary': 'Ba-sic Words',
     'lesson-numbers': 'Num-bers',
+    'lesson-tamil-essentials': 'Ta-mil Es-sen-tials',
+    'lesson-hindi-essentials': 'Hin-di Es-sen-tials',
   };
   return map[id] || fallbackTitle || id;
 };

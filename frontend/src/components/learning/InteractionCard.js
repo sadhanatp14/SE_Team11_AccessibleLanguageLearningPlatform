@@ -8,6 +8,7 @@ import { useI18n } from '../../utils/i18n';
 import api from '../../utils/api';
 import {
   backendTtsLangFor,
+  inferTtsLanguageKeyFromText,
   pickByLanguage,
   resolveBilingualTextModeFromPreferences,
   resolveUiLanguageFromPreferences,
@@ -394,7 +395,8 @@ const InteractionCard = ({
 
     // Try Backend TTS first
     try {
-      const ttsLanguageKey = overrides.languageKey ?? uiLanguage;
+      const baseLanguageKey = overrides.languageKey ?? uiLanguage;
+      const ttsLanguageKey = inferTtsLanguageKeyFromText(text, baseLanguageKey);
       const ttsUrl = joinUrl(api?.defaults?.baseURL || '/api', '/tts/speak');
       const response = await fetch(ttsUrl, {
         method: 'POST',
@@ -459,8 +461,9 @@ const InteractionCard = ({
       if (typeof window !== 'undefined' && window.speechSynthesis) {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = overrides.rate ?? 0.85;
-        const ttsLanguageKey = overrides.languageKey ?? uiLanguage;
-        utterance.lang = overrides.lang ?? speechSynthesisLangFor(ttsLanguageKey);
+        const baseLanguageKey = overrides.languageKey ?? uiLanguage;
+        const inferredLanguageKey = inferTtsLanguageKeyFromText(text, baseLanguageKey);
+        utterance.lang = overrides.lang ?? speechSynthesisLangFor(inferredLanguageKey);
 
         if (overrides.trackWords) {
           utterance.onboundary = (event) => {

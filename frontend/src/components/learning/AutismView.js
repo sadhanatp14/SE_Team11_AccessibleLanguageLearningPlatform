@@ -2614,6 +2614,7 @@ const AutismView = ({ initialLessonId = null }) => {
             flexWrap: 'wrap',
             gap: '12px',
             padding: '12px 16px',
+            marginTop: '20px',
             background: 'linear-gradient(135deg, #e8f5e9, #c8e6c9)',
             borderRadius: '8px',
             marginBottom: '20px',

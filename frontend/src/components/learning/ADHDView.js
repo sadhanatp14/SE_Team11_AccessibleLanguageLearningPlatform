@@ -43,7 +43,13 @@ import {
   Volume2,
   X,
 } from 'lucide-react';
-import { backendTtsLangFor, pickByLanguage, resolveUiLanguageFromPreferences, speechSynthesisLangFor } from '../../utils/languagePrefs';
+import {
+  backendTtsLangFor,
+  inferTtsLanguageKeyFromText,
+  pickByLanguage,
+  resolveUiLanguageFromPreferences,
+  speechSynthesisLangFor,
+} from '../../utils/languagePrefs';
 
 const joinUrl = (base, path) => {
   const baseStr = String(base || '').replace(/\/+$/, '');
@@ -383,10 +389,12 @@ const ADHDView = ({ initialLessonId = null }) => {
     if (trackWords) setActiveWord('');
 
     try {
+      const baseLangKey = activeLesson?.ttsLang || uiLanguage;
+      const ttsLanguageKey = inferTtsLanguageKeyFromText(text, baseLangKey);
       const response = await fetch(ttsEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, speed: rate, lang: backendTtsLangFor(uiLanguage) })
+        body: JSON.stringify({ text, speed: rate, lang: backendTtsLangFor(ttsLanguageKey) })
       });
 
       if (!response.ok) {
@@ -431,7 +439,9 @@ const ADHDView = ({ initialLessonId = null }) => {
       console.error("Server TTS failed, falling back to browser:", error);
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = rate;
-      utterance.lang = speechSynthesisLangFor(uiLanguage);
+      const baseLangKey = activeLesson?.ttsLang || uiLanguage;
+      const ttsLanguageKey = inferTtsLanguageKeyFromText(text, baseLangKey);
+      utterance.lang = speechSynthesisLangFor(ttsLanguageKey);
       if (trackWords) {
         utterance.onboundary = (event) => {
           if (event.name === 'word') {
@@ -795,6 +805,131 @@ const ADHDView = ({ initialLessonId = null }) => {
           options: ['A crow', 'A rabbit', 'A turtle'],
           correct: 'A crow',
           hint: 'It flew down.'
+        }
+      ]
+    }
+    ,
+    {
+      id: 5,
+      title: 'Tamil Essentials',
+      duration: '10 min',
+      Icon: Volume2,
+      ttsLang: 'tamil',
+      steps: [
+        {
+          type: 'learn',
+          content: 'வணக்கம் (Vanakkam)',
+          explanation: 'A polite way to say “Hello” in Tamil.',
+          visual: null,
+          highlight: 'வணக்கம்',
+          hint: 'Try saying it slowly: Va-nak-kam.'
+        },
+        {
+          type: 'quiz',
+          question: 'வணக்கம் means…',
+          options: ['Hello', 'Thank you', 'Goodbye'],
+          correct: 'Hello',
+          hint: 'It is used to greet someone.'
+        },
+        {
+          type: 'learn',
+          content: 'நன்றி (Nandri)',
+          explanation: 'This means “Thank you” in Tamil.',
+          visual: null,
+          highlight: 'நன்றி',
+          hint: 'Use this after someone helps you.'
+        },
+        {
+          type: 'quiz',
+          question: 'Choose “Thank you” in Tamil.',
+          options: ['வணக்கம்', 'நன்றி', 'இல்லை'],
+          correct: 'நன்றி',
+          hint: 'It starts with ந.'
+        },
+        {
+          type: 'learn',
+          content: 'ஆம் (Aam)',
+          explanation: 'This means “Yes” in Tamil.',
+          visual: null,
+          highlight: 'ஆம்',
+          hint: 'Say it when you agree.'
+        },
+        {
+          type: 'learn',
+          content: 'இல்லை (Illai)',
+          explanation: 'This means “No” in Tamil.',
+          visual: null,
+          highlight: 'இல்லை',
+          hint: 'Say it when you disagree.'
+        },
+        {
+          type: 'quiz',
+          question: 'Which one means “No”?',
+          options: ['ஆம்', 'நன்றி', 'இல்லை'],
+          correct: 'இல்லை',
+          hint: 'It has two “ல்” sounds.'
+        }
+      ]
+    },
+    {
+      id: 6,
+      title: 'Hindi Essentials',
+      duration: '10 min',
+      Icon: Mic,
+      ttsLang: 'hindi',
+      steps: [
+        {
+          type: 'learn',
+          content: 'नमस्ते (Namaste)',
+          explanation: 'A polite way to say “Hello” in Hindi.',
+          visual: null,
+          highlight: 'नमस्ते',
+          hint: 'Say it calmly: Na-mas-te.'
+        },
+        {
+          type: 'quiz',
+          question: 'नमस्ते means…',
+          options: ['Hello', 'Sorry', 'Good night'],
+          correct: 'Hello',
+          hint: 'It is a greeting.'
+        },
+        {
+          type: 'learn',
+          content: 'धन्यवाद (Dhanyavaad)',
+          explanation: 'This means “Thank you” in Hindi.',
+          visual: null,
+          highlight: 'धन्यवाद',
+          hint: 'Use it when someone is kind to you.'
+        },
+        {
+          type: 'quiz',
+          question: 'Choose “Thank you” in Hindi.',
+          options: ['धन्यवाद', 'नमस्ते', 'नहीं'],
+          correct: 'धन्यवाद',
+          hint: 'It is the longest word here.'
+        },
+        {
+          type: 'learn',
+          content: 'हाँ (Haan)',
+          explanation: 'This means “Yes” in Hindi.',
+          visual: null,
+          highlight: 'हाँ',
+          hint: 'Say it when you agree.'
+        },
+        {
+          type: 'learn',
+          content: 'नहीं (Nahin)',
+          explanation: 'This means “No” in Hindi.',
+          visual: null,
+          highlight: 'नहीं',
+          hint: 'Say it when you disagree.'
+        },
+        {
+          type: 'quiz',
+          question: 'Which one means “Yes”?',
+          options: ['हाँ', 'नहीं', 'नमस्ते'],
+          correct: 'हाँ',
+          hint: 'It is the shortest option.'
         }
       ]
     }

@@ -103,6 +103,8 @@ const ProgressPage = () => {
         { id: 'lesson-greetings', title: applyDyslexiaSyllables ? getDyslexiaLessonTitle('lesson-greetings', 'Greetings') : 'Greetings', route: '/lessons/lesson-greetings' },
         { id: 'lesson-vocabulary', title: applyDyslexiaSyllables ? getDyslexiaLessonTitle('lesson-vocabulary', 'Basic Words') : 'Basic Words', route: '/lessons/lesson-vocabulary' },
         { id: 'lesson-numbers', title: applyDyslexiaSyllables ? getDyslexiaLessonTitle('lesson-numbers', 'Numbers') : 'Numbers', route: '/lessons/lesson-numbers' },
+        { id: 'lesson-tamil-essentials', title: applyDyslexiaSyllables ? getDyslexiaLessonTitle('lesson-tamil-essentials', 'Tamil Essentials') : 'Tamil Essentials', route: '/lessons/lesson-tamil-essentials' },
+        { id: 'lesson-hindi-essentials', title: applyDyslexiaSyllables ? getDyslexiaLessonTitle('lesson-hindi-essentials', 'Hindi Essentials') : 'Hindi Essentials', route: '/lessons/lesson-hindi-essentials' },
       ];
 
       return lessonDefs.map((l) => {
@@ -123,12 +125,27 @@ const ProgressPage = () => {
     }
 
     // ADHD/Autism lessons are inside their respective learning centers.
-    const ids = [1, 2, 3];
-    const titles = {
-      1: 'Greetings',
-      2: 'Basic Words',
-      3: 'Numbers',
-    };
+    const ids = condition === 'adhd'
+      ? [1, 2, 3, 4, 5, 6]
+      : condition === 'autism'
+        ? [1, 2, 3, 4, 5]
+        : [1, 2, 3];
+    const titles = condition === 'adhd'
+      ? {
+          1: 'Greetings',
+          2: 'Basic Words',
+          3: 'Numbers',
+          4: 'Audio Stories',
+          5: 'Tamil Essentials',
+          6: 'Hindi Essentials',
+        }
+      : {
+          1: 'Greetings',
+          2: 'Basic Words',
+          3: 'Numbers',
+          4: 'Family Members',
+          5: 'Common Actions',
+        };
 
     return ids.map((lessonId) => {
       const key = `${remoteLessonPrefix}${lessonId}`;

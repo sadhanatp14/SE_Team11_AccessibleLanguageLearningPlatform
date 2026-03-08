@@ -23,6 +23,18 @@ const LESSON_LIBRARY = {
       description: 'Count, match, and order numbers',
       apiId: 'lesson-numbers',
     },
+    {
+      id: 4,
+      title: 'Tamil Essentials',
+      description: 'Learn a few useful Tamil words and phrases',
+      apiId: 'lesson-tamil-essentials',
+    },
+    {
+      id: 5,
+      title: 'Hindi Essentials',
+      description: 'Learn a few useful Hindi words and phrases',
+      apiId: 'lesson-hindi-essentials',
+    },
   ],
   adhd: [
     {
@@ -44,6 +56,16 @@ const LESSON_LIBRARY = {
       id: 4,
       title: 'Audio Stories',
       description: 'Listen and learn through guided mini stories',
+    },
+    {
+      id: 5,
+      title: 'Tamil Essentials',
+      description: 'Short Tamil phrase practice with focus-friendly steps',
+    },
+    {
+      id: 6,
+      title: 'Hindi Essentials',
+      description: 'Short Hindi phrase practice with focus-friendly steps',
     },
   ],
   autism: [

@@ -9,6 +9,7 @@ import { decorateDyslexiaText, useDyslexiaContext } from '../../utils/dyslexiaSy
 import {
   backendTtsLangFor,
   bilingualPrimaryLanguageForMode,
+  inferTtsLanguageKeyFromText,
   isBilingualTextMode,
   resolveBilingualTextModeFromPreferences,
   speechSynthesisLangFor,
@@ -338,7 +339,8 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
     // 2. Try Backend TTS first (Reliable on all OS)
     try {
       const ttsUrl = joinUrl(api?.defaults?.baseURL || '/api', '/tts/speak');
-      const langKey = contentLanguage || uiLanguage;
+      const baseLangKey = contentLanguage || uiLanguage;
+      const langKey = inferTtsLanguageKeyFromText(text, baseLangKey);
       const response = await fetch(ttsUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -430,7 +432,7 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
         speakText(section.textContent || section.title || 'No text content');
       }
     } else {
-      // Use TTS Fallback
+          utterance.lang = speechSynthesisLangFor(inferTtsLanguageKeyFromText(text, contentLanguage || uiLanguage));
       if (isPlaying || window.speechSynthesis.speaking) {
         window.speechSynthesis.cancel();
         setIsPlaying(false);
