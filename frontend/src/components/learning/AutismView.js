@@ -49,6 +49,13 @@ import MotivationReward from './MotivationReward';
 // import AutismLearningPath from './AutismLearningPath';
 import './AutismView.css';
 
+const joinUrl = (base, path) => {
+  const baseStr = String(base || '').replace(/\/+$/, '');
+  const pathStr = String(path || '');
+  const normalizedPath = pathStr.startsWith('/') ? pathStr : `/${pathStr}`;
+  return `${baseStr}${normalizedPath}`;
+};
+
 const AutismView = ({ initialLessonId = null }) => {
   // Auth context
   const { user, logout } = useAuth();
@@ -1539,7 +1546,8 @@ const AutismView = ({ initialLessonId = null }) => {
 
     try {
       // Try Backend TTS
-      const response = await fetch('/api/tts/speak', {
+      const ttsUrl = joinUrl(api?.defaults?.baseURL || '/api', '/tts/speak');
+      const response = await fetch(ttsUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, speed: playbackSpeed, lang: backendTtsLangFor(preferredLanguage) })

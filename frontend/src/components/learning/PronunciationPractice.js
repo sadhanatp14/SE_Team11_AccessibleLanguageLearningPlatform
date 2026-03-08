@@ -1,6 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Mic, RotateCcw, Volume2 } from 'lucide-react';
+import api from '../../utils/api';
 import './PronunciationPractice.css';
+
+const joinUrl = (base, path) => {
+  const baseStr = String(base || '').replace(/\/+$/, '');
+  const pathStr = String(path || '');
+  const normalizedPath = pathStr.startsWith('/') ? pathStr : `/${pathStr}`;
+  return `${baseStr}${normalizedPath}`;
+};
 
 const normalizePronunciationText = (value) => {
   const raw = String(value ?? '').trim().toLowerCase();
@@ -53,7 +61,8 @@ const speakViaBackendOrBrowser = async ({ text, speed, lang, audioRef, setIsPlay
 
   // Backend TTS first (consistent across OS)
   try {
-    const response = await fetch('/api/tts/speak', {
+    const ttsUrl = joinUrl(api?.defaults?.baseURL || '/api', '/tts/speak');
+    const response = await fetch(ttsUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text, speed: speed ?? 0.85, lang: lang || 'en' }),

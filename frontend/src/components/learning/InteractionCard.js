@@ -5,6 +5,7 @@ import GuidedSupport from './GuidedSupport';
 import { decorateDyslexiaText, useDyslexiaContext } from '../../utils/dyslexiaSyllableMode';
 import { usePreferences } from '../../context/PreferencesContext';
 import { useI18n } from '../../utils/i18n';
+import api from '../../utils/api';
 import {
   backendTtsLangFor,
   pickByLanguage,
@@ -16,6 +17,13 @@ import { pickI18nString } from '../../utils/lessonI18n';
 import { Mic } from 'lucide-react';
 import BilingualText from './BilingualText';
 import './InteractionCard.css';
+
+const joinUrl = (base, path) => {
+  const baseStr = String(base || '').replace(/\/+$/, '');
+  const pathStr = String(path || '');
+  const normalizedPath = pathStr.startsWith('/') ? pathStr : `/${pathStr}`;
+  return `${baseStr}${normalizedPath}`;
+};
 
 const normalizeAnswer = (value) => {
   if (typeof value === 'boolean') return value ? 'true' : 'false';
@@ -387,7 +395,8 @@ const InteractionCard = ({
     // Try Backend TTS first
     try {
       const ttsLanguageKey = overrides.languageKey ?? uiLanguage;
-      const response = await fetch('/api/tts/speak', {
+      const ttsUrl = joinUrl(api?.defaults?.baseURL || '/api', '/tts/speak');
+      const response = await fetch(ttsUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

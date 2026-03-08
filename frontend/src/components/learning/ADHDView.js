@@ -45,6 +45,13 @@ import {
 } from 'lucide-react';
 import { backendTtsLangFor, pickByLanguage, resolveUiLanguageFromPreferences, speechSynthesisLangFor } from '../../utils/languagePrefs';
 
+const joinUrl = (base, path) => {
+  const baseStr = String(base || '').replace(/\/+$/, '');
+  const pathStr = String(path || '');
+  const normalizedPath = pathStr.startsWith('/') ? pathStr : `/${pathStr}`;
+  return `${baseStr}${normalizedPath}`;
+};
+
 const ADHDView = ({ initialLessonId = null }) => {
   // Auth and preferences context
   const { user, logout } = useAuth();
@@ -341,6 +348,10 @@ const ADHDView = ({ initialLessonId = null }) => {
     }
   };
 
+  const ttsEndpoint = React.useMemo(() => {
+    return joinUrl(api?.defaults?.baseURL || '/api', '/tts/speak');
+  }, []);
+
   const renderTextWithActiveWord = (text) => {
     if (!text) return null;
     const words = String(text).split(' ');
@@ -372,7 +383,7 @@ const ADHDView = ({ initialLessonId = null }) => {
     if (trackWords) setActiveWord('');
 
     try {
-      const response = await fetch('/api/tts/speak', {
+      const response = await fetch(ttsEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, speed: rate, lang: backendTtsLangFor(uiLanguage) })
