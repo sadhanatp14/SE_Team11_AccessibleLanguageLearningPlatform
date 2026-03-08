@@ -439,7 +439,7 @@ const DyslexiaView = () => {
                 className="btn-settings"
                 style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center' }}
               >
-                <span>Simple</span>
+                <span>{t('learning.common.simple')}</span>
                 <span>{preferences?.simplifiedLayout ? t('learning.common.on') : t('learning.common.off')}</span>
               </button>
 

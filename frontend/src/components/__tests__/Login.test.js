@@ -80,10 +80,12 @@ describe('Login Component', () => {
         await waitFor(() => {
             expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
         });
-        expect(mockLogin).toHaveBeenCalledWith({
-            email: 'test@example.com',
-            password: 'password123',
-        });
+        expect(mockLogin).toHaveBeenCalledWith(
+            expect.objectContaining({
+                email: 'test@example.com',
+                password: 'password123',
+            })
+        );
     });
 
     it('should display error for invalid credentials', async () => {

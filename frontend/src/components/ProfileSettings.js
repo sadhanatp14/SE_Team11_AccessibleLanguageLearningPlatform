@@ -21,6 +21,37 @@ const ProfileSettings = ({ onClose }) => {
   const { preferences, updateAccessibilitySettings, resetLanguage } = usePreferences();
   const { t } = useI18n();
 
+  const languageOptions = [
+    { value: 'english', label: t('settings.langEnglish') },
+    { value: 'tamil', label: t('settings.langTamil') },
+    { value: 'hindi', label: t('settings.langHindi') },
+  ];
+
+  const bilingualOptions = [
+    { value: 'off', label: t('settings.bilingualOff') },
+    { value: 'english_tamil', label: t('settings.bilingualEnglishTamil') },
+    { value: 'english_hindi', label: t('settings.bilingualEnglishHindi') },
+  ];
+
+  const textSizeOptions = [
+    { value: 'small', label: t('settings.textSizeSmall') },
+    { value: 'medium', label: t('settings.textSizeMedium') },
+    { value: 'large', label: t('settings.textSizeLarge') },
+    { value: 'extra-large', label: t('settings.textSizeExtraLarge') },
+  ];
+
+  const paceOptions = [
+    { value: 'slow', label: t('settings.paceSlow') },
+    { value: 'normal', label: t('settings.paceNormal') },
+    { value: 'fast', label: t('settings.paceFast') },
+  ];
+
+  const letterSpacingOptions = [
+    { value: 'normal', label: t('settings.spacingNormal') },
+    { value: 'wide', label: t('settings.spacingWide') },
+    { value: 'extra-wide', label: t('settings.spacingExtraWide') },
+  ];
+
   const [activeTab, setActiveTab] = useState('profile');
   const [profileEditing, setProfileEditing] = useState(false);
   // eslint-disable-next-line no-unused-vars
@@ -226,12 +257,8 @@ const ProfileSettings = ({ onClose }) => {
 
             <div className="setting-group">
               <label>{t('settings.language')}</label>
-              <div className="button-group" role="radiogroup" aria-label="Preferred language">
-                {[
-                  { value: 'english', label: 'English' },
-                  { value: 'tamil', label: 'Tamil' },
-                  { value: 'hindi', label: 'Hindi' },
-                ].map((lang) => (
+              <div className="button-group" role="radiogroup" aria-label={t('settings.preferredLanguageAria')}>
+                {languageOptions.map((lang) => (
                   <button
                     key={lang.value}
                     type="button"
@@ -247,7 +274,7 @@ const ProfileSettings = ({ onClose }) => {
                     title={
                       isLanguageSelectionLocked
                         ? t('settings.languageLockedByBilingual')
-                        : `Switch language to ${lang.label}`
+                        : t('settings.switchLanguageTo', { language: lang.label })
                     }
                   >
                     {lang.label}
@@ -257,12 +284,8 @@ const ProfileSettings = ({ onClose }) => {
               <p className="setting-help" aria-live="polite">
                 {t('settings.selected')}{' '}
                 {(() => {
-                  const map = {
-                    english: 'English',
-                    tamil: 'Tamil',
-                    hindi: 'Hindi',
-                  };
-                  return map[uiLanguageValue] || String(uiLanguageValue || 'English');
+                  const resolved = languageOptions.find((l) => l.value === uiLanguageValue)?.label;
+                  return resolved || String(uiLanguageValue || t('settings.langEnglish'));
                 })()}
               </p>
               {isLanguageSelectionLocked ? (
@@ -274,12 +297,8 @@ const ProfileSettings = ({ onClose }) => {
 
             <div className="setting-group">
               <label>{t('settings.bilingualText')}</label>
-              <div className="button-group" role="radiogroup" aria-label="Bilingual text mode">
-                {[
-                  { value: 'off', label: t('settings.bilingualOff') },
-                  { value: 'english_tamil', label: 'English + Tamil' },
-                  { value: 'english_hindi', label: 'English + Hindi' },
-                ].map((option) => (
+              <div className="button-group" role="radiogroup" aria-label={t('settings.bilingualModeAria')}>
+                {bilingualOptions.map((option) => (
                   <button
                     key={option.value}
                     type="button"
@@ -287,7 +306,7 @@ const ProfileSettings = ({ onClose }) => {
                     role="radio"
                     aria-checked={bilingualMode === option.value}
                     onClick={() => handleAccessibilityChange('bilingualTextMode', option.value)}
-                    title={`Set bilingual mode to ${option.label}`}
+                    title={t('settings.setBilingualTo', { mode: option.label })}
                   >
                     {option.label}
                   </button>
@@ -296,12 +315,8 @@ const ProfileSettings = ({ onClose }) => {
               <p className="setting-help" aria-live="polite">
                 {t('settings.selected')}{' '}
                 {(() => {
-                  const map = {
-                    off: t('settings.bilingualOff'),
-                    english_tamil: 'English + Tamil',
-                    english_hindi: 'English + Hindi',
-                  };
-                  return map[bilingualMode] || t('settings.bilingualOff');
+                  const resolved = bilingualOptions.find((o) => o.value === bilingualMode)?.label;
+                  return resolved || t('settings.bilingualOff');
                 })()}
               </p>
             </div>
@@ -309,14 +324,14 @@ const ProfileSettings = ({ onClose }) => {
             <div className="setting-group">
               <label>{t('settings.textSize')}</label>
               <div className="button-group">
-                {['small', 'medium', 'large', 'extra-large'].map((size) => (
+                {textSizeOptions.map((size) => (
                   <button
-                    key={size}
+                    key={size.value}
                     type="button"
-                    className={`option-btn ${accessibilitySettings.fontSize === size ? 'active' : ''}`}
-                    onClick={() => handleAccessibilityChange('fontSize', size)}
+                    className={`option-btn ${accessibilitySettings.fontSize === size.value ? 'active' : ''}`}
+                    onClick={() => handleAccessibilityChange('fontSize', size.value)}
                   >
-                    {size.charAt(0).toUpperCase() + size.slice(1).replace('-', ' ')}
+                    {size.label}
                   </button>
                 ))}
               </div>
@@ -326,10 +341,10 @@ const ProfileSettings = ({ onClose }) => {
               <label>{t('settings.colorTheme')}</label>
               <div className="button-group">
                 {[
-                  { value: 'default', label: 'Default' },
-                  { value: 'high-contrast', label: 'High Contrast' },
-                  { value: 'dark', label: 'Dark' },
-                  { value: 'yellow-black', label: 'Yellow on Black' },
+                  { value: 'default', label: t('setup.defaultTheme') },
+                  { value: 'high-contrast', label: t('setup.highContrast') },
+                  { value: 'dark', label: t('setup.dark') },
+                  { value: 'yellow-black', label: t('setup.yellowOnBlack') },
                 ].map((theme) => (
                   <button
                     key={theme.value}
@@ -347,14 +362,14 @@ const ProfileSettings = ({ onClose }) => {
               <div className="setting-group">
                 <label>{t('settings.pace')}</label>
                 <div className="button-group">
-                  {['slow', 'normal', 'fast'].map((pace) => (
+                  {paceOptions.map((pace) => (
                     <button
-                      key={pace}
+                      key={pace.value}
                       type="button"
-                      className={`option-btn ${accessibilitySettings.learningPace === pace ? 'active' : ''}`}
-                      onClick={() => handleAccessibilityChange('learningPace', pace)}
+                      className={`option-btn ${accessibilitySettings.learningPace === pace.value ? 'active' : ''}`}
+                      onClick={() => handleAccessibilityChange('learningPace', pace.value)}
                     >
-                      {pace.charAt(0).toUpperCase() + pace.slice(1)}
+                      {pace.label}
                     </button>
                   ))}
                 </div>
@@ -386,14 +401,14 @@ const ProfileSettings = ({ onClose }) => {
                 <div className="setting-group">
                   <label>{t('settings.letterSpacing')}</label>
                   <div className="button-group">
-                    {['normal', 'wide', 'extra-wide'].map((spacing) => (
+                    {letterSpacingOptions.map((spacing) => (
                       <button
-                        key={spacing}
+                        key={spacing.value}
                         type="button"
-                        className={`option-btn ${accessibilitySettings.letterSpacing === spacing ? 'active' : ''}`}
-                        onClick={() => handleAccessibilityChange('letterSpacing', spacing)}
+                        className={`option-btn ${accessibilitySettings.letterSpacing === spacing.value ? 'active' : ''}`}
+                        onClick={() => handleAccessibilityChange('letterSpacing', spacing.value)}
                       >
-                        {spacing.charAt(0).toUpperCase() + spacing.slice(1).replace('-', ' ')}
+                        {spacing.label}
                       </button>
                     ))}
                   </div>
@@ -418,19 +433,19 @@ const ProfileSettings = ({ onClose }) => {
                     {accessibilitySettings.distractionFreeMode ? (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                         <Check size={16} aria-hidden="true" />
-                        <span>ON</span>
+                        <span>{t('learning.common.on')}</span>
                       </span>
                     ) : (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                         <X size={16} aria-hidden="true" />
-                        <span>OFF</span>
+                        <span>{t('learning.common.off')}</span>
                       </span>
                     )}
                   </span>
                   <span className="toggle-label">
                     {accessibilitySettings.distractionFreeMode
-                      ? 'Fewer distractions'
-                      : 'Normal mode'}
+                      ? t('settings.distractionFreeOn')
+                      : t('settings.distractionFreeOff')}
                   </span>
                 </button>
               </div>
@@ -438,7 +453,7 @@ const ProfileSettings = ({ onClose }) => {
 
             {/* EPIC 5.7: Reset Language Button */}
             <div className="setting-group" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px', marginTop: '20px' }}>
-              <label style={{ marginBottom: '12px', display: 'block' }}>Language Settings</label>
+              <label style={{ marginBottom: '12px', display: 'block' }}>{t('settings.languageSettings')}</label>
               <button
                 type="button"
                 className="btn btn-secondary"

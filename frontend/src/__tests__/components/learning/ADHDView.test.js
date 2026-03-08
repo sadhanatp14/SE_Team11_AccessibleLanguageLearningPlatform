@@ -164,7 +164,8 @@ describe('ADHDView Component - ADHD Learning Features', () => {
             fireEvent.click(startBtn);
 
             await waitFor(() => {
-                expect(screen.getByText('Choose One Lesson')).toBeInTheDocument();
+                // Lesson selection view is shown once session starts
+                expect(screen.getByText('Greetings')).toBeInTheDocument();
                 // Check if timer is running (20 mins = 20:00)
                 expect(screen.getByText('20:00')).toBeInTheDocument();
             });
@@ -203,7 +204,7 @@ describe('ADHDView Component - ADHD Learning Features', () => {
         test('should enter lesson view when a lesson is started', async () => {
             jest.useFakeTimers();
 
-            await waitFor(() => expect(screen.getByText('Choose One Lesson')).toBeInTheDocument());
+            await waitFor(() => expect(screen.getByText('Greetings')).toBeInTheDocument());
             const lessonBtn = screen.getAllByText('Start')[0]; // Greetings lesson
             fireEvent.click(lessonBtn);
 
@@ -223,7 +224,7 @@ describe('ADHDView Component - ADHD Learning Features', () => {
         test('should navigate between steps', async () => {
             jest.useFakeTimers();
 
-            await waitFor(() => expect(screen.getByText('Choose One Lesson')).toBeInTheDocument());
+            await waitFor(() => expect(screen.getByText('Greetings')).toBeInTheDocument());
             const lessonBtn = screen.getAllByText('Start')[0];
             fireEvent.click(lessonBtn);
 
@@ -261,7 +262,7 @@ describe('ADHDView Component - ADHD Learning Features', () => {
             jest.useFakeTimers();
             renderWithRouter(<ADHDView />);
             fireEvent.click(screen.getByText('Start Session'));
-            await waitFor(() => expect(screen.getByText('Choose One Lesson')).toBeInTheDocument());
+            await waitFor(() => expect(screen.getByText('Greetings')).toBeInTheDocument());
             const lessonBtn = screen.getAllByText('Start')[0]; // Greetings
             fireEvent.click(lessonBtn);
 
@@ -327,7 +328,7 @@ describe('ADHDView Component - ADHD Learning Features', () => {
             jest.useFakeTimers();
             renderWithRouter(<ADHDView />);
             fireEvent.click(screen.getByText('Start Session'));
-            await waitFor(() => expect(screen.getByText('Choose One Lesson')).toBeInTheDocument());
+            await waitFor(() => expect(screen.getByText('Audio Stories')).toBeInTheDocument());
             // Find 'Audio Stories' lesson
             const storyLessonStart = screen.getAllByText('Start')[3]; // index 3 is Audio Stories
             fireEvent.click(storyLessonStart);

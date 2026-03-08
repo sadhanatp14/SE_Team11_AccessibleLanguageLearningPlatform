@@ -2334,18 +2334,19 @@ const AutismView = ({ initialLessonId = null }) => {
             type="button"
             onClick={() => navigate('/dashboard')}
             className="btn-settings"
-            title="Home"
-            aria-label="Home"
+            title={t('learning.common.home')}
+            aria-label={t('learning.common.home')}
             style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
             <BookOpen size={18} aria-hidden="true" />
-            <span>Home</span>
+            <span>{t('learning.common.home')}</span>
           </button>
           <button
             type="button"
             onClick={() => navigate(-1)}
             className="btn-settings"
             title={t('learning.common.back')}
+            aria-label={t('learning.common.back')}
             style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
             <ChevronLeft size={18} aria-hidden="true" />
@@ -2358,12 +2359,12 @@ const AutismView = ({ initialLessonId = null }) => {
             type="button"
             onClick={() => setShowSideMenu((prev) => !prev)}
             className="btn-settings"
-            title="Menu"
-            aria-label="Menu"
+            title={t('learning.common.menu')}
+            aria-label={t('learning.common.menu')}
             style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
             {showSideMenu ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
-            <span>Menu</span>
+            <span>{t('learning.common.menu')}</span>
           </button>
         </div>
       </header>
@@ -2397,7 +2398,7 @@ const AutismView = ({ initialLessonId = null }) => {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px' }}>Quick Controls</h3>
+              <h3 style={{ margin: 0, fontSize: '16px' }}>{t('learning.common.quickControls')}</h3>
               <button type="button" className="btn-settings" onClick={() => setShowSideMenu(false)}>
                 <X size={16} aria-hidden="true" />
               </button>
@@ -2414,7 +2415,7 @@ const AutismView = ({ initialLessonId = null }) => {
                 style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: 8 }}
               >
                 <Hash size={18} aria-hidden="true" />
-                <span>Progress</span>
+                <span>{t('learning.common.progress')}</span>
               </button>
 
               <button
@@ -2426,7 +2427,7 @@ const AutismView = ({ initialLessonId = null }) => {
                 className="btn-settings"
                 style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center' }}
               >
-                <span>Simple</span>
+                <span>{t('learning.common.simple')}</span>
                 <span>{preferences?.simplifiedLayout ? t('learning.common.on') : t('learning.common.off')}</span>
               </button>
 
@@ -2440,7 +2441,7 @@ const AutismView = ({ initialLessonId = null }) => {
                 style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: 8 }}
               >
                 <Settings size={18} aria-hidden="true" />
-                <span>Settings</span>
+                <span>{t('learning.common.settings')}</span>
               </button>
             </div>
           </aside>
@@ -2460,6 +2461,58 @@ const AutismView = ({ initialLessonId = null }) => {
             <Hand size={18} aria-hidden="true" />
           </h2>
           <p>{t('learning.autism.selectLessonToBegin')}</p>
+        </div>
+
+        {/* Lessons Grid - Predictable Layout */}
+        <div className="lessons-simple-grid" aria-label="Available lessons">
+          {displayedLessons.map((lesson, index) => {
+            const isCompleted = completedLessons.includes(lesson.id);
+            const palette = [
+              { accent: '#2563eb', soft: '#dbeafe', hover: '#1d4ed8' },
+              { accent: '#7c3aed', soft: '#ede9fe', hover: '#6d28d9' },
+              { accent: '#059669', soft: '#d1fae5', hover: '#047857' },
+              { accent: '#d97706', soft: '#fef3c7', hover: '#b45309' },
+            ];
+            const colors = palette[index % palette.length];
+            const LessonIcon = lesson.Icon || BookOpen;
+
+            return (
+              <div
+                key={`autism-lesson-card-${lesson.id}`}
+                className={`lesson-simple-card${isCompleted ? ' completed' : ''}`}
+                style={{
+                  '--accent-color': colors.accent,
+                  '--accent-color-soft': colors.soft,
+                  '--accent-color-hover': colors.hover,
+                }}
+              >
+                <div className="lesson-top">
+                  <div className="lesson-large-icon" aria-hidden="true">
+                    <LessonIcon size={28} />
+                  </div>
+                  {isCompleted && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span className="completion-checkmark" aria-label={t('learning.common.statusCompleted')}>
+                        <Check size={18} aria-hidden="true" />
+                      </span>
+                      <span className="completion-badge">{t('learning.common.statusCompleted')}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="lesson-body">
+                  <h4>{lesson.title}</h4>
+                  <p>{lesson.description}</p>
+                </div>
+                <button
+                  type="button"
+                  className="btn-lesson-start"
+                  onClick={() => handleStartLesson(lesson.id)}
+                >
+                  {isCompleted ? t('learning.common.reviewLesson') : t('learning.common.startLesson')}
+                </button>
+              </div>
+            );
+          })}
         </div>
 
         {/* EPIC 4.5: Motivational Feedback */}

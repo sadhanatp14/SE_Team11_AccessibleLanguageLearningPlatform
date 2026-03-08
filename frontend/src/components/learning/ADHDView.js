@@ -1230,12 +1230,12 @@ const ADHDView = ({ initialLessonId = null }) => {
             type="button"
             onClick={() => navigate('/dashboard')}
             className="btn-minimal"
-            title="Home"
-            aria-label="Home"
+            title={t('learning.common.home')}
+            aria-label={t('learning.common.home')}
             style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
             <BookOpen size={18} aria-hidden="true" />
-            <span>Home</span>
+            <span>{t('learning.common.home')}</span>
           </button>
           <button
             type="button"
@@ -1268,12 +1268,12 @@ const ADHDView = ({ initialLessonId = null }) => {
             type="button"
             onClick={() => setShowSideMenu((prev) => !prev)}
             className="btn-minimal"
-            title="Menu"
-            aria-label="Menu"
+            title={t('learning.common.menu')}
+            aria-label={t('learning.common.menu')}
             style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
             {showSideMenu ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
-            <span>Menu</span>
+            <span>{t('learning.common.menu')}</span>
           </button>
         </div>
       </header>
@@ -1307,7 +1307,7 @@ const ADHDView = ({ initialLessonId = null }) => {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px' }}>Quick Controls</h3>
+              <h3 style={{ margin: 0, fontSize: '16px' }}>{t('learning.common.quickControls')}</h3>
               <button type="button" className="btn-minimal" onClick={() => setShowSideMenu(false)}>
                 <X size={16} aria-hidden="true" />
               </button>
@@ -1324,7 +1324,7 @@ const ADHDView = ({ initialLessonId = null }) => {
                 style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: 8 }}
               >
                 <Hash size={18} aria-hidden="true" />
-                <span>Progress</span>
+                <span>{t('learning.common.progress')}</span>
               </button>
 
               <button
@@ -1346,7 +1346,7 @@ const ADHDView = ({ initialLessonId = null }) => {
                 className="btn-minimal"
                 style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center' }}
               >
-                <span>Simple</span>
+                <span>{t('learning.common.simple')}</span>
                 <span>{preferences?.simplifiedLayout ? t('learning.common.on') : t('learning.common.off')}</span>
               </button>
 
@@ -1360,7 +1360,7 @@ const ADHDView = ({ initialLessonId = null }) => {
                 style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: 8 }}
               >
                 <Settings size={18} aria-hidden="true" />
-                <span>Settings</span>
+                <span>{t('learning.common.settings')}</span>
               </button>
             </div>
           </aside>
@@ -1492,6 +1492,30 @@ const ADHDView = ({ initialLessonId = null }) => {
                       )}
                     </section>
                   )}
+
+                  {/* Lesson Selection: Cards */}
+                  <div className="lesson-list" aria-label="Available lessons">
+                    {baseLessons.map((lesson) => (
+                      <div key={`adhd-lesson-${lesson.id}`} className="lesson-item">
+                        <div className="lesson-emoji" aria-hidden="true">
+                          {lesson.Icon ? <lesson.Icon size={20} /> : '📘'}
+                        </div>
+                        <div className="lesson-info">
+                          <h4>{lesson.title}</h4>
+                          <p>
+                            {t('learning.common.stepsCount', { count: (lesson.steps || []).length })} • {lesson.duration}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn-lesson"
+                          onClick={() => handleStartLesson(lesson)}
+                        >
+                          {t('learning.common.start')}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
 
                   {/* EPIC 4.3: Personalized Learning Path (linear, clear, low-overload) */}
                   <section
