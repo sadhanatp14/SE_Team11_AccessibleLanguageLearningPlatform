@@ -10,8 +10,16 @@ dotenv.config();
 
 const app = express();
 
-// Enable CORS for cross-origin requests
-app.use(cors());
+// Enable CORS for cross-origin requests with production URLs
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:5002',
+    process.env.FRONTEND_URL || 'http://localhost:3000',
+  ],
+  credentials: true,
+};
+app.use(cors(corsOptions));
 // Parse JSON request bodies
 app.use(express.json());
 // Parse URL-encoded request bodies
