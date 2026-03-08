@@ -23,7 +23,12 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+
+    "deps:add": "npx -y npm@10.9.2 install",
+    "deps:remove": "npx -y npm@10.9.2 uninstall",
+    "deps:lock": "npx -y npm@10.9.2 install --package-lock-only",
+    "deps:ci": "npx -y npm@10.9.2 ci"
   },
   "eslintConfig": {
     "extends": [
