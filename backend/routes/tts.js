@@ -55,11 +55,19 @@ router.get('/health', async (req, res) => {
         const probe = await runPythonProbe(pythonCandidates, ['-c', 'import sys; import gtts; print(sys.version); print(getattr(gtts, "__version__", "unknown"))']);
 
         if (!probe.ok) {
+            const combined = `${probe.error || ''}\n${probe.stderr || ''}`.toLowerCase();
+            const isPythonMissing = combined.includes('enoent') || combined.includes('not found') || combined.includes('no such file');
+            const isGttsMissing = combined.includes('modulenotfounderror') || combined.includes("no module named 'gtts'") || combined.includes('no module named gtts');
+
+            let hint = 'Enable TTS_DEBUG=true to see details.';
+            if (isPythonMissing) hint = 'Python is not available in the runtime image.';
+            else if (isGttsMissing) hint = 'Python is available but gTTS is not installed.';
+
             return res.status(500).json({
                 ok: false,
                 tts: 'unavailable',
                 pythonCandidates,
-                error: isTtsDebugEnabled() ? (probe.error || probe.stderr || 'probe failed') : 'probe failed'
+                error: isTtsDebugEnabled() ? (probe.error || probe.stderr || 'probe failed') : hint
             });
         }
 
