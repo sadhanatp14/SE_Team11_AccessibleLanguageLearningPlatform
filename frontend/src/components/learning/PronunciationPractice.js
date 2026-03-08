@@ -68,7 +68,16 @@ const speakViaBackendOrBrowser = async ({ text, speed, lang, audioRef, setIsPlay
       body: JSON.stringify({ text, speed: speed ?? 0.85, lang: lang || 'en' }),
     });
 
-    if (!response.ok) throw new Error('Backend TTS failed');
+    if (!response.ok) {
+      let details = '';
+      try {
+        details = await response.text();
+      } catch {
+        // ignore
+      }
+      const suffix = details ? `: ${details.slice(0, 500)}` : '';
+      throw new Error(`Backend TTS failed (${response.status})${suffix}`);
+    }
 
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);

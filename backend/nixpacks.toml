@@ -3,11 +3,11 @@
 
 # Force-enable the Python provider even though our requirements file is not at the
 # backend root (it's under python_services/).
-providers = ['...', 'python']
+providers = ['node', 'python']
 
 [phases.setup]
 # Ensure python exists in the build + runtime image.
-nixPkgs = ['...', 'python3']
+nixPkgs = ['python3']
 
 [phases.install]
 # Run Node install and Python deps install.

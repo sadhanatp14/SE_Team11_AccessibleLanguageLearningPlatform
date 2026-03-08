@@ -3,6 +3,8 @@ const router = express.Router();
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const http = require('http');
+const https = require('https');
 const googleTTS = require('google-tts-api');
 
 const isTtsDebugEnabled = () => {
@@ -66,6 +68,78 @@ const isSlowFromSpeed = (speed) => {
     return num < 0.8;
 };
 
+const isGoogleFallbackEnabled = () => {
+    // Keep unit tests deterministic.
+    if (String(process.env.NODE_ENV || '').toLowerCase() === 'test') return false;
+
+    const raw = String(process.env.TTS_DISABLE_GOOGLE_FALLBACK || '').trim().toLowerCase();
+    return !(raw === '1' || raw === 'true' || raw === 'yes');
+};
+
+const streamUrlToResponse = (url, res, redirectBudget = 3) => {
+    return new Promise((resolve, reject) => {
+        let parsed;
+        try {
+            parsed = new URL(url);
+        } catch (e) {
+            reject(new Error('Invalid upstream URL'));
+            return;
+        }
+
+        const client = parsed.protocol === 'http:' ? http : https;
+        const req = client.request(
+            {
+                protocol: parsed.protocol,
+                hostname: parsed.hostname,
+                port: parsed.port,
+                path: `${parsed.pathname}${parsed.search}`,
+                method: 'GET',
+                headers: {
+                    // Some hosts behave better when a UA is present.
+                    'User-Agent': 'accessible-language-learning-platform/1.0',
+                    'Accept': 'audio/mpeg,audio/*;q=0.9,*/*;q=0.8',
+                },
+            },
+            (upstream) => {
+                const status = upstream.statusCode || 0;
+                const location = upstream.headers.location;
+
+                if ([301, 302, 303, 307, 308].includes(status) && location && redirectBudget > 0) {
+                    upstream.resume();
+                    const nextUrl = location.startsWith('http') ? location : new URL(location, url).toString();
+                    streamUrlToResponse(nextUrl, res, redirectBudget - 1).then(resolve).catch(reject);
+                    return;
+                }
+
+                if (status < 200 || status >= 300) {
+                    let body = '';
+                    upstream.on('data', (d) => {
+                        if (body.length < 2000) body += d.toString();
+                    });
+                    upstream.on('end', () => {
+                        reject(new Error(`Upstream TTS failed: ${status}${body ? ` - ${body.slice(0, 2000)}` : ''}`));
+                    });
+                    return;
+                }
+
+                if (!res.headersSent) {
+                    res.setHeader('Content-Type', 'audio/mpeg');
+                    const len = upstream.headers['content-length'];
+                    if (len) res.setHeader('Content-Length', len);
+                    res.setHeader('Cache-Control', 'no-store');
+                }
+
+                upstream.on('error', reject);
+                upstream.on('end', resolve);
+                upstream.pipe(res);
+            }
+        );
+
+        req.on('error', reject);
+        req.end();
+    });
+};
+
 const streamGoogleTts = async ({ res, text, lang, slow }) => {
     // google-tts-api returns a public Google Translate TTS URL.
     // This is a pragmatic fallback when Python isn't available in the host.
@@ -75,37 +149,7 @@ const streamGoogleTts = async ({ res, text, lang, slow }) => {
         host: 'https://translate.google.com'
     });
 
-    const upstream = await fetch(url);
-    if (!upstream.ok) {
-        throw new Error(`Upstream TTS failed: ${upstream.status}`);
-    }
-
-    if (!res.headersSent) {
-        res.setHeader('Content-Type', 'audio/mpeg');
-        // Allow browsers to play/seek better.
-        const len = upstream.headers.get('content-length');
-        if (len) res.setHeader('Content-Length', len);
-        res.setHeader('Cache-Control', 'no-store');
-    }
-
-    // Stream upstream response body to client.
-    if (upstream.body) {
-        // Node fetch gives a web ReadableStream; convert chunk-by-chunk.
-        const reader = upstream.body.getReader();
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
-            // eslint-disable-next-line no-await-in-loop
-            const { done, value } = await reader.read();
-            if (done) break;
-            res.write(Buffer.from(value));
-        }
-        res.end();
-        return;
-    }
-
-    // Fallback (shouldn't happen often): buffer then send.
-    const buf = Buffer.from(await upstream.arrayBuffer());
-    res.end(buf);
+    await streamUrlToResponse(url, res);
 };
 
 router.get('/health', async (req, res) => {
@@ -176,7 +220,17 @@ router.post('/speak', (req, res) => {
     let pythonProcess;
 
     const startPython = (pythonExe, remainingCandidates) => {
-        pythonProcess = spawn(pythonExe, [scriptPath, text, speed || '1.0', resolvedLang]);
+        // Pass text via stdin to avoid OS argv length limits and quoting issues.
+        pythonProcess = spawn(pythonExe, [scriptPath, '--stdin', speed || '1.0', resolvedLang], {
+            stdio: ['pipe', 'pipe', 'pipe']
+        });
+
+        try {
+            pythonProcess.stdin.write(String(text));
+            pythonProcess.stdin.end();
+        } catch {
+            // ignore
+        }
 
         pythonProcess.stdout.on('data', (chunk) => {
             if (!sentAudio) {
@@ -199,13 +253,17 @@ router.post('/speak', (req, res) => {
                 return startPython(next, remainingCandidates.slice(1));
             }
 
+            const noPythonFound = err && err.code === 'ENOENT' && remainingCandidates.length === 0;
+
             // No python found at all: fall back to Node-based TTS.
-            if (err && err.code === 'ENOENT' && remainingCandidates.length === 0) {
+            if (noPythonFound && isGoogleFallbackEnabled()) {
                 return streamGoogleTts({ res, text, lang: resolvedLangForGoogle, slow: slowMode })
                     .catch((e) => {
                         console.error('Google TTS fallback failed:', e);
                         if (!res.headersSent) {
-                            return res.status(500).json({ message: 'TTS service unavailable' });
+                            const payload = { message: 'TTS service unavailable' };
+                            if (isTtsDebugEnabled()) payload.details = String(e && e.message ? e.message : e).slice(0, 1000);
+                            return res.status(503).json(payload);
                         }
                         res.end();
                     });
@@ -222,6 +280,22 @@ router.post('/speak', (req, res) => {
             if (code !== 0) {
                 console.error(`TTS process exited with code ${code}`);
                 if (!sentAudio && !res.headersSent) {
+                    // If python exists but fails (missing gTTS, network, etc), try the Google URL fallback.
+                    if (isGoogleFallbackEnabled()) {
+                        return streamGoogleTts({ res, text, lang: resolvedLangForGoogle, slow: slowMode })
+                            .catch((e) => {
+                                console.error('Google TTS fallback after python failure failed:', e);
+                                const payload = { message: 'TTS generation failed' };
+                                if (isTtsDebugEnabled()) {
+                                    payload.details = {
+                                        pythonStderr: stderrText.trim().slice(0, 1000) || undefined,
+                                        googleFallback: String(e && e.message ? e.message : e).slice(0, 1000),
+                                    };
+                                }
+                                return res.status(500).json(payload);
+                            });
+                    }
+
                     const payload = { message: 'TTS generation failed' };
                     if (isTtsDebugEnabled() && stderrText.trim()) {
                         payload.details = stderrText.trim().slice(0, 1000);

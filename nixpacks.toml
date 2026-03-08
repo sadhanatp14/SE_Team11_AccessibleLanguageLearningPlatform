@@ -2,12 +2,12 @@
 # This exists to support Railway services that use the repository root as the build root.
 # It ensures Python is available so backend TTS (/api/tts/speak) can spawn python.
 
-providers = ['...', 'python']
+providers = ['node', 'python']
 
 [phases.setup]
 # Ensure Python exists in the image.
 # (Node is provided by the Node provider inferred from package.json)
-nixPkgs = ['...', 'python3']
+nixPkgs = ['python3']
 
 [phases.install]
 cmds = [

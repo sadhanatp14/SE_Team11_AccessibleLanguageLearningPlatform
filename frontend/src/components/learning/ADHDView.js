@@ -389,7 +389,16 @@ const ADHDView = ({ initialLessonId = null }) => {
         body: JSON.stringify({ text, speed: rate, lang: backendTtsLangFor(uiLanguage) })
       });
 
-      if (!response.ok) throw new Error('Audio generation failed');
+      if (!response.ok) {
+        let details = '';
+        try {
+          details = await response.text();
+        } catch {
+          // ignore
+        }
+        const suffix = details ? `: ${details.slice(0, 500)}` : '';
+        throw new Error(`Audio generation failed (${response.status})${suffix}`);
+      }
 
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
