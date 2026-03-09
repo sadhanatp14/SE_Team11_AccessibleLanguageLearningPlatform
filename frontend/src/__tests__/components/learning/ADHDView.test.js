@@ -165,7 +165,7 @@ describe('ADHDView Component - ADHD Learning Features', () => {
 
             await waitFor(() => {
                 // Session dashboard view is shown once session starts
-                expect(screen.getByText('Want all lessons in one page?')).toBeInTheDocument();
+                expect(screen.getByText(/These lessons are available in Open All Lessons\./i)).toBeInTheDocument();
                 // Check if timer is running (20 mins = 20:00)
                 expect(screen.getByText('20:00')).toBeInTheDocument();
             });
@@ -192,8 +192,8 @@ describe('ADHDView Component - ADHD Learning Features', () => {
             fireEvent.click(screen.getByText('Start Session'));
 
             await waitFor(() => {
-                expect(screen.getByText('Want all lessons in one page?')).toBeInTheDocument();
-                expect(screen.getByRole('button', { name: 'Open All Lessons' })).toBeInTheDocument();
+                expect(screen.getByText(/These lessons are available in Open All Lessons\./i)).toBeInTheDocument();
+                expect(screen.getByRole('button', { name: /open all lessons/i })).toBeInTheDocument();
             });
         });
 

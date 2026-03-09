@@ -1573,17 +1573,17 @@ const ADHDView = ({ initialLessonId = null }) => {
                       color: '#2e7d32'
                     }}>
                       <TrendingUp size={18} aria-hidden="true" />
-                      <span>Current Level: {currentDifficulty}</span>
+                      <span>{t('learning.common.currentLevelLabel')} {currentDifficulty}</span>
                       {performanceSummary?.recentAverage > 0 && (
                         <span style={{ marginLeft: '8px', opacity: 0.8 }}>
-                          ({performanceSummary.recentAverage.toFixed(0)}% avg)
+                          ({performanceSummary.recentAverage.toFixed(0)}% {t('learning.common.avgAbbrev')})
                         </span>
                       )}
                       {performanceSummary?.pace && (
-                        <span style={{ opacity: 0.85 }}>• Pace: {performanceSummary.pace}</span>
+                        <span style={{ opacity: 0.85 }}>• {t('learning.common.paceLabel')} {String(performanceSummary.pace).toLowerCase() === 'standard' ? t('settings.paceNormal') : String(performanceSummary.pace).toLowerCase() === 'normal' ? t('settings.paceNormal') : String(performanceSummary.pace).toLowerCase() === 'slow' ? t('settings.paceSlow') : String(performanceSummary.pace).toLowerCase() === 'fast' ? t('settings.paceFast') : performanceSummary.pace}</span>
                       )}
                       {typeof performanceSummary?.completionRate === 'number' && performanceSummary.completionRate > 0 && (
-                        <span style={{ opacity: 0.8 }}>• Completion: {performanceSummary.completionRate}%</span>
+                        <span style={{ opacity: 0.8 }}>• {t('learning.common.completionLabel')} {performanceSummary.completionRate}%</span>
                       )}
                     </div>
                   )}
@@ -1602,7 +1602,7 @@ const ADHDView = ({ initialLessonId = null }) => {
                         skippedRecommendationId !== (nextRecommendation.recommendationKey || String(nextRecommendation.lesson.id)) && (
                           <NextLessonCard
                             recommendation={{
-                              title: `${nextRecommendation.recommendationType === 'review' ? 'Review' : 'Next'}: ${nextRecommendation.lesson.title}`,
+                              title: `${nextRecommendation.recommendationType === 'review' ? t('learning.nextLesson.reviewPrefix') : t('learning.nextLesson.nextPrefix')}: ${nextRecommendation.lesson.title}`,
                               description: `Focused lesson (${nextRecommendation.lesson.duration})`,
                               position: nextRecommendation.position,
                             }}
@@ -1639,7 +1639,7 @@ const ADHDView = ({ initialLessonId = null }) => {
                       marginBottom: '20px'
                     }}
                   >
-                    <h3 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>Learning Path</h3>
+                    <h3 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>{t('learning.common.learningPathTitle')}</h3>
                     <div style={{ display: 'grid', gap: '8px' }}>
                       {baseLessons.map((lesson, index) => {
                         const isCompleted = completedLessons.includes(lesson.id);
@@ -1659,7 +1659,7 @@ const ADHDView = ({ initialLessonId = null }) => {
                           >
                             <span style={{ fontWeight: isCurrent ? 700 : 500 }}>{index + 1}. {lesson.title}</span>
                             <span style={{ fontSize: '12px', color: isCompleted ? '#166534' : isCurrent ? '#1d4ed8' : '#6b7280' }}>
-                              {isCompleted ? '✓ Completed' : isCurrent ? 'Current' : 'Upcoming'}
+                              {isCompleted ? `✓ ${t('learning.common.statusCompleted')}` : isCurrent ? t('learning.common.statusCurrent') : t('learning.common.statusUpcoming')}
                             </span>
                           </div>
                         );
@@ -1682,8 +1682,8 @@ const ADHDView = ({ initialLessonId = null }) => {
                     }}
                   >
                     <div>
-                      <p style={{ margin: 0, fontWeight: 700, color: '#1e3a8a' }}>Want all lessons in one page?</p>
-                      <p style={{ margin: '4px 0 0 0', color: '#334155', fontSize: '14px' }}>Open the lesson library and pick any lesson to complete.</p>
+                      <p style={{ margin: 0, fontWeight: 700, color: '#1e3a8a' }}>{t('learning.common.lessonsAvailableInLibrary')}</p>
+                      <p style={{ margin: '4px 0 0 0', color: '#334155', fontSize: '14px' }}>{t('learning.common.useOpenAllLessons')}</p>
                     </div>
                     <button
                       type="button"
@@ -1699,7 +1699,7 @@ const ADHDView = ({ initialLessonId = null }) => {
                         whiteSpace: 'nowrap'
                       }}
                     >
-                      Open All Lessons
+                      {t('learning.common.openAllLessons')}
                     </button>
                   </section>
                 </>

@@ -557,13 +557,15 @@ const DyslexiaView = () => {
             color: '#2e7d32'
           }}>
             <TrendingUp size={18} aria-hidden="true" />
-            <span>{syllableMode && isEnglish ? 'Cur-rent Le-vel: ' : 'Current Level: '}{currentDifficulty}</span>
+            <span>
+              {isEnglish && syllableMode ? 'Cur-rent Le-vel:' : t('learning.common.currentLevelLabel')} {currentDifficulty}
+            </span>
           </div>
         )}
 
         {/* Next-Lesson Recommendation — shown prominently above the lessons grid */}
         {recommendation && (
-          <section className="lessons-section" aria-label="Recommended next lesson">
+          <section className="lessons-section" aria-label={t('learning.nextLesson.recommendedAria')}>
             {recommendation.allCompleted ? (
               <NextLessonCard
                 allCompleted
@@ -601,7 +603,7 @@ const DyslexiaView = () => {
           }}
         >
           <h3 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>
-            {syllableMode && isEnglish ? 'Learn-ing Path' : 'Learning Path'}
+            {isEnglish && syllableMode ? 'Learn-ing Path' : t('learning.common.learningPathTitle')}
           </h3>
           <div style={{ display: 'grid', gap: '8px' }}>
             {lessons.map((lesson, index) => {
@@ -629,11 +631,13 @@ const DyslexiaView = () => {
                 >
                   <span style={{ fontWeight: isCurrent ? 700 : 500 }}>{index + 1}. {title}</span>
                   <span style={{ fontSize: '12px', color: isCompleted ? '#166534' : isCurrent ? '#1d4ed8' : '#6b7280' }}>
-                    {isCompleted
-                      ? (syllableMode && isEnglish ? '✓ Com-plet-ed' : '✓ Completed')
-                      : isCurrent
-                        ? (syllableMode && isEnglish ? 'Cur-rent' : 'Current')
-                        : (syllableMode && isEnglish ? 'Up-com-ing' : 'Upcoming')}
+                    {isEnglish && syllableMode
+                      ? (isCompleted ? '✓ Com-plet-ed' : isCurrent ? 'Cur-rent' : 'Up-com-ing')
+                      : (isCompleted
+                        ? `✓ ${t('learning.common.statusCompleted')}`
+                        : isCurrent
+                          ? t('learning.common.statusCurrent')
+                          : t('learning.common.statusUpcoming'))}
                   </span>
                 </div>
               );
@@ -642,7 +646,7 @@ const DyslexiaView = () => {
         </section>
 
         <section
-          aria-label="Open all lessons page"
+          aria-label={t('learning.common.openAllLessons')}
           style={{
             background: 'linear-gradient(135deg, #eef2ff, #dbeafe)',
             border: '1px solid #bfdbfe',
@@ -657,12 +661,12 @@ const DyslexiaView = () => {
         >
           <div>
             <p style={{ margin: 0, fontWeight: 700, color: '#1e3a8a' }}>
-              {syllableMode && isEnglish ? 'Open All Les-sons Page' : 'Open All Lessons Page'}
+              {isEnglish && syllableMode ? 'Open All Les-sons' : t('learning.common.openAllLessons')}
             </p>
             <p style={{ margin: '4px 0 0 0', color: '#334155', fontSize: '14px' }}>
-              {syllableMode && isEnglish
+              {isEnglish && syllableMode
                 ? 'Pick any les-son and start prac-tice from a sep-a-rate page.'
-                : 'Pick any lesson and start practice from a separate page.'}
+                : t('learning.common.useOpenAllLessons')}
             </p>
           </div>
           <button
@@ -679,7 +683,7 @@ const DyslexiaView = () => {
               whiteSpace: 'nowrap'
             }}
           >
-            {syllableMode && isEnglish ? 'Open Les-sons' : 'Open Lessons'}
+            {isEnglish && syllableMode ? 'Open Les-sons' : t('learning.common.openAllLessons')}
           </button>
         </section>
 

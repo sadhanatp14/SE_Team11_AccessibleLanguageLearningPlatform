@@ -197,8 +197,8 @@ describe('AutismView Component - Autism Learning Features', () => {
         expect(document.querySelectorAll('.lesson-simple-card').length).toBe(0);
       });
 
-      // The old explanatory empty-state card is removed.
-      expect(screen.queryByText(/These lessons are available in Open All Lessons\./i)).not.toBeInTheDocument();
+      // The Open All Lessons CTA is present.
+      expect(screen.getByText(/These lessons are available in Open All Lessons\./i)).toBeInTheDocument();
 
       // A prominent next-lesson recommendation card is shown instead.
       expect(await screen.findByLabelText('Recommended next lesson')).toBeInTheDocument();
