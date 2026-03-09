@@ -15,7 +15,7 @@ export const normalizeSpeechText = (value) => {
   if (!raw) return '';
 
   return raw
-    .replace(/[.,!?;:()"'{}\[\]<>\\/|@#$%^&*_+=~`]/g, ' ')
+    .replace(/[.,!?;:()"'{}[\]<>\\/|@#$%^&*_+=~`]/g, ' ')
     .replace(/[\u201C\u201D\u2018\u2019\u2013\u2014]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();

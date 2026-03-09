@@ -335,7 +335,7 @@ const PronunciationPractice = ({
         setListeningItemId(null);
       }
     },
-    [recognitionLang, isTranscriptAcceptable]
+    [inferItemLanguageKey, recognitionLang, isTranscriptAcceptable]
   );
 
   const handleProceed = useCallback(() => {
