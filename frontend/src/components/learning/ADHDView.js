@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { usePreferences } from '../../context/PreferencesContext';
 import ProfileSettings from '../ProfileSettings';
 import './ADHDView.css';
+import './BilingualText.css';
 import PronunciationPractice from './PronunciationPractice';
 import NextLessonCard from './NextLessonCard';
 import PracticeSuggestion from './PracticeSuggestion';
@@ -44,14 +45,18 @@ import {
   X,
 } from 'lucide-react';
 import {
+  bilingualPrimaryLanguageForMode,
   backendTtsLangFor,
   inferTtsLanguageKeyFromText,
+  isBilingualTextMode,
   pickByLanguage,
+  resolveBilingualTextModeFromPreferences,
   resolveUiLanguageFromPreferences,
   speechRecognitionLangFor,
   speechSynthesisLangFor,
 } from '../../utils/languagePrefs';
 import { makeSpeechCompareForms } from '../../utils/speechCompare';
+import { pickI18nString } from '../../utils/lessonI18n';
 
 const joinUrl = (base, path) => {
   const baseStr = String(base || '').replace(/\/+$/, '');
@@ -60,11 +65,24 @@ const joinUrl = (base, path) => {
   return `${baseStr}${normalizedPath}`;
 };
 
+const labelForLang = (lang) => {
+  const normalized = String(lang || '').trim().toLowerCase();
+  if (normalized === 'tamil') return 'Tamil';
+  if (normalized === 'hindi') return 'Hindi';
+  return 'English';
+};
+
+const normalizeText = (value) => {
+  const text = typeof value === 'string' ? value : String(value ?? '');
+  return text.trim();
+};
+
 const ADHDView = ({ initialLessonId = null }) => {
   // Auth and preferences context
   const { user, logout } = useAuth();
   const { preferences, updatePreferences } = usePreferences();
   const uiLanguage = resolveUiLanguageFromPreferences(preferences);
+  const bilingualTextMode = resolveBilingualTextModeFromPreferences(preferences);
   const { t } = useI18n();
   const navigate = useNavigate();
 
@@ -360,7 +378,7 @@ const ADHDView = ({ initialLessonId = null }) => {
     return joinUrl(api?.defaults?.baseURL || '/api', '/tts/speak');
   }, []);
 
-  const renderTextWithActiveWord = (text) => {
+  const renderTextWithActiveWord = useCallback((text) => {
     if (!text) return null;
     const words = String(text).split(' ');
     return words.map((word, idx) => {
@@ -375,7 +393,298 @@ const ADHDView = ({ initialLessonId = null }) => {
         </span>
       );
     });
-  };
+  }, [activeWord]);
+
+  // Lightweight translations so bilingual mode actually shows 2 lines in ADHD lessons.
+  // (We keep lesson logic data in English; only the rendered label becomes bilingual.)
+  const EN_TO_TA = React.useMemo(
+    () =>
+      ({
+        Hello: 'வணக்கம்',
+        Hi: 'ஹாய்',
+        'Good Morning': 'காலை வணக்கம்',
+        'How are you?': 'எப்படி இருக்கிறீர்கள்?',
+        Goodbye: 'பிரியாவிடை',
+        'Good Night': 'இனிய இரவு',
+        Thanks: 'நன்றி',
+        'Thank you': 'நன்றி',
+        Sorry: 'மன்னிக்கவும்',
+        Yes: 'ஆம்',
+        No: 'இல்லை',
+        Maybe: 'ஒருவேளை',
+        'A common way to greet someone when you meet them.': 'நீங்கள் ஒருவரை சந்திக்கும் போது வாழ்த்தும் ஒரு பொதுவான வழி.',
+        'A short, friendly greeting.': 'ஒரு குறுகிய, நட்பான வாழ்த்து.',
+        'Used to say hello in the early part of the day.': 'நாளின் ஆரம்ப பகுதியில் வணக்கம் சொல்ல பயன்படுத்தப்படும்.',
+        'A friendly question to ask someone after you greet them.': 'வணக்கம் சொன்ன பிறகு ஒருவரிடம் கேட்கும் நட்பான கேள்வி.',
+        'A round fruit that can be red or green.': 'சிவப்பு அல்லது பச்சை நிறமாக இருக்கக்கூடிய வட்டமான பழம்.',
+        'A set of pages you read.': 'நீங்கள் படிக்கும் பக்கங்களின் தொகுப்பு.',
+        'A small animal that says "Meow".': '"Meow" என்று சொல்லும் ஒரு சிறிய விலங்கு.',
+        'You sit on it.': 'நீங்கள் இதில் உட்காருவீர்கள்.',
+        'The number 1. It means a single thing.': 'எண் 1. இது ஒரு தனி பொருளை குறிக்கிறது.',
+        'The number 2. One plus one equals two.': 'எண் 2. ஒன்று + ஒன்று = இரண்டு.',
+        'The number 3. It means one more than two.': 'எண் 3. இது இரண்டை விட ஒன்று அதிகம்.',
+        'A polite way to say “Hello” in Tamil.': 'தமிழில் “Hello” சொல்லும் மரியாதையான முறை.',
+        'This means “Thank you” in Tamil.': 'இது தமிழில் “Thank you” என்பதைக் குறிக்கிறது.',
+        'This means “Yes” in Tamil.': 'இது தமிழில் “Yes” என்பதைக் குறிக்கிறது.',
+        'This means “No” in Tamil.': 'இது தமிழில் “No” என்பதைக் குறிக்கிறது.',
+        'A polite way to say “Hello” in Hindi.': 'இந்தியில் “Hello” சொல்லும் மரியாதையான முறை.',
+        'This means “Thank you” in Hindi.': 'இது இந்தியில் “Thank you” என்பதைக் குறிக்கிறது.',
+        'This means “Yes” in Hindi.': 'இது இந்தியில் “Yes” என்பதைக் குறிக்கிறது.',
+        'This means “No” in Hindi.': 'இது இந்தியில் “No” என்பதைக் குறிக்கிறது.',
+        Apple: 'ஆப்பிள்',
+        Book: 'புத்தகம்',
+        Cat: 'பூனை',
+        Chair: 'நாற்காலி',
+        Car: 'கார்',
+        Table: 'மேசை',
+        Dog: 'நாய்',
+        Bird: 'பறவை',
+        Shoe: 'செருப்பு',
+        Plate: 'தட்டு',
+        One: 'ஒன்று',
+        Two: 'இரண்டு',
+        Three: 'மூன்று',
+        Ten: 'பத்து',
+        'A turtle': 'ஒரு ஆமை',
+        'A cat': 'ஒரு பூனை',
+        'A bird': 'ஒரு பறவை',
+        'A key': 'ஒரு சாவி',
+        'A book': 'ஒரு புத்தகம்',
+        'An apple': 'ஒரு ஆப்பிள்',
+        'A crow': 'ஒரு காக்கை',
+        'A rabbit': 'ஒரு முயல்',
+        Hop: 'ஹாப்',
+        Sam: 'சாம்',
+        Max: 'மேக்ஸ்',
+        'Which word means "Hello"?': '"Hello" என்றால் எந்த சொல்?',
+        'What do you say in the early part of the day?': 'நாளின் ஆரம்ப பகுதியில் நீங்கள் என்ன சொல்வீர்கள்?',
+        'Which one is a question you can ask after greeting someone?': 'வணக்கம் சொன்ன பிறகு கேட்கக்கூடிய கேள்வி எது?',
+        'When do we say "Good Morning"?': '"Good Morning" எப்போது சொல்வோம்?',
+        'Which one is a fruit?': 'எது ஒரு பழம்?',
+        'Which one is something you read?': 'எது நீங்கள் படிப்பது?',
+        'Which animal says "Meow"?': '"Meow" என்று சொல்லும் விலங்கு எது?',
+        'What do you sit on?': 'நீங்கள் எதில் உட்கார்வீர்கள்?',
+        'How many noses do you have?': 'உங்களிடம் எத்தனை மூக்குகள் உள்ளன?',
+        'How many eyes do most people have?': 'பெரும்பாலானவர்களுக்கு எத்தனை கண்கள் உள்ளன?',
+        'Which number comes after 2?': '2க்கு பிறகு எந்த எண் வருகிறது?',
+        'Select the word for 3.': '3 என்பதற்கான சொல்லைத் தேர்ந்தெடுக்கவும்.',
+        "What was the rabbit's name?": 'முயலின் பெயர் என்ன?',
+        'Who did Hop meet?': 'ஹாப் யாரை சந்தித்தான்?',
+        'What did Sam drop?': 'சாம் என்னை கீழே போட்டான்?',
+        'Which animal picked up the key?': 'சாவியை எடுத்தது எந்த விலங்கு?',
+        'In the morning': 'காலையில்',
+        'At night': 'இரவில்',
+        'At lunch': 'மதிய உணவில்',
+        'To greet': 'வணக்கம் சொல்ல',
+        'To thank': 'நன்றி சொல்ல',
+        'To say goodbye': 'பிரியாவிடை சொல்ல',
+      }),
+    []
+  );
+
+  const EN_TO_HI = React.useMemo(
+    () =>
+      ({
+        Hello: 'नमस्ते',
+        Hi: 'हाय',
+        'Good Morning': 'सुप्रभात',
+        'How are you?': 'आप कैसे हैं?',
+        Goodbye: 'अलविदा',
+        'Good Night': 'शुभ रात्रि',
+        Thanks: 'धन्यवाद',
+        'Thank you': 'धन्यवाद',
+        Sorry: 'माफ़ कीजिए',
+        Yes: 'हाँ',
+        No: 'नहीं',
+        Maybe: 'शायद',
+        'A common way to greet someone when you meet them.': 'जब आप किसी से मिलते हैं तो अभिवादन करने का एक आम तरीका।',
+        'A short, friendly greeting.': 'एक छोटा, दोस्ताना अभिवादन।',
+        'Used to say hello in the early part of the day.': 'दिन के शुरुआती हिस्से में नमस्ते/हैलो कहने के लिए।',
+        'A friendly question to ask someone after you greet them.': 'अभिवादन के बाद किसी से पूछने के लिए एक दोस्ताना सवाल।',
+        'A round fruit that can be red or green.': 'एक गोल फल जो लाल या हरा हो सकता है।',
+        'A set of pages you read.': 'पन्नों का एक संग्रह जिसे आप पढ़ते हैं।',
+        'A small animal that says "Meow".': 'एक छोटा जानवर जो "Meow" कहता है।',
+        'You sit on it.': 'आप इस पर बैठते हैं।',
+        'The number 1. It means a single thing.': 'संख्या 1। इसका मतलब एक ही चीज़ है।',
+        'The number 2. One plus one equals two.': 'संख्या 2। एक और एक मिलकर दो होते हैं।',
+        'The number 3. It means one more than two.': 'संख्या 3। यह दो से एक अधिक है।',
+        'A polite way to say “Hello” in Tamil.': 'तमिल में “Hello” कहने का एक विनम्र तरीका।',
+        'This means “Thank you” in Tamil.': 'तमिल में इसका अर्थ “Thank you” है।',
+        'This means “Yes” in Tamil.': 'तमिल में इसका अर्थ “Yes” है।',
+        'This means “No” in Tamil.': 'तमिल में इसका अर्थ “No” है।',
+        'A polite way to say “Hello” in Hindi.': 'हिंदी में “Hello” कहने का एक विनम्र तरीका।',
+        'This means “Thank you” in Hindi.': 'हिंदी में इसका अर्थ “Thank you” है।',
+        'This means “Yes” in Hindi.': 'हिंदी में इसका अर्थ “Yes” है।',
+        'This means “No” in Hindi.': 'हिंदी में इसका अर्थ “No” है।',
+        Apple: 'सेब',
+        Book: 'किताब',
+        Cat: 'बिल्ली',
+        Chair: 'कुर्सी',
+        Car: 'कार',
+        Table: 'मेज़',
+        Dog: 'कुत्ता',
+        Bird: 'पक्षी',
+        Shoe: 'जूता',
+        Plate: 'प्लेट',
+        One: 'एक',
+        Two: 'दो',
+        Three: 'तीन',
+        Ten: 'दस',
+        'A turtle': 'एक कछुआ',
+        'A cat': 'एक बिल्ली',
+        'A bird': 'एक पक्षी',
+        'A key': 'एक चाबी',
+        'A book': 'एक किताब',
+        'An apple': 'एक सेब',
+        'A crow': 'एक कौआ',
+        'A rabbit': 'एक खरगोश',
+        Hop: 'हॉप',
+        Sam: 'सैम',
+        Max: 'मैक्स',
+        'Which word means "Hello"?': '"Hello" का अर्थ कौन सा शब्द है?',
+        'What do you say in the early part of the day?': 'दिन के शुरुआती हिस्से में आप क्या कहते हैं?',
+        'Which one is a question you can ask after greeting someone?': 'अभिवादन के बाद आप कौन सा प्रश्न पूछ सकते हैं?',
+        'When do we say "Good Morning"?': '"Good Morning" कब कहते हैं?',
+        'Which one is a fruit?': 'कौन सा फल है?',
+        'Which one is something you read?': 'कौन सी चीज़ आप पढ़ते हैं?',
+        'Which animal says "Meow"?': '"Meow" कहने वाला जानवर कौन सा है?',
+        'What do you sit on?': 'आप किस पर बैठते हैं?',
+        'How many noses do you have?': 'आपके पास कितनी नाकें हैं?',
+        'How many eyes do most people have?': 'अधिकांश लोगों की कितनी आँखें होती हैं?',
+        'Which number comes after 2?': '2 के बाद कौन सा अंक आता है?',
+        'Select the word for 3.': '3 के लिए शब्द चुनें।',
+        "What was the rabbit's name?": 'खरगोश का नाम क्या था?',
+        'Who did Hop meet?': 'हॉप किससे मिला?',
+        'What did Sam drop?': 'सैम ने क्या गिराया?',
+        'Which animal picked up the key?': 'चाबी किस जानवर ने उठाई?',
+        'In the morning': 'सुबह',
+        'At night': 'रात में',
+        'At lunch': 'दोपहर के खाने में',
+        'To greet': 'नमस्ते करने के लिए',
+        'To thank': 'धन्यवाद कहने के लिए',
+        'To say goodbye': 'अलविदा कहने के लिए',
+      }),
+    []
+  );
+
+  const TA_TO_EN = React.useMemo(
+    () =>
+      ({
+        'வணக்கம் (Vanakkam)': 'Hello',
+        வணக்கம்: 'Hello',
+        'நன்றி (Nandri)': 'Thank you',
+        நன்றி: 'Thank you',
+        'ஆம் (Aam)': 'Yes',
+        ஆம்: 'Yes',
+        'இல்லை (Illai)': 'No',
+        இல்லை: 'No',
+        'வணக்கம் means…': 'What does வணக்கம் mean?',
+        'Choose “Thank you” in Tamil.': 'Choose “Thank you” in Tamil.',
+        'Which one means “No”?': 'Which one means “No”?',
+      }),
+    []
+  );
+
+  const HI_TO_EN = React.useMemo(
+    () =>
+      ({
+        'नमस्ते (Namaste)': 'Hello',
+        नमस्ते: 'Hello',
+        'धन्यवाद (Dhanyavaad)': 'Thank you',
+        धन्यवाद: 'Thank you',
+        'हाँ (Haan)': 'Yes',
+        हाँ: 'Yes',
+        'नहीं (Nahin)': 'No',
+        नहीं: 'No',
+        'नमस्ते means…': 'What does नमस्ते mean?',
+        'Choose “Thank you” in Hindi.': 'Choose “Thank you” in Hindi.',
+        'Which one means “Yes”?': 'Which one means “Yes”?',
+      }),
+    []
+  );
+
+  const buildAdhdI18n = useCallback(
+    (text, defaultLang = 'english') => {
+      const raw = typeof text === 'string' ? text : String(text ?? '');
+      const trimmed = raw.trim();
+      if (!trimmed) return null;
+
+      const inferred = inferTtsLanguageKeyFromText(trimmed, defaultLang);
+      if (inferred === 'tamil') {
+        const english = TA_TO_EN[trimmed] || '';
+        return { english, tamil: trimmed, hindi: '' };
+      }
+
+      if (inferred === 'hindi') {
+        const english = HI_TO_EN[trimmed] || '';
+        return { english, tamil: '', hindi: trimmed };
+      }
+
+      return {
+        english: trimmed,
+        tamil: EN_TO_TA[trimmed] || '',
+        hindi: EN_TO_HI[trimmed] || '',
+      };
+    },
+    [EN_TO_HI, EN_TO_TA, HI_TO_EN, TA_TO_EN]
+  );
+
+  const renderBilingualTextWithActiveWord = useCallback(
+    (
+      baseText,
+      {
+        defaultLanguage = 'english',
+        showLabels = true,
+        compact = false,
+        fullWidth = false,
+        className = '',
+      } = {}
+    ) => {
+      const enabled = isBilingualTextMode(bilingualTextMode);
+      const i18n = buildAdhdI18n(baseText, defaultLanguage);
+      const plain = normalizeText(pickI18nString(defaultLanguage, baseText, i18n));
+
+      const widthClass = fullWidth ? 'adhd-bilingual-fullwidth' : '';
+
+      const inlineWords = (text) => <span className="adhd-inline-words">{renderTextWithActiveWord(text)}</span>;
+
+      if (!enabled) {
+        return (
+          <span className={`bilingual-text bilingual-single ${compact ? 'compact' : ''} ${widthClass} ${className}`.trim()}>
+            {inlineWords(plain)}
+          </span>
+        );
+      }
+
+      const primaryLang = bilingualPrimaryLanguageForMode(bilingualTextMode);
+      const englishText = normalizeText(pickI18nString('english', baseText, i18n));
+      const primaryText = normalizeText(pickI18nString(primaryLang, baseText, i18n));
+
+      if (!primaryText || !englishText || primaryText === englishText) {
+        const single = primaryText || englishText || plain;
+        return (
+          <span className={`bilingual-text bilingual-single ${compact ? 'compact' : ''} ${widthClass} ${className}`.trim()}>
+            {inlineWords(single)}
+          </span>
+        );
+      }
+
+      return (
+        <span className={`bilingual-text ${compact ? 'compact' : ''} ${widthClass} ${className}`.trim()}>
+          <span className="bilingual-line bilingual-primary">
+            {showLabels ? <span className="bilingual-label">{labelForLang(primaryLang)}</span> : null}
+            <span className="bilingual-value">{inlineWords(primaryText)}</span>
+          </span>
+          <span className="bilingual-break" aria-hidden="true" />
+          <span className="bilingual-line bilingual-secondary">
+            {showLabels ? <span className="bilingual-label">English</span> : null}
+            <span className="bilingual-value">{inlineWords(englishText)}</span>
+          </span>
+        </span>
+      );
+    },
+    [bilingualTextMode, buildAdhdI18n, renderTextWithActiveWord]
+  );
 
   const playAudio = async (text, rate = 1, options = {}) => {
     const { trackWords = true } = options;
@@ -1590,9 +1899,6 @@ const ADHDView = ({ initialLessonId = null }) => {
                           ({performanceSummary.recentAverage.toFixed(0)}% {t('learning.common.avgAbbrev')})
                         </span>
                       )}
-                      {performanceSummary?.pace && (
-                        <span style={{ opacity: 0.85 }}>• {t('learning.common.paceLabel')} {String(performanceSummary.pace).toLowerCase() === 'standard' ? t('settings.paceNormal') : String(performanceSummary.pace).toLowerCase() === 'normal' ? t('settings.paceNormal') : String(performanceSummary.pace).toLowerCase() === 'slow' ? t('settings.paceSlow') : String(performanceSummary.pace).toLowerCase() === 'fast' ? t('settings.paceFast') : performanceSummary.pace}</span>
-                      )}
                       {typeof performanceSummary?.completionRate === 'number' && performanceSummary.completionRate > 0 && (
                         <span style={{ opacity: 0.8 }}>• {t('learning.common.completionLabel')} {performanceSummary.completionRate}%</span>
                       )}
@@ -1914,10 +2220,18 @@ const ADHDView = ({ initialLessonId = null }) => {
                       {currentStep.type === 'learn' && (
                         <div className="learn-mode">
                           <h2 className={currentStep.highlight ? 'highlight-text' : ''}>
-                            {renderTextWithActiveWord(currentStep.content)}
+                            {renderBilingualTextWithActiveWord(currentStep.content, {
+                              defaultLanguage: activeLesson?.ttsLang || 'english',
+                              showLabels: true,
+                            })}
                           </h2>
                           <p style={{ fontSize: '1.5rem', color: 'var(--text-primary)', fontWeight: '500', marginTop: '1rem' }}>
-                            {renderTextWithActiveWord(currentStep.explanation)}
+                            {renderBilingualTextWithActiveWord(currentStep.explanation, {
+                              defaultLanguage: 'english',
+                              showLabels: true,
+                              compact: true,
+                              fullWidth: true,
+                            })}
                           </p>
                           <button type="button" onClick={handleListenCurrentStep} className="btn-audio" title="Listen">
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
@@ -2006,14 +2320,24 @@ const ADHDView = ({ initialLessonId = null }) => {
                               border: isPlaying ? '2px solid #fbc02d' : '1px solid transparent'
                             }}
                           >
-                            {renderTextWithActiveWord(currentStep.content)}
+                            {renderBilingualTextWithActiveWord(currentStep.content, {
+                              defaultLanguage: 'english',
+                              showLabels: true,
+                              fullWidth: true,
+                            })}
                           </p>
                         </div>
                       )}
 
                       {currentStep.type === 'quiz' && (
                         <div className="quiz-mode">
-                          <h2>{renderTextWithActiveWord(currentStep.question)}</h2>
+                          <h2>
+                            {renderBilingualTextWithActiveWord(currentStep.question, {
+                              defaultLanguage: activeLesson?.ttsLang || 'english',
+                              showLabels: true,
+                              fullWidth: true,
+                            })}
+                          </h2>
                           <div className="quiz-audio-actions">
                             <button type="button" onClick={handleListenCurrentStep} className="btn-audio" title="Listen to question">
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
@@ -2053,7 +2377,11 @@ const ADHDView = ({ initialLessonId = null }) => {
                                 className="btn-option"
                                 disabled={feedback?.type === 'success' || isTransitioning}
                               >
-                                {opt}
+                                {renderBilingualTextWithActiveWord(opt, {
+                                  defaultLanguage: 'english',
+                                  showLabels: false,
+                                  compact: true,
+                                })}
                               </button>
                             ))}
                           </div>

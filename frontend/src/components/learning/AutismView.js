@@ -12,13 +12,17 @@ import { adjustDifficulty, getCurrentDifficulty, getPerformanceSummary, recordLe
 import { getReviewBasedRecommendation } from '../../services/reviewRecommendationService';
 import NextLessonCard from './NextLessonCard';
 import {
+  bilingualPrimaryLanguageForMode,
   backendTtsLangFor,
+  isBilingualTextMode,
   normalizePreferredLanguage,
   pickByLanguage,
+  resolveBilingualTextModeFromPreferences,
   resolveUiLanguageFromPreferences,
   speechSynthesisLangFor,
 } from '../../utils/languagePrefs';
 import { useI18n } from '../../utils/i18n';
+import BilingualText from './BilingualText';
 // Icon imports for UI elements
 import {
   BookOpen,
@@ -64,13 +68,437 @@ const joinUrl = (base, path) => {
   return `${baseStr}${normalizedPath}`;
 };
 
+const labelForLang = (lang) => {
+  const normalized = String(lang || '').trim().toLowerCase();
+  if (normalized === 'tamil') return 'Tamil';
+  if (normalized === 'hindi') return 'Hindi';
+  return 'English';
+};
+
+const inferScriptLanguage = (text) => {
+  const value = String(text || '');
+  if (/[\u0B80-\u0BFF]/.test(value)) return 'tamil';
+  if (/[\u0900-\u097F]/.test(value)) return 'hindi';
+  return 'english';
+};
+
 const AutismView = ({ initialLessonId = null }) => {
   // Auth context
   const { user, logout } = useAuth();
   const { preferences, updateAccessibilitySettings } = usePreferences();
   const uiLanguage = resolveUiLanguageFromPreferences(preferences);
+  const bilingualTextMode = resolveBilingualTextModeFromPreferences(preferences);
+  const showBilingualText = isBilingualTextMode(bilingualTextMode);
   const { t } = useI18n();
   const navigate = useNavigate();
+
+  const AUTISM_TEXT_EN_TO_TA = useMemo(
+    () => ({
+      Hello: 'வணக்கம்',
+      Goodbye: 'பிரியாவிடை',
+      'Thank you': 'நன்றி',
+      Sorry: 'மன்னிக்கவும்',
+      Yes: 'ஆம்',
+      No: 'இல்லை',
+      Maybe: 'ஒருவேளை',
+      'How are you?': 'எப்படி இருக்கிறீர்கள்?',
+      'Where are you?': 'நீங்கள் எங்கே இருக்கிறீர்கள்?',
+      'What is your name?': 'உங்கள் பெயர் என்ன?',
+      'Good Morning': 'காலை வணக்கம்',
+      'Good night': 'இனிய இரவு',
+      'Good Night': 'இனிய இரவு',
+      'To greet': 'வணக்கம் சொல்ல',
+      'To thank': 'நன்றி சொல்ல',
+      'To say goodbye': 'பிரியாவிடை சொல்ல',
+      Greeting: 'வணக்கம்',
+      Thanking: 'நன்றி சொல்வது',
+      'Saying goodbye': 'பிரியாவிடை சொல்வது',
+      'In the morning': 'காலையில்',
+      'At night': 'இரவில்',
+      'In the evening': 'மாலையில்',
+      'To say you are fine': 'நீங்கள் நலமாக இருக்கிறேன் என்று சொல்ல',
+      'To say thank you': 'நன்றி சொல்ல',
+      'To agree': 'ஒப்புக்கொள்ள',
+      'To disagree': 'மறுக்க',
+      'To ask a question': 'ஒரு கேள்வி கேட்க',
+      'To be polite': 'மரியாதையாக இருக்க',
+
+      // English lesson options (alphabet)
+      Apple: 'ஆப்பிள்',
+      Ball: 'பந்து',
+      Cat: 'பூனை',
+      Dog: 'நாய்',
+      Elephant: 'யானை',
+      Fish: 'மீன்',
+      Goat: 'ஆடு',
+      Hat: 'தொப்பி',
+      Ice: 'பனி',
+      Jug: 'குடம்',
+      Kite: 'பட்டம்',
+
+      // Actions (used as lesson content)
+      Walk: 'நட',
+      Run: 'ஓடு',
+      Sit: 'உட்கார்',
+      Stand: 'நில்',
+      Eat: 'சாப்பிடு',
+      Drink: 'குடி',
+      Sleep: 'தூங்கு',
+      Jump: 'குதி',
+      Read: 'படி',
+      Write: 'எழுது',
+
+      // Numbers / general
+      One: 'ஒன்று',
+      Two: 'இரண்டு',
+      Three: 'மூன்று',
+      Four: 'நான்கு',
+      Five: 'ஐந்து',
+      Six: 'ஆறு',
+      Seven: 'ஏழு',
+      Eight: 'எட்டு',
+      Nine: 'ஒன்பது',
+      Ten: 'பத்து',
+      Eleven: 'பதினொன்று',
+
+      // Family members options
+      Mother: 'அம்மா',
+      Father: 'அப்பா',
+      Sister: 'சகோதரி',
+      Brother: 'சகோதரன்',
+      Grandfather: 'தாத்தா',
+      Grandmother: 'பாட்டி',
+      Uncle: 'மாமா',
+      Aunt: 'அத்தை',
+      'Elder brother': 'மூத்த சகோதரன்',
+      'Younger brother': 'இளைய சகோதரன்',
+      'Elder sister': 'மூத்த சகோதரி',
+      'Younger sister': 'இளைய சகோதரி',
+
+      // Actions lesson options
+      'Move your feet': 'உங்கள் கால்களை நகர்த்துங்கள்',
+      'Jump high': 'உயரமாக குதிக்க',
+      'Stay still': 'அசையாமல் இருங்கள்',
+      'Same speed': 'அதே வேகம்',
+      'On a chair': 'நாற்காலியில்',
+      'In the air': 'காற்றில்',
+      'On the ceiling': 'மேல்சுவரில்',
+      'Your feet': 'உங்கள் கால்கள்',
+      'Your hands': 'உங்கள் கைகள்',
+      'Your head': 'உங்கள் தலை',
+      'Chew food': 'உணவை மென்று சாப்பிட',
+      Water: 'தண்ணீர்',
+      'A rock': 'ஒரு கல்',
+      'A chair': 'ஒரு நாற்காலி',
+      Chair: 'நாற்காலி',
+      'While walking': 'நடக்கும் போது',
+      'While eating': 'சாப்பிடும் போது',
+      'You go up': 'நீங்கள் மேலே செல்கிறீர்கள்',
+      'You sit down': 'நீங்கள் உட்காருகிறீர்கள்',
+      'You sleep': 'நீங்கள் தூங்குகிறீர்கள்',
+      Books: 'புத்தகங்கள்',
+      Food: 'உணவு',
+      Air: 'காற்று',
+      'A pen': 'ஒரு பேனா',
+      'Your nose': 'உங்கள் மூக்கு',
+    }),
+    []
+  );
+
+  const AUTISM_TEXT_EN_TO_HI = useMemo(
+    () => ({
+      Hello: 'नमस्ते',
+      Goodbye: 'अलविदा',
+      'Thank you': 'धन्यवाद',
+      Sorry: 'माफ़ कीजिए',
+      Yes: 'हाँ',
+      No: 'नहीं',
+      Maybe: 'शायद',
+      'How are you?': 'आप कैसे हैं?',
+      'Where are you?': 'आप कहाँ हैं?',
+      'What is your name?': 'आपका नाम क्या है?',
+      'Good Morning': 'सुप्रभात',
+      'Good night': 'शुभ रात्रि',
+      'Good Night': 'शुभ रात्रि',
+      'To greet': 'अभिवादन करने के लिए',
+      'To thank': 'धन्यवाद कहने के लिए',
+      'To say goodbye': 'अलविदा कहने के लिए',
+      Greeting: 'अभिवादन',
+      Thanking: 'धन्यवाद कहना',
+      'Saying goodbye': 'अलविदा कहना',
+      'In the morning': 'सुबह',
+      'At night': 'रात में',
+      'In the evening': 'शाम',
+      'To say you are fine': 'यह बताने के लिए कि आप ठीक हैं',
+      'To say thank you': 'धन्यवाद कहने के लिए',
+      'To agree': 'सहमत होने के लिए',
+      'To disagree': 'असहमत होने के लिए',
+      'To ask a question': 'प्रश्न पूछने के लिए',
+      'To be polite': 'विनम्र होने के लिए',
+
+      Apple: 'सेब',
+      Ball: 'गेंद',
+      Cat: 'बिल्ली',
+      Dog: 'कुत्ता',
+      Elephant: 'हाथी',
+      Fish: 'मछली',
+      Goat: 'बकरी',
+      Hat: 'टोपी',
+      Ice: 'बर्फ',
+      Jug: 'घड़ा',
+      Kite: 'पतंग',
+
+      // Actions (used as lesson content)
+      Walk: 'चलना',
+      Run: 'दौड़ना',
+      Sit: 'बैठना',
+      Stand: 'खड़ा होना',
+      Eat: 'खाना',
+      Drink: 'पीना',
+      Sleep: 'सोना',
+      Jump: 'कूदना',
+      Read: 'पढ़ना',
+      Write: 'लिखना',
+
+      One: 'एक',
+      Two: 'दो',
+      Three: 'तीन',
+      Four: 'चार',
+      Five: 'पाँच',
+      Six: 'छह',
+      Seven: 'सात',
+      Eight: 'आठ',
+      Nine: 'नौ',
+      Ten: 'दस',
+      Eleven: 'ग्यारह',
+
+      Mother: 'माँ',
+      Father: 'पिता',
+      Sister: 'बहन',
+      Brother: 'भाई',
+      Grandfather: 'दादा',
+      Grandmother: 'दादी',
+      Uncle: 'चाचा',
+      Aunt: 'चाची',
+      'Elder brother': 'बड़ा भाई',
+      'Younger brother': 'छोटा भाई',
+      'Elder sister': 'बड़ी बहन',
+      'Younger sister': 'छोटी बहन',
+
+      'Move your feet': 'अपने पैर हिलाएँ',
+      'Jump high': 'ऊँचा कूदो',
+      'Stay still': 'स्थिर रहो',
+      'Same speed': 'वही गति',
+      'On a chair': 'कुर्सी पर',
+      'In the air': 'हवा में',
+      'On the ceiling': 'छत पर',
+      'Your feet': 'आपके पैर',
+      'Your hands': 'आपके हाथ',
+      'Your head': 'आपका सिर',
+      'Chew food': 'खाना चबाओ',
+      Water: 'पानी',
+      'A rock': 'एक पत्थर',
+      'A chair': 'एक कुर्सी',
+      Chair: 'कुर्सी',
+      'While walking': 'चलते समय',
+      'While eating': 'खाते समय',
+      'You go up': 'आप ऊपर जाते हैं',
+      'You sit down': 'आप बैठते हैं',
+      'You sleep': 'आप सोते हैं',
+      Books: 'किताबें',
+      Food: 'खाना',
+      Air: 'हवा',
+      'A pen': 'एक पेन',
+      'Your nose': 'आपकी नाक',
+    }),
+    []
+  );
+
+  const AUTISM_CONTENT_TO_EN = useMemo(
+    () => ({
+      'வணக்கம் (Vanakkam)': 'Hello',
+      'நன்றி (Nandri)': 'Thank you',
+      'எப்படி இருக்கிறீர்கள்? (Eppadi Irukkireergal?)': 'How are you?',
+      'மன்னிக்கவும் (Mannikkavum)': 'Sorry',
+      'இல்லை (Illai)': 'No',
+      'பிரியாவிடை (Piriyavidai)': 'Goodbye',
+      'காலை வணக்கம் (Kaalai Vanakkam)': 'Good Morning',
+      'நான் நலமாக இருக்கிறேன் (Naan Nalamaaga Irukkiren)': 'I am fine',
+      'ஆம் (Aam)': 'Yes',
+      'தயவு செய்து (Thayavu Seidhu)': 'Please',
+
+      'एक (Ek)': 'One',
+      'दो (Do)': 'Two',
+      'तीन (Teen)': 'Three',
+      'चार (Chaar)': 'Four',
+      'पाँच (Paanch)': 'Five',
+      'छह (Chhah)': 'Six',
+      'सात (Saat)': 'Seven',
+      'आठ (Aath)': 'Eight',
+      'नौ (Nau)': 'Nine',
+      'दस (Das)': 'Ten',
+
+      'அம்மா (Amma)': 'Mother',
+      'அப்பா (Appa)': 'Father',
+      'அண்ணா (Anna)': 'Elder brother',
+      'அக்கா (Akka)': 'Elder sister',
+      'தம்பி (Thambi)': 'Younger brother',
+      'தங்கை (Thangai)': 'Younger sister',
+      'தாத்தா (Thaathaa)': 'Grandfather',
+      'பாட்டி (Paatti)': 'Grandmother',
+      'மாமா (Maama)': 'Uncle',
+      'அத்தை (Atthai)': 'Aunt',
+
+      Walk: 'Walk',
+      Run: 'Run',
+      Sit: 'Sit',
+      Stand: 'Stand',
+      Eat: 'Eat',
+      Drink: 'Drink',
+      Sleep: 'Sleep',
+      Jump: 'Jump',
+      Read: 'Read',
+      Write: 'Write',
+    }),
+    []
+  );
+
+  const translateAutismEnglishText = useCallback(
+    (text, lang) => {
+      const key = String(text || '').trim();
+      if (!key) return '';
+      const normalized = String(lang || '').trim().toLowerCase();
+      if (normalized === 'tamil') return AUTISM_TEXT_EN_TO_TA[key] || '';
+      if (normalized === 'hindi') return AUTISM_TEXT_EN_TO_HI[key] || '';
+      return '';
+    },
+    [AUTISM_TEXT_EN_TO_HI, AUTISM_TEXT_EN_TO_TA]
+  );
+
+  const translateAutismQuestion = useCallback(
+    (question, lang) => {
+      const q = String(question || '').trim();
+      if (!q) return '';
+      const normalized = String(lang || '').trim().toLowerCase();
+
+      // Pattern-based translations cover the full question set in this module.
+      let m = q.match(/^What does\s+(.+?)\s+mean\?$/i);
+      if (m) {
+        const term = m[1];
+        return normalized === 'tamil' ? `${term} என்றால் என்ன?` : `${term} का मतलब क्या है?`;
+      }
+
+      m = q.match(/^When do you say\s+(.+?)\?$/i);
+      if (m) {
+        const phrase = m[1];
+        return normalized === 'tamil' ? `நீங்கள் ${phrase} எப்போது சொல்வீர்கள்?` : `आप ${phrase} कब कहते हैं?`;
+      }
+
+      m = q.match(/^What is\s+(.+?)\s+used for\?$/i);
+      if (m) {
+        const phrase = m[1];
+        return normalized === 'tamil' ? `${phrase} எதற்குப் பயன்படுத்தப்படுகிறது?` : `${phrase} किस लिए उपयोग होता है?`;
+      }
+
+      m = q.match(/^Why do we use\s+(.+?)\?$/i);
+      if (m) {
+        const phrase = m[1];
+        return normalized === 'tamil' ? `நாம் ${phrase} என்பதை ஏன் பயன்படுத்துகிறோம்?` : `हम ${phrase} का उपयोग क्यों करते हैं?`;
+      }
+
+      m = q.match(/^Which word starts with\s+(.+?)\?$/i);
+      if (m) {
+        const letter = m[1];
+        return normalized === 'tamil' ? `எந்த வார்த்தை ${letter}-ஆல் தொடங்குகிறது?` : `कौन सा शब्द ${letter} से शुरू होता है?`;
+      }
+
+      m = q.match(/^What number is\s+(.+?)\?$/i);
+      if (m) {
+        const token = m[1];
+        return normalized === 'tamil' ? `${token} எந்த எண்?` : `${token} कौन सी संख्या है?`;
+      }
+
+      // Explicit translations for the remaining fixed questions.
+      const TA = {
+        'What do you do when you walk?': 'நீங்கள் நடக்கும்போது என்ன செய்வீர்கள்?',
+        'Is running faster than walking?': 'ஓடுவது நடப்பதைவிட வேகமாக உள்ளதா?',
+        'Where can you sit?': 'நீங்கள் எங்கே உட்காரலாம்?',
+        'What do you use to stand?': 'நீங்கள் நின்றிருக்க எதை பயன்படுத்துகிறீர்கள்?',
+        'What do you do when you eat?': 'நீங்கள் சாப்பிடும் போது என்ன செய்வீர்கள்?',
+        'What can you drink?': 'நீங்கள் என்ன குடிக்கலாம்?',
+        'When do you usually sleep?': 'நீங்கள் பொதுவாக எப்போது தூங்குவீர்கள்?',
+        'What happens when you jump?': 'நீங்கள் குதிக்கும்போது என்ன நடக்கும்?',
+        'What do you read?': 'நீங்கள் என்ன படிப்பீர்கள்?',
+        'What do you use to write?': 'நீங்கள் எழுத எதை பயன்படுத்துகிறீர்கள்?',
+      };
+
+      const HI = {
+        'What do you do when you walk?': 'जब आप चलते हैं तो आप क्या करते हैं?',
+        'Is running faster than walking?': 'क्या दौड़ना चलने से तेज़ है?',
+        'Where can you sit?': 'आप कहाँ बैठ सकते हैं?',
+        'What do you use to stand?': 'खड़े होने के लिए आप क्या इस्तेमाल करते हैं?',
+        'What do you do when you eat?': 'जब आप खाते हैं तो आप क्या करते हैं?',
+        'What can you drink?': 'आप क्या पी सकते हैं?',
+        'When do you usually sleep?': 'आप आमतौर पर कब सोते हैं?',
+        'What happens when you jump?': 'जब आप कूदते हैं तो क्या होता है?',
+        'What do you read?': 'आप क्या पढ़ते हैं?',
+        'What do you use to write?': 'लिखने के लिए आप क्या इस्तेमाल करते हैं?',
+      };
+
+      if (normalized === 'tamil') return TA[q] || '';
+      if (normalized === 'hindi') return HI[q] || '';
+      return '';
+    },
+    []
+  );
+
+  const renderContentWithActiveWord = useCallback(
+    (text, highlightPhrase, currentActiveWord) => {
+      const rawText = String(text || '');
+      if (!rawText) return null;
+
+      const phrase = String(highlightPhrase || '').trim();
+      const highlightIndex = phrase ? rawText.indexOf(phrase) : -1;
+
+      const renderWords = (segment, keyPrefix, isHighlighted) =>
+        segment
+          .split(' ')
+          .filter((w) => w.length > 0)
+          .map((word, idx) => {
+            const cleanWord = word.replace(/[.,!?;:() "]/g, '');
+            const isActive =
+              currentActiveWord && cleanWord.toLowerCase() === currentActiveWord.toLowerCase();
+            return (
+              <span
+                key={`${keyPrefix}-${idx}`}
+                className={
+                  isActive ? 'highlight active-word' :
+                  isHighlighted ? 'highlight keyword-highlight' : ''
+                }
+              >
+                {word}{' '}
+              </span>
+            );
+          });
+
+      if (highlightIndex === -1) {
+        return renderWords(rawText, 'w', false);
+      }
+
+      const before = rawText.slice(0, highlightIndex);
+      const match = rawText.slice(highlightIndex, highlightIndex + phrase.length);
+      const after = rawText.slice(highlightIndex + phrase.length);
+
+      return (
+        <>
+          {renderWords(before, 'before', false)}
+          {renderWords(match, 'match', true)}
+          {renderWords(after, 'after', false)}
+        </>
+      );
+    },
+    []
+  );
   // UI state for settings panel
   const [showSettings, setShowSettings] = useState(false);
   const [showSideMenu, setShowSideMenu] = useState(false);
@@ -2010,7 +2438,24 @@ const AutismView = ({ initialLessonId = null }) => {
                 {/* Question below image */}
                 {currentStep.interaction && (
                   <div className="step-interaction-left">
-                    <p className="interaction-question">{currentStep.interaction.question}</p>
+                    <p className="interaction-question">
+                      {showBilingualText ? (
+                        <BilingualText
+                          bilingualTextMode={bilingualTextMode}
+                          contentLanguage="english"
+                          baseText={currentStep.interaction.question}
+                          i18n={{
+                            english: currentStep.interaction.question,
+                            tamil: translateAutismQuestion(currentStep.interaction.question, 'tamil'),
+                            hindi: translateAutismQuestion(currentStep.interaction.question, 'hindi'),
+                          }}
+                          showLabels={false}
+                          compact
+                        />
+                      ) : (
+                        currentStep.interaction.question
+                      )}
+                    </p>
 
                     <div className="interaction-voice-answer">
                       <button
@@ -2049,7 +2494,20 @@ const AutismView = ({ initialLessonId = null }) => {
                         disabled={questionAnswered}
                       >
                         <span className="option-letter">{String.fromCharCode(65 + index)}</span>
-                        <span className="option-text">{option}</span>
+                        <span className="option-text">
+                          <BilingualText
+                            bilingualTextMode={bilingualTextMode}
+                            contentLanguage="english"
+                            baseText={option}
+                            i18n={{
+                              english: option,
+                              tamil: translateAutismEnglishText(option, 'tamil'),
+                              hindi: translateAutismEnglishText(option, 'hindi'),
+                            }}
+                            showLabels={false}
+                            compact
+                          />
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -2060,62 +2518,45 @@ const AutismView = ({ initialLessonId = null }) => {
                 {/* EPIC 2.5.1: Highlighted main content with multi-word phrase support */}
                 <div className="step-text">
                   <p className="content-main">
-                    {/* Dynamic highlighting with multi-word phrase support */}
-                    {(() => {
-                      const text = currentStep.content;
-                      const highlightPhrase = currentStep.highlight || '';
+                    {showBilingualText ? (
+                      (() => {
+                        const rawContent = String(currentStep.content || '');
+                        const highlightPhrase = currentStep.highlight || '';
+                        const contentLang = inferScriptLanguage(rawContent);
 
-                      // Find the highlight phrase position in the content
-                      const highlightIndex = highlightPhrase ? text.indexOf(highlightPhrase) : -1;
+                        // If the content is English, show primary as user's preferred local language.
+                        const primaryLang = bilingualPrimaryLanguageForMode(bilingualTextMode);
+                        const primaryLabel = contentLang === 'english' ? labelForLang(primaryLang) : labelForLang(contentLang);
 
-                      if (highlightIndex === -1) {
-                        // No phrase match — render word-by-word with TTS active-word only
-                        return text.split(' ').map((word, idx) => {
-                          const cleanWord = word.replace(/[.,!?;:()"]/g, '');
-                          const isActive = activeWord && cleanWord.toLowerCase() === activeWord.toLowerCase();
-                          return (
-                            <span
-                              key={idx}
-                              className={isActive ? 'highlight active-word' : ''}
-                            >
-                              {word}{' '}
+                        const primaryText =
+                          contentLang === 'english'
+                            ? translateAutismEnglishText(rawContent, primaryLang) || rawContent
+                            : rawContent;
+
+                        const englishMeaning = AUTISM_CONTENT_TO_EN[rawContent] || '';
+                        const secondaryText = contentLang === 'english' ? rawContent : (englishMeaning || rawContent);
+
+                        return (
+                          <span className="bilingual-text">
+                            <span className="bilingual-line bilingual-primary">
+                              <span className="bilingual-label">{primaryLabel}</span>
+                              <span className="bilingual-value">{renderContentWithActiveWord(primaryText, highlightPhrase, activeWord)}</span>
                             </span>
-                          );
-                        });
-                      }
-
-                      // Split content into: before highlight, highlight phrase, after highlight
-                      const before = text.slice(0, highlightIndex);
-                      const match = text.slice(highlightIndex, highlightIndex + highlightPhrase.length);
-                      const after = text.slice(highlightIndex + highlightPhrase.length);
-
-                      const renderWords = (segment, keyPrefix, isHighlighted) =>
-                        segment.split(' ').filter(w => w.length > 0).map((word, idx) => {
-                          const cleanWord = word.replace(/[.,!?;:()"]/g, '');
-                          const isActive = activeWord && cleanWord.toLowerCase() === activeWord.toLowerCase();
-                          return (
-                            <span
-                              key={`${keyPrefix}-${idx}`}
-                              className={
-                                isActive ? 'highlight active-word' :
-                                isHighlighted ? 'highlight keyword-highlight' : ''
-                              }
-                            >
-                              {word}{' '}
+                            <span className="bilingual-break" aria-hidden="true" />
+                            <span className="bilingual-line bilingual-secondary">
+                              <span className="bilingual-label">English</span>
+                              <span className="bilingual-value">{renderContentWithActiveWord(secondaryText, highlightPhrase, activeWord)}</span>
                             </span>
-                          );
-                        });
-
-                      return (
-                        <>
-                          {renderWords(before, 'before', false)}
-                          {renderWords(match, 'match', true)}
-                          {renderWords(after, 'after', false)}
-                        </>
-                      );
-                    })()}
+                          </span>
+                        );
+                      })()
+                    ) : (
+                      renderContentWithActiveWord(currentStep.content, currentStep.highlight, activeWord)
+                    )}
                   </p>
-                  <p className="content-translation">{currentStep.translation}</p>
+                    {showBilingualText && currentStep.translation ? (
+                      <p className="content-translation">{currentStep.translation}</p>
+                    ) : null}
                 </div>
 
                 {/* EPIC 2.1.2: Audio controls */}
@@ -2502,9 +2943,6 @@ const AutismView = ({ initialLessonId = null }) => {
                   ({performanceSummary.recentAverage.toFixed(0)}% {t('learning.common.avgAbbrev')})
                 </span>
               )}
-            {performanceSummary?.pace && (
-              <span style={{ opacity: 0.85 }}>• {t('learning.common.paceLabel')} {String(performanceSummary.pace).toLowerCase() === 'standard' ? t('settings.paceNormal') : String(performanceSummary.pace).toLowerCase() === 'normal' ? t('settings.paceNormal') : String(performanceSummary.pace).toLowerCase() === 'slow' ? t('settings.paceSlow') : String(performanceSummary.pace).toLowerCase() === 'fast' ? t('settings.paceFast') : performanceSummary.pace}</span>
-            )}
             {typeof performanceSummary?.completionRate === 'number' && performanceSummary.completionRate > 0 && (
               <span style={{ opacity: 0.8 }}>• {t('learning.common.completionLabel')} {performanceSummary.completionRate}%</span>
             )}

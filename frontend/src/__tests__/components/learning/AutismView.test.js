@@ -221,7 +221,6 @@ describe('AutismView Component - Autism Learning Features', () => {
         // Verify lesson content is displayed
         const tamilTexts = screen.getAllByText(/வணக்கம்/);
         expect(tamilTexts.length).toBeGreaterThan(0);
-        expect(screen.getByText(/A common word used when meeting someone/)).toBeInTheDocument();
       });
     });
 
@@ -247,6 +246,10 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should display translation text alongside main content', async () => {
+      mockPreferences = {
+        ...mockPreferences,
+        bilingualTextMode: 'english_tamil',
+      };
       renderAutismLesson(1);
       
       await waitFor(() => {

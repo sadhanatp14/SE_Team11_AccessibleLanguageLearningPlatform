@@ -4,9 +4,8 @@ import { ArrowRight, BookOpen, ChevronLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { usePreferences } from '../../context/PreferencesContext';
 import { useI18n } from '../../utils/i18n';
-import { resolveBilingualTextModeFromPreferences, resolveUiLanguageFromPreferences } from '../../utils/languagePrefs';
+import { resolveUiLanguageFromPreferences } from '../../utils/languagePrefs';
 import { pickI18nString } from '../../utils/lessonI18n';
-import BilingualText from './BilingualText';
 
 const LANGUAGE_KEYS = ['en', 'ta', 'hi'];
 
@@ -267,7 +266,6 @@ const LessonLibraryPage = () => {
   const { t } = useI18n();
 
   const uiLanguage = useMemo(() => resolveUiLanguageFromPreferences(preferences), [preferences]);
-  const bilingualTextMode = useMemo(() => resolveBilingualTextModeFromPreferences(preferences), [preferences]);
 
   const [selectedLanguage, setSelectedLanguage] = useState('en');
 
@@ -382,19 +380,6 @@ const LessonLibraryPage = () => {
   };
 
   const renderLibraryText = (baseText, i18n) => {
-    if (bilingualTextMode !== 'off') {
-      return (
-        <BilingualText
-          bilingualTextMode={bilingualTextMode}
-          contentLanguage={uiLanguage}
-          baseText={baseText}
-          i18n={i18n}
-          showLabels
-          compact
-        />
-      );
-    }
-
     return pickI18nString(uiLanguage, baseText, i18n);
   };
 

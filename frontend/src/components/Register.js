@@ -32,7 +32,6 @@ const Register = () => {
     pattern: '',
     confirmPattern: '',
     learningCondition: 'none',
-    role: 'learner', // added role for admin support
     age: '',
     isMinor: false,
     parentEmail: '',
@@ -79,15 +78,6 @@ const Register = () => {
       }
     }
 
-    // If registering as admin, require admin key and skip other learner fields
-    if (formData.role === 'admin') {
-      if (!formData.adminKey) {
-        setError('Admin key is required');
-        return false;
-      }
-      return true;
-    }
-
     // Age is optional; when provided, enforce a reasonable range.
     const age = parseInt(formData.age);
     if (age && (age < 3 || age > 100)) {
@@ -120,22 +110,11 @@ const Register = () => {
 
     // Remove fields that the backend doesn't need.
     const { confirmPassword, confirmPattern, ...registrationData } = formData;
-
-    // Ensure role is sent (defaults to learner)
-    registrationData.role = registrationData.role || 'learner';
     // Normalize age to number or omit it entirely.
     registrationData.age = parseInt(registrationData.age) || undefined;
 
     // Only send `parentEmail` when minor flow is enabled.
     if (!registrationData.isMinor) {
-      delete registrationData.parentEmail;
-    }
-
-    // If admin role, include adminKey and override learningCondition
-    if (registrationData.role === 'admin') {
-      registrationData.learningCondition = 'none';
-      delete registrationData.age;
-      delete registrationData.isMinor;
       delete registrationData.parentEmail;
     }
 
@@ -314,92 +293,59 @@ const Register = () => {
             )}
 
             <div className="form-group">
-              <label htmlFor="role">{t('auth.registerRole')}</label>
+              <label htmlFor="learningCondition">{t('auth.learningCondition')} *</label>
               <select
-                id="role"
-                name="role"
-                value={formData.role}
+                id="learningCondition"
+                name="learningCondition"
+                value={formData.learningCondition}
                 onChange={handleChange}
+                required
+                aria-required="true"
               >
-                <option value="learner">Learner</option>
-                <option value="admin">Admin</option>
+                <option value="none">None</option>
+                <option value="dyslexia">Dyslexia</option>
+                <option value="adhd">ADHD</option>
+                <option value="autism">Autism</option>
               </select>
             </div>
 
-            {formData.role === 'admin' && (
+            <div className="form-group">
+              <label htmlFor="age">{t('auth.ageOptional')}</label>
+              <input
+                type="number"
+                id="age"
+                name="age"
+                value={formData.age}
+                onChange={handleChange}
+                min={3}
+                max={100}
+                placeholder={t('auth.ageOptional')}
+              />
+            </div>
+
+            <div className="form-group checkbox-group">
+              <input
+                type="checkbox"
+                id="isMinor"
+                name="isMinor"
+                checked={formData.isMinor}
+                onChange={handleChange}
+              />
+              <label htmlFor="isMinor">{t('auth.under13')}</label>
+            </div>
+
+            {formData.isMinor && (
               <div className="form-group">
-                <label htmlFor="adminKey">{t('auth.adminKey')} *</label>
+                <label htmlFor="parentEmail">{t('auth.parentEmail')}</label>
                 <input
-                  type="password"
-                  id="adminKey"
-                  name="adminKey"
-                  value={formData.adminKey || ''}
+                  type="email"
+                  id="parentEmail"
+                  name="parentEmail"
+                  value={formData.parentEmail}
                   onChange={handleChange}
-                  required
-                  aria-required="true"
-                  placeholder="Enter admin registration key"
+                  placeholder={t('auth.parentEmailPlaceholder')}
                 />
               </div>
-            )}
-
-            {formData.role !== 'admin' && (
-              <>
-                <div className="form-group">
-                  <label htmlFor="learningCondition">{t('auth.learningCondition')} *</label>
-                  <select
-                    id="learningCondition"
-                    name="learningCondition"
-                    value={formData.learningCondition}
-                    onChange={handleChange}
-                    required
-                    aria-required="true"
-                  >
-                    <option value="none">None</option>
-                    <option value="dyslexia">Dyslexia</option>
-                    <option value="adhd">ADHD</option>
-                    <option value="autism">Autism</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="age">{t('auth.ageOptional')}</label>
-                  <input
-                    type="number"
-                    id="age"
-                    name="age"
-                    value={formData.age}
-                    onChange={handleChange}
-                    min={3}
-                    max={100}
-                    placeholder={t('auth.ageOptional')}
-                  />
-                </div>
-
-                <div className="form-group checkbox-group">
-                  <input
-                    type="checkbox"
-                    id="isMinor"
-                    name="isMinor"
-                    checked={formData.isMinor}
-                    onChange={handleChange}
-                  />
-                  <label htmlFor="isMinor">{t('auth.under13')}</label>
-                </div>
-
-                {formData.isMinor && (
-                  <div className="form-group">
-                    <label htmlFor="parentEmail">{t('auth.parentEmail')}</label>
-                    <input
-                      type="email"
-                      id="parentEmail"
-                      name="parentEmail"
-                      value={formData.parentEmail}
-                      onChange={handleChange}
-                      placeholder={t('auth.parentEmailPlaceholder')}
-                    />
-                  </div>
-                )}
-              </>
             )}
 
             <button

@@ -622,6 +622,19 @@
   transform: scale(1.02);
 }
 
+/* Wrap word-highlight spans as a single inline run.
+   Without this, `.bilingual-text` (a flex column) would stack each word vertically. */
+.adhd-inline-words {
+  display: inline;
+}
+
+/* When bilingual text is used for longer sentences, avoid shrink-to-fit wrapping
+   (which can cause each word to stack on its own line on narrow screens). */
+.bilingual-text.adhd-bilingual-fullwidth {
+  display: flex;
+  width: 100%;
+}
+
 /* Instructions (ADHD): exam-style modal */
 .btn-instructions {
   display: inline-flex;
