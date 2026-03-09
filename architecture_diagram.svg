@@ -1,0 +1,458 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" font-family="'Inter','Helvetica Neue',Helvetica,Arial,sans-serif">
+  <defs>
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="108%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#00000018"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3.5" orient="auto">
+      <path d="M0,0 L8,3.5 L0,7 L2,3.5 Z" fill="#555"/>
+    </marker>
+    <marker id="arr-light" markerWidth="8" markerHeight="8" refX="7" refY="3.5" orient="auto">
+      <path d="M0,0 L8,3.5 L0,7 L2,3.5 Z" fill="#999"/>
+    </marker>
+    <marker id="arr-blue" markerWidth="8" markerHeight="8" refX="7" refY="3.5" orient="auto">
+      <path d="M0,0 L8,3.5 L0,7 L2,3.5 Z" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <!-- WHITE BACKGROUND -->
+  <rect width="1920" height="1080" fill="#ffffff"/>
+
+  <!-- ============================================================
+       TOP STRIP: Deployment & CI/CD
+       ============================================================ -->
+  <rect x="560" y="18" width="800" height="72" rx="10" ry="10"
+        fill="#F8F9FA" stroke="#BBBBBB" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <!-- Title -->
+  <text x="960" y="38" text-anchor="middle" font-size="11" fill="#888" font-weight="600" letter-spacing="1">DEPLOYMENT &amp; CI/CD</text>
+
+  <!-- GitHub box -->
+  <rect x="590" y="48" width="140" height="34" rx="7" fill="#fff" stroke="#BBBBBB" stroke-width="1.5" filter="url(#shadow)"/>
+  <!-- GitHub icon (Octocat) -->
+  <text x="612" y="70" font-size="18" fill="#24292F">⬡</text>
+  <text x="635" y="70" font-size="12" fill="#24292F" font-weight="700">GitHub Repo</text>
+
+  <!-- Arrow GitHub → Vercel -->
+  <line x1="730" y1="65" x2="780" y2="65" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Vercel Deploy box -->
+  <rect x="780" y="48" width="210" height="34" rx="7" fill="#fff" stroke="#BBBBBB" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="800" y="70" font-size="12" fill="#000" font-weight="700">▲ Vercel</text>
+  <text x="848" y="70" font-size="12" fill="#555"> Build &amp; Deploy</text>
+  <text x="885" y="82" font-size="9" fill="#888" text-anchor="middle">(Frontend)</text>
+
+  <!-- Arrow GitHub → Railway (below Vercel arrow) -->
+  <line x1="730" y1="65" x2="760" y2="65" stroke="#555" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="760" y1="65" x2="760" y2="85" stroke="#555" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="760" y1="85" x2="1000" y2="85" stroke="#555" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arr-light)"/>
+
+  <!-- Railway Deploy box -->
+  <rect x="1000" y="48" width="200" height="34" rx="7" fill="#fff" stroke="#BBBBBB" stroke-width="1.5" filter="url(#shadow)"/>
+  <circle cx="1022" cy="65" r="9" fill="#7000FF" opacity="0.85"/>
+  <text x="1038" y="70" font-size="12" fill="#000" font-weight="700">Railway Deploy</text>
+  <text x="1100" y="82" font-size="9" fill="#888" text-anchor="middle">(Backend)</text>
+
+  <!-- ============================================================
+       COLUMN GROUP LABELS (above each column)
+       ============================================================ -->
+  <text x="175" y="116" text-anchor="middle" font-size="11" fill="#888" font-weight="700" letter-spacing="0.8">COLUMN 1</text>
+  <text x="455" y="116" text-anchor="middle" font-size="11" fill="#888" font-weight="700" letter-spacing="0.8">COLUMN 2</text>
+  <text x="800" y="116" text-anchor="middle" font-size="11" fill="#888" font-weight="700" letter-spacing="0.8">COLUMN 3</text>
+  <text x="1180" y="116" text-anchor="middle" font-size="11" fill="#888" font-weight="700" letter-spacing="0.8">COLUMN 4</text>
+  <text x="1560" y="116" text-anchor="middle" font-size="11" fill="#888" font-weight="700" letter-spacing="0.8">COLUMN 5</text>
+
+  <!-- ============================================================
+       COL 1: CLIENT (BROWSER)
+       x=20, y=128, w=310, h=880
+       ============================================================ -->
+  <!-- Outer dashed boundary -->
+  <rect x="20" y="128" width="310" height="880" rx="14" fill="#FAFAFA" stroke="#BBBBBB" stroke-width="1.5" stroke-dasharray="8,4"/>
+  <!-- Column header -->
+  <text x="175" y="154" text-anchor="middle" font-size="13" fill="#555" font-weight="700">Client (Browser)</text>
+
+  <!-- MAIN CLIENT BOX -->
+  <rect x="36" y="164" width="278" height="828" rx="12" fill="#fff" stroke="#333" stroke-width="2" filter="url(#shadow)"/>
+
+  <!-- BOX TITLE -->
+  <!-- Browser icon (simplified) -->
+  <rect x="52" y="176" width="22" height="16" rx="3" fill="none" stroke="#4285F4" stroke-width="1.5"/>
+  <line x1="52" y1="181" x2="74" y2="181" stroke="#4285F4" stroke-width="1"/>
+  <text x="82" y="189" font-size="13" font-weight="700" fill="#111">Client (Web Browser)</text>
+  <!-- Divider -->
+  <line x1="52" y1="200" x2="298" y2="200" stroke="#DDD" stroke-width="1"/>
+
+  <!-- SUB-BOX 1: UI/UX -->
+  <rect x="52" y="210" width="246" height="185" rx="8" fill="#F0F4FF" stroke="#B0BEE0" stroke-width="1.5"/>
+  <text x="68" y="232" font-size="12" font-weight="700" fill="#1E3A8A">UI / UX</text>
+  <line x1="68" y1="238" x2="282" y2="238" stroke="#B0BEE0" stroke-width="1"/>
+  <text x="68" y="256" font-size="10" fill="#333">Condition dashboards:</text>
+  <text x="68" y="272" font-size="10" fill="#555">  Dyslexia / ADHD / Autism</text>
+  <text x="68" y="292" font-size="10" fill="#333">Accessibility settings:</text>
+  <text x="68" y="308" font-size="10" fill="#555">  font, spacing, contrast,</text>
+  <text x="68" y="320" font-size="10" fill="#555">  reduce motion</text>
+  <text x="68" y="340" font-size="10" fill="#333">i18n UI text:</text>
+  <text x="68" y="356" font-size="10" fill="#555">  English / Tamil / Hindi</text>
+  <!-- internal arrow: UI/UX ↔ In-Browser Speech (labeled, inside box) -->
+  <line x1="175" y1="394" x2="175" y2="406" stroke="#999" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arr-light)"/>
+  <text x="185" y="403" font-size="8" fill="#999">On-device (no server)</text>
+
+  <!-- SUB-BOX 2: In-Browser Speech -->
+  <rect x="52" y="410" width="246" height="148" rx="8" fill="#F0FFF4" stroke="#86EFAC" stroke-width="1.5"/>
+  <!-- Microphone icon -->
+  <rect x="68" y="422" width="8" height="14" rx="4" fill="none" stroke="#16A34A" stroke-width="1.5"/>
+  <path d="M64,432 Q64,440 72,440 Q80,440 80,432" fill="none" stroke="#16A34A" stroke-width="1.5"/>
+  <line x1="72" y1="440" x2="72" y2="446" stroke="#16A34A" stroke-width="1.5"/>
+  <text x="86" y="432" font-size="12" font-weight="700" fill="#166534">In-Browser Speech</text>
+  <line x1="68" y1="438" x2="282" y2="438" stroke="#86EFAC" stroke-width="1"/>
+  <text x="68" y="456" font-size="10" fill="#333">SpeechRecognition</text>
+  <text x="68" y="470" font-size="10" fill="#555">  (Web Speech API)</text>
+  <!-- Speaker icon -->
+  <path d="M68,484 L72,484 L78,478 L78,496 L72,490 L68,490 Z" fill="none" stroke="#16A34A" stroke-width="1.5"/>
+  <path d="M80,481 Q84,487 80,493" fill="none" stroke="#16A34A" stroke-width="1.5"/>
+  <text x="86" y="490" font-size="10" fill="#555">SpeechSynthesis fallback</text>
+  <text x="86" y="502" font-size="10" fill="#555">  (browser TTS)</text>
+  <!-- internal arrow: In-Browser Speech ↔ Local Storage -->
+  <line x1="175" y1="557" x2="175" y2="568" stroke="#999" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arr-light)"/>
+  <text x="185" y="565" font-size="8" fill="#999">localStorage</text>
+
+  <!-- SUB-BOX 3: Local Storage -->
+  <rect x="52" y="572" width="246" height="100" rx="8" fill="#FFFBEB" stroke="#FCD34D" stroke-width="1.5"/>
+  <!-- DB icon -->
+  <ellipse cx="72" cy="588" rx="8" ry="4" fill="none" stroke="#CA8A04" stroke-width="1.5"/>
+  <line x1="64" y1="588" x2="64" y2="598" stroke="#CA8A04" stroke-width="1.5"/>
+  <line x1="80" y1="588" x2="80" y2="598" stroke="#CA8A04" stroke-width="1.5"/>
+  <ellipse cx="72" cy="598" rx="8" ry="4" fill="none" stroke="#CA8A04" stroke-width="1.5"/>
+  <text x="88" y="594" font-size="12" font-weight="700" fill="#92400E">Local Storage</text>
+  <line x1="68" y1="602" x2="282" y2="602" stroke="#FCD34D" stroke-width="1"/>
+  <text x="68" y="618" font-size="10" fill="#333">Dyslexia progress stored</text>
+  <text x="68" y="632" font-size="10" fill="#555">  locally (localStorage)</text>
+  <text x="68" y="650" font-size="9" fill="#999">← Dyslexia progress (localStorage)</text>
+
+  <!-- ============================================================
+       COL 2: FRONTEND (REACT SPA)
+       x=350, y=128, w=310, h=880
+       ============================================================ -->
+  <rect x="350" y="128" width="310" height="880" rx="14" fill="#FAFAFA" stroke="#BBBBBB" stroke-width="1.5" stroke-dasharray="8,4"/>
+  <text x="505" y="154" text-anchor="middle" font-size="13" fill="#555" font-weight="700">Frontend — React SPA</text>
+
+  <!-- MAIN FRONTEND BOX -->
+  <rect x="366" y="164" width="278" height="828" rx="12" fill="#fff" stroke="#333" stroke-width="2" filter="url(#shadow)"/>
+
+  <!-- React Logo (simplified) -->
+  <!-- Atom rings -->
+  <ellipse cx="386" cy="182" rx="12" ry="5" fill="none" stroke="#61DAFB" stroke-width="1.5" transform="rotate(-30,386,182)"/>
+  <ellipse cx="386" cy="182" rx="12" ry="5" fill="none" stroke="#61DAFB" stroke-width="1.5" transform="rotate(30,386,182)"/>
+  <ellipse cx="386" cy="182" rx="12" ry="5" fill="none" stroke="#61DAFB" stroke-width="1.5"/>
+  <circle cx="386" cy="182" r="2.5" fill="#61DAFB"/>
+
+  <text x="406" y="178" font-size="13" font-weight="700" fill="#111">Frontend</text>
+  <text x="406" y="193" font-size="10" fill="#555">React SPA (Static Host)</text>
+  <text x="406" y="207" font-size="9" fill="#888">Built with CRA / React</text>
+
+  <!-- Vercel badge top-right -->
+  <rect x="570" y="168" width="66" height="22" rx="5" fill="#000" opacity="0.85"/>
+  <text x="578" y="183" font-size="10" fill="#fff" font-weight="700">▲ Vercel</text>
+
+  <line x1="382" y1="218" x2="628" y2="218" stroke="#DDD" stroke-width="1"/>
+
+  <!-- Bullets -->
+  <text x="382" y="238" font-size="11" font-weight="700" fill="#333">Routes:</text>
+  <text x="420" y="238" font-size="10" fill="#555">Auth · Dashboard · Lessons</text>
+  <text x="382" y="254" font-size="10" fill="#555">  Progress · Admin UI</text>
+
+  <text x="382" y="274" font-size="11" font-weight="700" fill="#333">API Base URL:</text>
+  <text x="382" y="290" font-size="10" fill="#555">  REACT_APP_API_URL → /api/*</text>
+
+  <text x="382" y="310" font-size="11" font-weight="700" fill="#333">Static assets:</text>
+  <text x="382" y="326" font-size="10" fill="#555">  images / audio in public/</text>
+
+  <!-- JS logo badge -->
+  <rect x="382" y="345" width="28" height="20" rx="3" fill="#F7DF1E"/>
+  <text x="395" y="360" font-size="10" fill="#000" font-weight="900" text-anchor="middle">JS</text>
+  <text x="418" y="360" font-size="10" fill="#888">JavaScript (ES6+)</text>
+
+  <!-- ============================================================
+       COL 3: BACKEND API
+       x=680, y=128, w=310, h=880
+       ============================================================ -->
+  <rect x="680" y="128" width="310" height="880" rx="14" fill="#FAFAFA" stroke="#BBBBBB" stroke-width="1.5" stroke-dasharray="8,4"/>
+  <text x="835" y="154" text-anchor="middle" font-size="13" fill="#555" font-weight="700">Backend API — Node/Express</text>
+
+  <!-- MAIN BACKEND BOX -->
+  <rect x="696" y="164" width="278" height="828" rx="12" fill="#fff" stroke="#333" stroke-width="2" filter="url(#shadow)"/>
+
+  <!-- Node.js logo (hex) -->
+  <polygon points="712,192  720,187  728,192  728,202  720,207  712,202" fill="none" stroke="#339933" stroke-width="1.5"/>
+  <text x="718" y="199" font-size="7" fill="#339933" font-weight="700">N</text>
+
+  <text x="736" y="185" font-size="13" font-weight="700" fill="#111">Backend</text>
+  <text x="736" y="200" font-size="10" fill="#555">Node.js + Express (REST API)</text>
+
+  <!-- Railway badge top-right -->
+  <rect x="878" y="168" width="88" height="22" rx="5" fill="#7000FF" opacity="0.85"/>
+  <text x="922" y="183" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">⬡ Railway</text>
+
+  <line x1="712" y1="215" x2="958" y2="215" stroke="#DDD" stroke-width="1"/>
+
+  <!-- Auth + validation bullets -->
+  <!-- key icon -->
+  <circle cx="720" cy="230" r="5" fill="none" stroke="#555" stroke-width="1.5"/>
+  <line x1="725" y1="230" x2="732" y2="230" stroke="#555" stroke-width="1.5"/>
+  <line x1="730" y1="230" x2="730" y2="234" stroke="#555" stroke-width="1.5"/>
+  <text x="738" y="234" font-size="10" fill="#333">Auth: JWT + bcrypt</text>
+
+  <text x="712" y="252" font-size="10" fill="#555">Validation: express-validator</text>
+  <text x="712" y="268" font-size="10" fill="#555">CORS via FRONTEND_URL</text>
+
+  <line x1="712" y1="278" x2="958" y2="278" stroke="#EEE" stroke-width="1"/>
+
+  <!-- API Routes sub-box -->
+  <rect x="712" y="286" width="246" height="170" rx="8" fill="#F5F5F5" stroke="#CCC" stroke-width="1.5"/>
+  <text x="726" y="306" font-size="12" font-weight="700" fill="#222">API Routes (/api/*)</text>
+  <line x1="712" y1="312" x2="958" y2="312" stroke="#CCC" stroke-width="1"/>
+  <text x="726" y="330" font-size="10" fill="#555">/auth</text>
+  <text x="726" y="346" font-size="10" fill="#555">/users · /preferences</text>
+  <text x="726" y="362" font-size="10" fill="#555">/lessons · /interactions</text>
+  <text x="726" y="378" font-size="10" fill="#555">/progress</text>
+  <text x="726" y="394" font-size="10" fill="#2563EB" font-weight="600">/ai · /tts</text>
+  <text x="726" y="410" font-size="10" fill="#555">/admin</text>
+  <text x="726" y="430" font-size="9" fill="#888">Express Router → Controller → Service</text>
+
+  <!-- Health sub-box -->
+  <rect x="712" y="464" width="246" height="56" rx="8" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.5"/>
+  <text x="726" y="484" font-size="11" font-weight="700" fill="#065F46">Health</text>
+  <line x1="712" y1="490" x2="958" y2="490" stroke="#6EE7B7" stroke-width="1"/>
+  <text x="726" y="508" font-size="10" fill="#333">GET /health · GET /api/health</text>
+
+  <!-- Middleware notes -->
+  <line x1="712" y1="530" x2="958" y2="530" stroke="#EEE" stroke-width="1"/>
+  <text x="712" y="548" font-size="10" font-weight="700" fill="#333">Middleware</text>
+  <text x="712" y="564" font-size="10" fill="#555">morgan · helmet · cors</text>
+  <text x="712" y="580" font-size="10" fill="#555">express.json() · dotenv</text>
+
+  <!-- ============================================================
+       COL 4: DATA & STORAGE
+       x=1010, y=128, w=310, h=880
+       ============================================================ -->
+  <rect x="1010" y="128" width="310" height="880" rx="14" fill="#FAFAFA" stroke="#BBBBBB" stroke-width="1.5" stroke-dasharray="8,4"/>
+  <text x="1165" y="154" text-anchor="middle" font-size="13" fill="#555" font-weight="700">Data &amp; Storage</text>
+
+  <!-- MAIN DB BOX -->
+  <rect x="1026" y="164" width="278" height="828" rx="12" fill="#fff" stroke="#333" stroke-width="2" filter="url(#shadow)"/>
+
+  <!-- MongoDB leaf logo (simplified) -->
+  <path d="M1046,172 Q1046,195 1056,200 Q1066,195 1066,172 Q1056,168 1046,172Z" fill="#47A248" opacity="0.85"/>
+  <line x1="1056" y1="200" x2="1056" y2="212" stroke="#47A248" stroke-width="1.5"/>
+
+  <text x="1074" y="186" font-size="13" font-weight="700" fill="#111">MongoDB</text>
+  <text x="1074" y="201" font-size="10" fill="#555">Atlas / Hosted</text>
+  <text x="1074" y="215" font-size="9" fill="#888">Mongoose ODM</text>
+
+  <line x1="1042" y1="222" x2="1288" y2="222" stroke="#DDD" stroke-width="1"/>
+
+  <!-- Collections -->
+  <text x="1042" y="242" font-size="11" font-weight="700" fill="#333">Collections / Models</text>
+  <line x1="1042" y1="248" x2="1288" y2="248" stroke="#EEE" stroke-width="1"/>
+
+  <!-- Model boxes -->
+  <!-- User -->
+  <rect x="1042" y="256" width="110" height="36" rx="6" fill="#F0F4FF" stroke="#B0BEE0" stroke-width="1"/>
+  <text x="1097" y="277" font-size="10" font-weight="700" fill="#1E3A8A" text-anchor="middle">User</text>
+
+  <!-- Preferences -->
+  <rect x="1166" y="256" width="110" height="36" rx="6" fill="#F0F4FF" stroke="#B0BEE0" stroke-width="1"/>
+  <text x="1221" y="277" font-size="9" font-weight="700" fill="#1E3A8A" text-anchor="middle">Preferences</text>
+
+  <!-- Lesson -->
+  <rect x="1042" y="302" width="110" height="36" rx="6" fill="#FFF7ED" stroke="#FED7AA" stroke-width="1"/>
+  <text x="1097" y="323" font-size="10" font-weight="700" fill="#92400E" text-anchor="middle">Lesson</text>
+
+  <!-- LessonSection -->
+  <rect x="1166" y="302" width="110" height="36" rx="6" fill="#FFF7ED" stroke="#FED7AA" stroke-width="1"/>
+  <text x="1221" y="319" font-size="9" font-weight="700" fill="#92400E" text-anchor="middle">LessonSection</text>
+
+  <!-- UserProgress -->
+  <rect x="1042" y="348" width="110" height="36" rx="6" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1"/>
+  <text x="1097" y="365" font-size="9" font-weight="700" fill="#065F46" text-anchor="middle">UserProgress</text>
+
+  <!-- UserInteraction -->
+  <rect x="1166" y="348" width="110" height="36" rx="6" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1"/>
+  <text x="1221" y="365" font-size="9" font-weight="700" fill="#065F46" text-anchor="middle">UserInteraction</text>
+
+  <line x1="1042" y1="396" x2="1288" y2="396" stroke="#EEE" stroke-width="1"/>
+  <text x="1042" y="416" font-size="10" fill="#555">Atlas cloud-hosted or</text>
+  <text x="1042" y="432" font-size="10" fill="#555">  self-hosted MongoDB</text>
+  <text x="1042" y="452" font-size="10" fill="#555">Mongoose schema validation</text>
+  <text x="1042" y="468" font-size="10" fill="#555">Connection via MONGO_URI env</text>
+
+  <!-- ============================================================
+       COL 5: EXTERNAL SERVICES
+       x=1340, y=128, w=560, h=880
+       ============================================================ -->
+  <rect x="1340" y="128" width="560" height="880" rx="14" fill="#FAFAFA" stroke="#BBBBBB" stroke-width="1.5" stroke-dasharray="8,4"/>
+  <text x="1620" y="154" text-anchor="middle" font-size="13" fill="#555" font-weight="700">External Services</text>
+
+  <!-- MAIN EXTERNAL BOX -->
+  <rect x="1356" y="164" width="528" height="828" rx="12" fill="#fff" stroke="#333" stroke-width="2" filter="url(#shadow)"/>
+
+  <!-- ---- SUB-BOX: AI (Gemini) ---- -->
+  <rect x="1372" y="176" width="496" height="270" rx="10" fill="#F8F4FF" stroke="#C4B5FD" stroke-width="1.5"/>
+  <!-- Google Gemini icon (simplified gradient diamond) -->
+  <polygon points="1394,200 1402,188 1410,200 1402,212" fill="none" stroke="#7C3AED" stroke-width="1.5"/>
+  <polygon points="1394,200 1402,194 1410,200 1402,206" fill="#7C3AED" opacity="0.5"/>
+  <text x="1418" y="196" font-size="13" font-weight="700" fill="#4C1D95">AI — Google Gemini</text>
+  <text x="1418" y="211" font-size="10" fill="#7C3AED">@google/generative-ai</text>
+  <line x1="1388" y1="220" x2="1852" y2="220" stroke="#C4B5FD" stroke-width="1"/>
+
+  <text x="1388" y="240" font-size="11" font-weight="700" fill="#333">Endpoints:</text>
+  <text x="1388" y="258" font-size="10" fill="#555">• Quiz generation</text>
+  <text x="1388" y="274" font-size="10" fill="#555">• Story quiz</text>
+  <text x="1388" y="290" font-size="10" fill="#555">• Recommendations</text>
+  <text x="1388" y="310" font-size="10" fill="#888">  (mock fallback if key missing)</text>
+
+  <text x="1388" y="332" font-size="11" font-weight="700" fill="#333">Environment:</text>
+  <text x="1388" y="350" font-size="10" fill="#555">GEMINI_API_KEY · GEMINI_MODEL</text>
+
+  <text x="1388" y="370" font-size="10" fill="#555">Route /api/ai/* → Gemini SDK</text>
+  <text x="1388" y="386" font-size="10" fill="#888">  HTTPS API calls to Google Cloud</text>
+  <text x="1388" y="402" font-size="9" fill="#999">  gemini.google.com / generativelanguage.googleapis.com</text>
+  <text x="1388" y="432" font-size="9" fill="#888">Google AI · Gemini Pro / Gemini Flash</text>
+
+  <!-- ---- SUB-BOX: TTS ---- -->
+  <rect x="1372" y="460" width="496" height="320" rx="10" fill="#FFF7ED" stroke="#FED7AA" stroke-width="1.5"/>
+  <!-- Python logo (simplified) -->
+  <path d="M1394,492 L1394,480 Q1394,472 1402,472 L1414,472 Q1422,472 1422,480 L1422,492 L1412,492 L1412,484 L1404,484 L1404,492 Z" fill="#3776AB" opacity="0.8"/>
+  <path d="M1394,504 L1394,516 Q1394,524 1402,524 L1414,524 Q1422,524 1422,516 L1422,504 L1412,504 L1412,512 L1404,512 L1404,504 Z" fill="#FFD43B" opacity="0.9"/>
+
+  <text x="1432" y="484" font-size="13" font-weight="700" fill="#92400E">Text-to-Speech (TTS)</text>
+  <text x="1432" y="498" font-size="10" fill="#555">Route: POST /api/tts/speak</text>
+  <line x1="1388" y1="508" x2="1852" y2="508" stroke="#FED7AA" stroke-width="1"/>
+
+  <text x="1388" y="528" font-size="11" font-weight="700" fill="#333">Primary:</text>
+  <text x="1388" y="545" font-size="10" fill="#555">Python tts_gen.py → gTTS (MP3 stream)</text>
+
+  <!-- Speaker icon -->
+  <path d="M1388,558 L1394,558 L1400,552 L1400,570 L1394,564 L1388,564 Z" fill="none" stroke="#92400E" stroke-width="1.5"/>
+  <path d="M1402,555 Q1406,561 1402,567" fill="none" stroke="#92400E" stroke-width="1.5"/>
+
+  <text x="1412" y="564" font-size="11" font-weight="700" fill="#333">Fallback:</text>
+  <text x="1412" y="580" font-size="10" fill="#555">google-tts-api (Translate TTS URL)</text>
+  <text x="1412" y="596" font-size="10" fill="#888">  when Python unavailable</text>
+  <!-- Google Translate badge -->
+  <rect x="1412" y="604" width="120" height="18" rx="4" fill="#4285F4" opacity="0.85"/>
+  <text x="1472" y="616" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">Google Translate TTS</text>
+
+  <text x="1388" y="638" font-size="10" fill="#555">Health: GET /api/tts/health</text>
+  <text x="1388" y="656" font-size="10" fill="#888">Spawns Python subprocess or falls back</text>
+  <text x="1388" y="672" font-size="10" fill="#888">  to Google Translate URL stream</text>
+
+  <!-- ---- SUB-BOX: Vector Search Placeholder ---- -->
+  <rect x="1372" y="796" width="496" height="80" rx="10" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="5,3"/>
+  <text x="1388" y="820" font-size="11" font-weight="600" fill="#64748B">Vector Search (Placeholder)</text>
+  <line x1="1388" y1="826" x2="1852" y2="826" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="1388" y="844" font-size="10" fill="#94A3B8">VECTOR_DB_ENDPOINT (env)</text>
+  <text x="1388" y="860" font-size="9" fill="#94A3B8">Future vector DB integration</text>
+
+  <!-- ============================================================
+       CONNECTOR ARROWS
+       All routed orthogonally, no crossing text/boxes
+       ============================================================ -->
+
+  <!-- 1. Client → Frontend: HTTPS (SPA) -->
+  <!-- From right edge of Client box (col1) to left edge of Frontend box (col2) -->
+  <!-- Client right edge at x=314, Frontend left edge at x=366, y≈400 -->
+  <line x1="314" y1="400" x2="366" y2="400" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+  <!-- Label above arrow -->
+  <rect x="318" y="384" width="44" height="13" rx="3" fill="#fff" opacity="0.9"/>
+  <text x="340" y="394" font-size="9" fill="#2563EB" text-anchor="middle" font-weight="600">HTTPS SPA</text>
+
+  <!-- 2. Frontend → Backend: HTTPS REST /api/* -->
+  <!-- Frontend right edge at x=644, Backend left edge at x=696, y≈400 -->
+  <line x1="644" y1="400" x2="696" y2="400" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+  <rect x="648" y="384" width="44" height="13" rx="3" fill="#fff" opacity="0.9"/>
+  <text x="670" y="394" font-size="9" fill="#2563EB" text-anchor="middle" font-weight="600">HTTPS /api/*</text>
+
+  <!-- 3. Backend → MongoDB: Mongoose connection -->
+  <!-- Backend right edge at x=974, MongoDB left edge at x=1026, y≈450 -->
+  <line x1="974" y1="450" x2="1026" y2="450" stroke="#47A248" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="978" y="434" width="44" height="13" rx="3" fill="#fff" opacity="0.9"/>
+  <text x="1000" y="444" font-size="9" fill="#47A248" text-anchor="middle" font-weight="600">Mongoose</text>
+
+  <!-- 4. Backend → AI (Gemini): HTTPS -->
+  <!-- Backend right side x=974, External Services left x=1356 -->
+  <!-- Route: backend at y=280 → right to x=1180 → up to y=280 → right to Gemini sub-box -->
+  <!-- Simpler: go from backend right at y=320 across to external left at y=320 -->
+  <line x1="974" y1="320" x2="1026" y2="320" stroke="#555" stroke-width="1.5" stroke-dasharray="5,0"/>
+  <line x1="1026" y1="320" x2="1026" y2="300" stroke="#555" stroke-width="1.5"/>
+  <!-- overlap with DB box - reroute ABOVE col4 instead -->
+  <!-- Actually route via top margin: up from backend top, across, down into external -->
+  <!-- Route: from backend top center (835, 164) → up to y=108 → right to x=1620 → down to gemini box -->
+  <polyline points="835,164 835,108 1620,108 1620,176" fill="none" stroke="#7C3AED" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr)"/>
+  <rect x="1100" y="96" width="120" height="14" rx="3" fill="#fff" opacity="0.9"/>
+  <text x="1160" y="107" font-size="9" fill="#7C3AED" text-anchor="middle" font-weight="600">HTTPS AI prompts/responses</text>
+
+  <!-- 5. Backend → TTS -->
+  <!-- route from backend bottom at y=992 → but boxes truncated at 992, instead go from bottom of backend at y=990
+       Actually col heights end at 1008 (128+880). Route below. -->
+  <!-- Route below: backend bottom (835,1008) → down to y=1048 → right to x=1620 → up to TTS sub-box bottom -->
+  <polyline points="835,1008 835,1050 1620,1050 1620,780" fill="none" stroke="#EA580C" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr)"/>
+  <rect x="1100" y="1038" width="120" height="14" rx="3" fill="#fff" opacity="0.9"/>
+  <text x="1160" y="1049" font-size="9" fill="#EA580C" text-anchor="middle" font-weight="600">Spawn Python / Google TTS</text>
+
+  <!-- 6. Backend → Frontend (JSON response return) -->
+  <!-- Route down from backend at y=560, across to left, up to frontend at y=480 -->
+  <!-- Route below the bottom: backend bottom at y=1008 left margin y=1040 right... too complex. -->
+  <!-- Simple: go along left margin from backend y=550 → x=336 (outer left) → up to frontend y=500 -->
+  <polyline points="696,550 660,550 660,500 644,500" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+  <rect x="644" y="485" width="44" height="13" rx="3" fill="#fff" opacity="0.9"/>
+  <text x="666" y="495" font-size="9" fill="#555" text-anchor="middle">JSON+MP3</text>
+
+  <!-- 7. Frontend back to Client (response return) -->
+  <polyline points="366,500 340,500 340,440 314,440" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+  <rect x="318" y="453" width="44" height="13" rx="3" fill="#fff" opacity="0.9"/>
+  <text x="340" y="463" font-size="9" fill="#555" text-anchor="middle">Response</text>
+
+  <!-- ============================================================
+       BOTTOM LEGEND STRIP
+       ============================================================ -->
+  <rect x="20" y="1018" width="1880" height="56" rx="0" fill="#F8F9FA" stroke="none"/>
+  <line x1="20" y1="1018" x2="1900" y2="1018" stroke="#DDD" stroke-width="1"/>
+
+  <!-- Legend title -->
+  <text x="36" y="1040" font-size="11" font-weight="700" fill="#333">Legend</text>
+
+  <!-- HTTPS arrow -->
+  <line x1="100" y1="1038" x2="140" y2="1038" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+  <text x="148" y="1042" font-size="10" fill="#555">HTTPS / REST</text>
+
+  <!-- Spawn / external dashed -->
+  <line x1="250" y1="1038" x2="290" y2="1038" stroke="#EA580C" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr)"/>
+  <text x="298" y="1042" font-size="10" fill="#555">Spawn Process / External HTTPS</text>
+
+  <!-- DB connection -->
+  <line x1="460" y1="1038" x2="500" y2="1038" stroke="#47A248" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="508" y="1042" font-size="10" fill="#555">DB Connection (Mongoose)</text>
+
+  <!-- Return arrow -->
+  <line x1="660" y1="1038" x2="700" y2="1038" stroke="#555" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+  <text x="708" y="1042" font-size="10" fill="#555">Response Return</text>
+
+  <!-- Dashed boundary -->
+  <rect x="820" y="1030" width="50" height="16" rx="4" fill="#FAFAFA" stroke="#BBBBBB" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="878" y="1042" font-size="10" fill="#555">Dashed boundary = logical group / column zone</text>
+
+  <!-- On-device note -->
+  <line x1="1150" y1="1038" x2="1190" y2="1038" stroke="#999" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arr-light)"/>
+  <text x="1198" y="1042" font-size="10" fill="#555">On-device (no server round-trip)</text>
+
+  <!-- Copyright / project -->
+  <text x="1884" y="1058" text-anchor="end" font-size="9" fill="#BBB">Accessible Language Learning Platform — SE Team 11 — System Architecture</text>
+
+  <!-- SUB-LEGEND row 2 -->
+  <text x="36" y="1062" font-size="9" fill="#888">Boxes: 2px stroke major / 1.5px connectors / 1px internal dividers | Typography: Inter/Helvetica | Radius: 12px major, 8px sub | Shadow: subtle drop shadow on main boxes</text>
+
+  <!-- ============================================================
+       PAGE TITLE / WATERMARK
+       ============================================================ -->
+  <text x="960" y="1070" text-anchor="middle" font-size="9" fill="#CCC">1920 × 1080 · System Architecture Diagram · Accessible Language Learning Platform</text>
+
+</svg>
