@@ -127,6 +127,13 @@
   color: #1e293b;
 }
 
+/* Logout should animate to a darker red on Autism view */
+.btn-exit:hover {
+  background: #fff1f2;
+  border-color: #991b1b;
+  color: #991b1b;
+}
+
 /* Main Layout */
 .main-layout {
   display: flex;
@@ -134,6 +141,38 @@
   max-width: 1000px;
   margin: 0 auto;
   padding: 30px 20px;
+}
+
+/* ProgressPage layout polish */
+.progress-page .main-layout {
+  padding: 36px 20px 60px;
+  gap: 28px;
+}
+
+.progress-page .welcome-card {
+  margin-bottom: 0;
+}
+
+.progress-page .progress-section-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.progress-page .progress-section-card .card-header {
+  padding: 18px 22px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.progress-page .progress-section-card .card-header h3 {
+  margin: 0;
+}
+
+.progress-page .progress-section-card .card-body {
+  padding: 22px;
+}
+
+.progress-page .lessons-simple-grid {
+  gap: 26px;
 }
 
 /* Content Area - Simple & Focused */
@@ -175,6 +214,17 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 25px;
+}
+
+/* ProgressPage: show 2 lesson cards per row */
+.progress-page .lessons-simple-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+  .progress-page .lessons-simple-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* When the dashboard lesson list is intentionally empty, we show the

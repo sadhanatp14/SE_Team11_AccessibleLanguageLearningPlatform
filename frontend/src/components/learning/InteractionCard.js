@@ -12,9 +12,11 @@ import {
   pickByLanguage,
   resolveBilingualTextModeFromPreferences,
   resolveUiLanguageFromPreferences,
+  speechRecognitionLangFor,
   speechSynthesisLangFor,
 } from '../../utils/languagePrefs';
 import { pickI18nString } from '../../utils/lessonI18n';
+import { speechTextsMatch } from '../../utils/speechCompare';
 import { Mic } from 'lucide-react';
 import BilingualText from './BilingualText';
 import './InteractionCard.css';
@@ -57,6 +59,9 @@ const voiceMatchesOption = (heard, option) => {
   const heardNorm = normalizeVoiceText(heard);
   const optionNorm = normalizeVoiceText(option);
   if (!heardNorm || !optionNorm) return false;
+
+  // First try a script-aware match (handles cases like "namaste" vs "नमस्ते").
+  if (speechTextsMatch(heard, option)) return true;
 
   if (heardNorm === optionNorm) return true;
 
@@ -815,7 +820,11 @@ const InteractionCard = ({
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return null;
     const recognition = new SpeechRecognition();
-    recognition.lang = speechSynthesisLangFor(resolvedContentLanguage);
+
+    // Use option text to select recognition language when possible.
+    const optionSample = Array.isArray(options) ? options.join(' ') : '';
+    const inferredKey = inferTtsLanguageKeyFromText(optionSample || interaction?.question || '', resolvedContentLanguage);
+    recognition.lang = speechRecognitionLangFor(inferredKey) || speechSynthesisLangFor(resolvedContentLanguage);
     recognition.interimResults = false;
     recognition.maxAlternatives = 5;
     return recognition;

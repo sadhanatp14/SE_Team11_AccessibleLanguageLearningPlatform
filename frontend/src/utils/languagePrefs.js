@@ -111,6 +111,14 @@ export const speechSynthesisLangFor = (preferredLanguage) => {
   return 'en-US';
 };
 
+// SpeechRecognition language (Web Speech API)
+export const speechRecognitionLangFor = (preferredLanguage) => {
+  const lang = normalizePreferredLanguage(preferredLanguage);
+  if (lang === 'tamil') return 'ta-IN';
+  if (lang === 'hindi') return 'hi-IN';
+  return 'en-US';
+};
+
 // Infer a language key for TTS based on script in the text.
 // Useful when the UI is English but the lesson content includes Tamil/Hindi words.
 // We only switch away from the fallback when a meaningful portion of the text

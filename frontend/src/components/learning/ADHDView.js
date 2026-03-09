@@ -48,8 +48,10 @@ import {
   inferTtsLanguageKeyFromText,
   pickByLanguage,
   resolveUiLanguageFromPreferences,
+  speechRecognitionLangFor,
   speechSynthesisLangFor,
 } from '../../utils/languagePrefs';
+import { makeSpeechCompareForms } from '../../utils/speechCompare';
 
 const joinUrl = (base, path) => {
   const baseStr = String(base || '').replace(/\/+$/, '');
@@ -1213,6 +1215,7 @@ const ADHDView = ({ initialLessonId = null }) => {
       compact(wordsToDigits),
       normalizeVoice(digitsToWords),
       compact(digitsToWords),
+      ...makeSpeechCompareForms(value),
     ].filter(Boolean);
 
     return Array.from(new Set(forms));
@@ -1237,12 +1240,12 @@ const ADHDView = ({ initialLessonId = null }) => {
     return false;
   }, [makeAnswerForms]);
 
-  const initAnswerSpeechRecognition = useCallback(() => {
+  const initAnswerSpeechRecognition = useCallback((lang) => {
     if (typeof window === 'undefined') return null;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return null;
     const recognition = new SpeechRecognition();
-    recognition.lang = 'en-IN';
+    recognition.lang = lang || 'en-US';
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
     return recognition;
@@ -1264,9 +1267,19 @@ const ADHDView = ({ initialLessonId = null }) => {
 
     setAnswerVoiceError('');
 
-    if (!answerRecognitionRef.current) {
-      answerRecognitionRef.current = initAnswerSpeechRecognition();
+    const options = Array.isArray(step?.options) ? step.options : [];
+    const baseLangKey = activeLesson?.ttsLang || uiLanguage;
+    const inferredLangKey = inferTtsLanguageKeyFromText(options.join(' '), baseLangKey);
+    const recognitionLang = speechRecognitionLangFor(inferredLangKey);
+
+    // Always create a fresh recognizer so `recognition.lang` matches the current option language.
+    try {
+      answerRecognitionRef.current?.stop?.();
+    } catch {
+      // ignore
     }
+
+    answerRecognitionRef.current = initAnswerSpeechRecognition(recognitionLang);
     const recognition = answerRecognitionRef.current;
     if (!recognition) {
       setAnswerVoiceError('Voice input is not supported in this browser.');
@@ -1282,8 +1295,6 @@ const ADHDView = ({ initialLessonId = null }) => {
       const transcript = event.results?.[0]?.[0]?.transcript || '';
       const cleaned = transcript.trim();
       setAnswerTranscript(cleaned);
-
-      const options = Array.isArray(step?.options) ? step.options : [];
       if (!options.length) return;
 
       const normalized = normalizeVoice(cleaned);
@@ -1321,7 +1332,7 @@ const ADHDView = ({ initialLessonId = null }) => {
     } catch (e) {
       setIsAnswerListening(false);
     }
-  }, [steps, currentStepIndex, handleAnswer, initAnswerSpeechRecognition, isTransitioning, isVoiceMatch, normalizeVoice]);
+  }, [steps, currentStepIndex, handleAnswer, initAnswerSpeechRecognition, isTransitioning, isVoiceMatch, normalizeVoice, activeLesson, uiLanguage]);
 
   useEffect(() => {
     stopAnswerListening();
@@ -1761,8 +1772,8 @@ const ADHDView = ({ initialLessonId = null }) => {
                 title="Pronunciation Practice"
                 subtitle={`Practice the words from “${activeLesson?.title || 'this lesson'}”. Complete all to proceed.`}
                 items={pronunciationItems}
-                recognitionLang="en-US"
-                ttsLang="en-US"
+                recognitionLang={speechRecognitionLangFor(activeLesson?.ttsLang || uiLanguage)}
+                ttsLang={activeLesson?.ttsLang || uiLanguage}
                 playbackRate={0.85}
                 onExit={exitLesson}
                 onComplete={() => setLessonPhase('complete')}

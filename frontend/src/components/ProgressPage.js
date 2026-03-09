@@ -37,6 +37,7 @@ const ProgressPage = () => {
   const [summaryError, setSummaryError] = useState('');
   const [localProgress, setLocalProgress] = useState({});
   const [completedLessonKeys, setCompletedLessonKeys] = useState([]);
+  const [lessonFilter, setLessonFilter] = useState(null); // null | 'completed' | 'partial' | 'notStarted'
 
   const refreshLocalProgress = React.useCallback(() => {
     // Dyslexia uses a localStorage key derived from the current user.
@@ -80,7 +81,11 @@ const ProgressPage = () => {
   );
 
   const statusLabelFor = React.useCallback(
-    (status) => (status === 'Completed' ? t('progress.statusCompleted') : t('progress.statusNotStarted')),
+    (status) => {
+      if (status === 'Completed') return t('progress.statusCompleted');
+      if (status === 'In Progress') return t('progress.statusInProgress');
+      return t('progress.statusNotStarted');
+    },
     [t]
   );
   const remoteLessonPrefix = condition === 'autism'
@@ -89,7 +94,7 @@ const ProgressPage = () => {
       ? 'adhd-lesson-'
       : '';
 
-  const showLearningHistory = condition === 'dyslexia';
+  const showLearningHistory = false;
 
   const remoteCompletedCount = React.useMemo(() => {
     if (!remoteLessonPrefix) return 0;
@@ -111,15 +116,25 @@ const ProgressPage = () => {
         const entry = localProgress?.[l.id] || { status: 'Not Started', correctCount: 0 };
         const correctCount = Number(entry.correctCount || 0);
         const percent = Math.min(100, Math.round((correctCount / 5) * 100));
-        const completed = (entry.status === 'Completed');
+        const completed = (entry.status === 'Completed') || percent >= 100;
+        const derivedStatus = completed
+          ? 'Completed'
+          : percent > 0
+            ? 'In Progress'
+            : 'Not Started';
+        const notStarted = derivedStatus === 'Not Started' || percent <= 0;
         return {
           id: l.id,
           title: l.title,
-          status: entry.status || 'Not Started',
-          statusLabel: statusLabelFor(entry.status || 'Not Started'),
+          status: derivedStatus,
+          statusLabel: statusLabelFor(derivedStatus),
           percent,
           onOpen: () => navigate(l.route),
-          openLabel: completed ? t('progress.reviewLesson') : t('progress.continue'),
+          openLabel: completed
+            ? t('progress.reviewLesson')
+            : notStarted
+              ? t('progress.startLesson')
+              : t('progress.continue'),
         };
       });
     }
@@ -157,10 +172,26 @@ const ProgressPage = () => {
         statusLabel: completed ? t('progress.statusCompleted') : t('progress.statusNotStarted'),
         percent: completed ? 100 : 0,
         onOpen: () => navigate('/dashboard', { state: { openLessonId: lessonId, openCondition: condition } }),
-        openLabel: completed ? t('progress.reviewInCenter') : t('progress.startInCenter'),
+        openLabel: completed ? t('progress.reviewLesson') : t('progress.startLesson'),
       };
     });
   }, [applyDyslexiaSyllables, completedLessonKeys, condition, localProgress, navigate, remoteLessonPrefix, statusLabelFor, t]);
+
+  const lessonCategoryFor = React.useCallback((lesson) => {
+    const rawPercent = Number(lesson?.percent ?? 0);
+    const percent = Number.isFinite(rawPercent) ? rawPercent : 0;
+    const status = String(lesson?.status || '');
+
+    if (status === 'Completed' || percent >= 100) return 'completed';
+    if (/in\s*progress/i.test(status)) return 'partial';
+    if (percent > 0 && percent < 100) return 'partial';
+    return 'notStarted';
+  }, []);
+
+  const filteredLessonCards = React.useMemo(() => {
+    if (!lessonFilter) return lessonCards;
+    return lessonCards.filter((l) => lessonCategoryFor(l) === lessonFilter);
+  }, [lessonCards, lessonCategoryFor, lessonFilter]);
 
   useEffect(() => {
     let mounted = true;
@@ -258,13 +289,17 @@ const ProgressPage = () => {
   }, [preferences, user?.learningCondition]);
 
   const displayCompletedCount = summary?.completedCount ?? 0;
-  const displayTotalLessons = summary?.totalLessons ?? 3;
+
+  // Prefer condition-specific totals derived from the visible lesson catalog.
+  // The backend summary currently reflects DB lessons and can be lower than the UI catalog.
+  const computedTotalLessons = Array.isArray(lessonCards) ? lessonCards.length : 0;
+  const displayTotalLessons = Math.max(summary?.totalLessons ?? 0, computedTotalLessons, 3);
   const mergedCompletedCount = Math.max(
     displayCompletedCount,
     condition === 'dyslexia' || !remoteLessonPrefix ? localDyslexiaCompleted : remoteCompletedCount
   );
   const mergedPercentage = displayTotalLessons
-    ? Math.round((mergedCompletedCount / displayTotalLessons) * 100)
+    ? Math.min(100, Math.round((mergedCompletedCount / displayTotalLessons) * 100))
     : 0;
 
   // EPIC 6.1.2: Progress UI is derived from completed/total to show a percentage.
@@ -302,7 +337,7 @@ const ProgressPage = () => {
           </p>
         </div>
 
-        <div className={user?.learningCondition === 'autism' ? 'lesson-simple-card' : 'progress-card'}>
+        <div className={user?.learningCondition === 'autism' ? 'lesson-simple-card progress-section-card' : 'progress-card'}>
           <div className="card-header">
             <h3>{t('progress.cardTitle')}</h3>
           </div>
@@ -362,15 +397,41 @@ const ProgressPage = () => {
         </div>
 
         <div 
-          className={user?.learningCondition === 'autism' ? 'lesson-simple-card' : 'progress-card'}
+          className={user?.learningCondition === 'autism' ? 'lesson-simple-card progress-section-card' : 'progress-card'}
           style={user?.learningCondition === 'autism' ? { marginTop: '40px' } : {}}
         >
           <div className="card-header">
             <h3>{uiText('progress.lessonStatus', 'Les-son sta-tus')}</h3>
           </div>
           <div className="card-body">
+            <div className="progress-filter-bar" role="toolbar" aria-label={t('progress.filterAria')}>
+              <button
+                type="button"
+                className={`progress-filter-btn ${lessonFilter === 'completed' ? 'is-active' : ''}`}
+                aria-pressed={lessonFilter === 'completed'}
+                onClick={() => setLessonFilter((prev) => (prev === 'completed' ? null : 'completed'))}
+              >
+                {t('progress.filterCompleted')}
+              </button>
+              <button
+                type="button"
+                className={`progress-filter-btn ${lessonFilter === 'partial' ? 'is-active' : ''}`}
+                aria-pressed={lessonFilter === 'partial'}
+                onClick={() => setLessonFilter((prev) => (prev === 'partial' ? null : 'partial'))}
+              >
+                {t('progress.filterPartial')}
+              </button>
+              <button
+                type="button"
+                className={`progress-filter-btn ${lessonFilter === 'notStarted' ? 'is-active' : ''}`}
+                aria-pressed={lessonFilter === 'notStarted'}
+                onClick={() => setLessonFilter((prev) => (prev === 'notStarted' ? null : 'notStarted'))}
+              >
+                {t('progress.filterNotStarted')}
+              </button>
+            </div>
             <div className={user?.learningCondition === 'autism' ? 'lessons-simple-grid' : 'lessons-grid'}>
-              {lessonCards.map((l) => {
+              {filteredLessonCards.map((l) => {
                 const statusClass = (l.status || 'Not Started').replace(/\s+/g, '-').toLowerCase();
                 return (
                   <div key={l.id} className={user?.learningCondition === 'autism' ? 'lesson-simple-card' : 'lesson-card'}>

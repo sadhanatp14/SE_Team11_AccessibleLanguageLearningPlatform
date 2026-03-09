@@ -111,6 +111,13 @@
   color: var(--accent-color);
 }
 
+/* Logout should animate to red (not accent blue) */
+.btn-logout:hover {
+  border-color: #dc2626;
+  color: #dc2626;
+  background: #fef2f2;
+}
+
 .btn-syllable-toggle {
   background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
   border-color: #bae6fd;
@@ -248,6 +255,104 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 30px;
+}
+
+/* ProgressPage: show 2 lesson cards per row */
+.progress-page .lessons-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+  .progress-page .lessons-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ProgressPage lesson filters */
+.progress-page .progress-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+/* ProgressPage layout polish */
+.progress-page .main-content {
+  padding: 46px 20px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.progress-page .welcome-section {
+  margin-bottom: 0;
+}
+
+.progress-page .progress-card {
+  background: white;
+  border-radius: 24px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 10px 25px -10px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.progress-page .progress-card .card-header {
+  padding: 18px 22px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.progress-page .progress-card .card-header h3 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.progress-page .progress-card .card-body {
+  padding: 22px;
+}
+
+.progress-page .dashboard-progress__headline {
+  margin: 0 0 14px;
+  line-height: 1.6;
+}
+
+.progress-page .dashboard-progress__bar {
+  margin: 10px 0 14px;
+}
+
+.progress-page .dashboard-progress__meta {
+  margin: 14px 0 0;
+}
+
+.progress-page .lessons-grid {
+  gap: 26px;
+}
+
+.progress-page .progress-filter-btn {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: white;
+  color: var(--text-secondary);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.progress-page .progress-filter-btn:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.progress-page .progress-filter-btn.is-active {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+}
+
+.progress-page .progress-filter-btn:focus-visible {
+  outline: 3px solid rgba(var(--accent-rgb), 0.35);
+  outline-offset: 2px;
 }
 
 .lesson-card {
