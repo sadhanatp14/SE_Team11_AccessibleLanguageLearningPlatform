@@ -1695,17 +1695,6 @@ const ADHDView = ({ initialLessonId = null }) => {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/badges')}
-            className="btn-minimal"
-            title={t('learning.common.badges')}
-            aria-label={t('learning.common.badges')}
-            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-          >
-            <Award size={18} aria-hidden="true" />
-            <span>{t('learning.common.badges')}</span>
-          </button>
-          <button
-            type="button"
             onClick={() => {
               if (isSessionActive && !activeLesson) {
                 backToSessionStart();
@@ -1792,6 +1781,19 @@ const ADHDView = ({ initialLessonId = null }) => {
               >
                 <Hash size={18} aria-hidden="true" />
                 <span>{t('learning.common.progress')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  navigate('/badges');
+                  setShowSideMenu(false);
+                }}
+                className="btn-minimal"
+                style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: 8 }}
+              >
+                <Award size={18} aria-hidden="true" />
+                <span>{t('learning.common.badges')}</span>
               </button>
 
               <button

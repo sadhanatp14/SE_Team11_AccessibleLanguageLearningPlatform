@@ -2801,17 +2801,6 @@ const AutismView = ({ initialLessonId = null }) => {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/badges')}
-            className="btn-settings"
-            title={t('learning.common.badges')}
-            aria-label={t('learning.common.badges')}
-            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-          >
-            <Award size={18} aria-hidden="true" />
-            <span>{t('learning.common.badges')}</span>
-          </button>
-          <button
-            type="button"
             onClick={() => navigate(-1)}
             className="btn-settings"
             title={t('learning.common.back')}
@@ -2885,6 +2874,19 @@ const AutismView = ({ initialLessonId = null }) => {
               >
                 <Hash size={18} aria-hidden="true" />
                 <span>{t('learning.common.progress')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  navigate('/badges');
+                  setShowSideMenu(false);
+                }}
+                className="btn-settings"
+                style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: 8 }}
+              >
+                <Award size={18} aria-hidden="true" />
+                <span>{t('learning.common.badges')}</span>
               </button>
 
               <button
