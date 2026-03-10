@@ -860,6 +860,628 @@ const lessonSamples = {
       },
     ],
   },
+
+  'lesson-tamil-essentials': {
+    _id: 'lesson-tamil-essentials',
+    title: 'Tamil Foundations: Everyday Greetings',
+    titleI18n: {
+      english: 'Tamil Foundations: Everyday Greetings',
+      tamil: 'தமிழ் அடித்தளம்: தினசரி வாழ்த்துகள்',
+      hindi: 'तमिल की बुनियाद: रोज़मर्रा के अभिवादन',
+    },
+        textContent: `In this lesson you will practice a few useful Tamil words.
+
+    Try reading slowly and clearly:
+    - “வணக்கம்” (Vanakkam) = Hello
+    - “நன்றி” (Nandri) = Thank you
+    - “தயவு செய்து” (Thayavu seithu) = Please
+    - “ஆம்” (Aam) = Yes
+    - “இல்லை” (Illai) = No`,
+    textContentI18n: {
+      english: `In this lesson you will practice a few useful Tamil words.
+
+    Try reading slowly and clearly:
+    - “வணக்கம்” (Vanakkam) = Hello
+    - “நன்றி” (Nandri) = Thank you
+    - “தயவு செய்து” (Thayavu seithu) = Please
+    - “ஆம்” (Aam) = Yes
+    - “இல்லை” (Illai) = No`,
+      tamil: `இந்தப் பாடத்தில் சில பயனுள்ள தமிழ் சொற்களைப் பயிற்சி செய்வோம்.
+
+    மெதுவாகவும் தெளிவாகவும் வாசிக்க முயற்சிக்கவும்:
+    - “வணக்கம்” (Vanakkam) = Hello
+    - “நன்றி” (Nandri) = Thank you
+    - “தயவு செய்து” (Thayavu seithu) = Please
+    - “ஆம்” (Aam) = Yes
+    - “இல்லை” (Illai) = No`,
+      hindi: `इस पाठ में आप कुछ उपयोगी तमिल शब्दों का अभ्यास करेंगे।
+
+    धीरे और साफ़ पढ़ने की कोशिश करें:
+    - “வணக்கம்” (Vanakkam) = Hello
+    - “நன்றி” (Nandri) = Thank you
+    - “தயவு செய்து” (Thayavu seithu) = Please
+    - “ஆம்” (Aam) = Yes
+    - “இல்லை” (Illai) = No`,
+    },
+    audioUrl: '',
+    visuals: [
+      { iconUrl: '/visuals/wave.svg', description: 'Practice “வணக்கம்” (Vanakkam) as a greeting.' },
+      { iconUrl: '/visuals/speech.svg', description: 'Say “நன்றி” (Nandri) to say thank you.' },
+    ],
+    highlights: [
+      { id: 'ta-h1', phrase: 'வணக்கம்', emphasisType: 'background', color: '#fde68a', position: 0 },
+      { id: 'ta-h2', phrase: 'நன்றி', emphasisType: 'underline' },
+    ],
+    visualAids: [
+      { id: 'ta-v1', imageUrl: '/visuals/wave.svg', altText: 'Waving hand icon', relatedPhrase: 'வணக்கம்', placement: 'inline' },
+      { id: 'ta-v2', imageUrl: '/visuals/speech.svg', altText: 'Speech bubble icon', relatedPhrase: 'நன்றி', placement: 'below' },
+    ],
+    interactions: [
+      {
+        id: 'ta-1',
+        type: 'multiple_choice',
+        question: 'வணக்கம் means…',
+        questionI18n: {
+          english: 'வணக்கம் means…',
+          tamil: '“வணக்கம்” என்றால்…',
+          hindi: '“வணக்கம்” का अर्थ है…',
+        },
+        questionImageUrl: '/images/greeting-hello.svg',
+        questionAudioUrl: '',
+        options: ['Hello', 'Thank you', 'Goodbye'],
+        optionsI18n: [
+          { english: 'Hello', tamil: 'Hello', hindi: 'Hello' },
+          { english: 'Thank you', tamil: 'Thank you', hindi: 'Thank you' },
+          { english: 'Goodbye', tamil: 'Goodbye', hindi: 'Goodbye' },
+        ],
+        correctAnswer: 0,
+        hint: 'It is used to greet someone.',
+        hintI18n: {
+          english: 'It is used to greet someone.',
+          tamil: 'இது ஒருவரை வாழ்த்த பயன்படுத்தப்படுகிறது.',
+          hindi: 'यह किसी को अभिवादन करने के लिए इस्तेमाल होता है।',
+        },
+        explanation: '“வணக்கம்” is a common Tamil greeting (Hello).',
+        explanationI18n: {
+          english: '“வணக்கம்” is a common Tamil greeting (Hello).',
+          tamil: '“வணக்கம்” என்பது பொதுவான தமிழ் வாழ்த்து (Hello).',
+          hindi: '“வணக்கம்” एक सामान्य तमिल अभिवादन है (Hello)।',
+        },
+        explanationAudioUrl: '',
+        maxAttempts: 3,
+        timeLimitSeconds: 30,
+        feedback: {
+          correct: 'Great! வணக்கம் = Hello.',
+          incorrect: 'Try again. Think: greeting.',
+        },
+        feedbackI18n: {
+          correct: { english: 'Great! வணக்கம் = Hello.', tamil: 'சரி! வணக்கம் = Hello.', hindi: 'बहुत अच्छा! वணக்கம் = Hello.' },
+          incorrect: { english: 'Try again. Think: greeting.', tamil: 'மீண்டும் முயற்சி. வாழ்த்து என்று நினையுங்கள்.', hindi: 'फिर से कोशिश करें। अभिवादन सोचें।' },
+        },
+        position: 0,
+      },
+      {
+        id: 'ta-2',
+        type: 'multiple_choice',
+        question: 'Choose “Thank you” in Tamil.',
+        questionI18n: {
+          english: 'Choose “Thank you” in Tamil.',
+          tamil: 'தமிழில் “Thank you” என்பதைத் தேர்ந்தெடுக்கவும்.',
+          hindi: 'तमिल में “Thank you” चुनें।',
+        },
+        questionImageUrl: '/images/greeting-options.svg',
+        questionAudioUrl: '',
+        options: ['வணக்கம்', 'நன்றி', 'இல்லை'],
+        optionsI18n: [
+          { english: 'வணக்கம்', tamil: 'வணக்கம்', hindi: 'वणக்கம்' },
+          { english: 'நன்றி', tamil: 'நன்றி', hindi: 'नन्द्री' },
+          { english: 'இல்லை', tamil: 'இல்லை', hindi: 'इल्लै' },
+        ],
+        correctAnswer: 1,
+        hint: 'You say it after someone helps you.',
+        hintI18n: {
+          english: 'You say it after someone helps you.',
+          tamil: 'யாராவது உதவிய பிறகு இதை சொல்வீர்கள்.',
+          hindi: 'जब कोई आपकी मदद करे, तब आप यह कहते हैं।',
+        },
+        explanation: 'நன்றி means Thank you.',
+        explanationI18n: {
+          english: 'நன்றி means Thank you.',
+          tamil: 'நன்றி என்றால் Thank you.',
+          hindi: 'நன்றி का मतलब Thank you है।',
+        },
+        explanationAudioUrl: '',
+        maxAttempts: 3,
+        timeLimitSeconds: 30,
+        feedback: {
+          correct: 'Nice! நன்றி = Thank you.',
+          incorrect: 'Good try. Look for the word used for thanks.',
+        },
+        feedbackI18n: {
+          correct: { english: 'Nice! நன்றி = Thank you.', tamil: 'சிறப்பு! நன்றி = Thank you.', hindi: 'अच्छा! नன்றி = Thank you.' },
+          incorrect: { english: 'Good try. Look for the word used for thanks.', tamil: 'நல்ல முயற்சி. நன்றி சொல்லும் சொல்லைப் பாருங்கள்.', hindi: 'अच्छी कोशिश। धन्यवाद वाले शब्द को देखें।' },
+        },
+        position: 1,
+      },
+      {
+        id: 'ta-3',
+        type: 'true_false',
+        question: '“ஆம்” means “Yes”.',
+        questionI18n: {
+          english: '“ஆம்” means “Yes”.',
+          tamil: '“ஆம்” என்றால் “Yes”.',
+          hindi: '“ஆம்” का मतलब “Yes” है।',
+        },
+        questionImageUrl: '/images/responding-greeting.svg',
+        questionAudioUrl: '',
+        correctAnswer: 'True',
+        hint: 'Yes = agree.',
+        hintI18n: {
+          english: 'Yes = agree.',
+          tamil: 'Yes = சம்மதம்.',
+          hindi: 'Yes = सहमत होना।',
+        },
+        explanation: 'ஆம் is used to say Yes.',
+        explanationI18n: {
+          english: 'ஆம் is used to say Yes.',
+          tamil: 'ஆம் என்பது Yes சொல்லப் பயன்படும்.',
+          hindi: 'ஆம் का उपयोग Yes कहने के लिए होता है।',
+        },
+        explanationAudioUrl: '',
+        maxAttempts: 2,
+        timeLimitSeconds: 25,
+        feedback: {
+          correct: 'Correct!',
+          incorrect: 'Try again.',
+        },
+        feedbackI18n: {
+          correct: { english: 'Correct!', tamil: 'சரி!', hindi: 'सही!' },
+          incorrect: { english: 'Try again.', tamil: 'மீண்டும் முயற்சி.', hindi: 'फिर से कोशिश करें।' },
+        },
+        position: 2,
+      },
+      {
+        id: 'ta-4',
+        type: 'click',
+        question: 'Click the polite word you add when asking for something.',
+        questionI18n: {
+          english: 'Click the polite word you add when asking for something.',
+          tamil: 'எதையாவது கேட்கும்போது மரியாதையாக சேர்க்கும் சொல்லை கிளிக் செய்யவும்.',
+          hindi: 'कुछ माँगते समय जो विनम्र शब्द जोड़ते हैं, उसे चुनें।',
+        },
+        questionImageUrl: '/images/asking-question.svg',
+        questionAudioUrl: '',
+        options: ['தயவு செய்து', 'நன்றி', 'பிரியாவிடை'],
+        optionsI18n: [
+          { english: 'தயவு செய்து', tamil: 'தயவு செய்து', hindi: 'कृपया' },
+          { english: 'நன்றி', tamil: 'நன்றி', hindi: 'धन्यवाद' },
+          { english: 'பிரியாவிடை', tamil: 'பிரியாவிடை', hindi: 'अलविदा' },
+        ],
+        correctAnswer: 0,
+        hint: 'It is like “Please”.',
+        hintI18n: {
+          english: 'It is like “Please”.',
+          tamil: 'இது “Please” போல.',
+          hindi: 'यह “Please” जैसा है।',
+        },
+        explanation: 'தயவு செய்து is used to say Please.',
+        explanationI18n: {
+          english: 'தயவு செய்து is used to say Please.',
+          tamil: 'தயவு செய்து என்பது Please சொல்லப் பயன்படும்.',
+          hindi: 'தயவு செய்து का उपयोग Please कहने के लिए होता है।',
+        },
+        explanationAudioUrl: '',
+        maxAttempts: 3,
+        timeLimitSeconds: 30,
+        feedback: {
+          correct: 'Well done!',
+          incorrect: 'Try again. Pick the polite request word.',
+        },
+        feedbackI18n: {
+          correct: { english: 'Well done!', tamil: 'சிறப்பு!', hindi: 'बहुत बढ़िया!' },
+          incorrect: { english: 'Try again. Pick the polite request word.', tamil: 'மீண்டும் முயற்சி. மரியாதை கேட்கும் சொல்லைத் தேர்ந்தெடுக்கவும்.', hindi: 'फिर से कोशिश करें। विनम्र अनुरोध वाला शब्द चुनें।' },
+        },
+        position: 3,
+      },
+      {
+        id: 'ta-5',
+        type: 'multiple_choice',
+        question: 'Which one means “No” in Tamil?',
+        questionI18n: {
+          english: 'Which one means “No” in Tamil?',
+          tamil: 'தமிழில் “No” என்றால் எது?',
+          hindi: 'तमिल में “No” कौन सा है?',
+        },
+        questionImageUrl: '/images/type-greeting.svg',
+        questionAudioUrl: '',
+        options: ['ஆம்', 'இல்லை', 'நன்றி'],
+        optionsI18n: [
+          { english: 'ஆம்', tamil: 'ஆம்', hindi: 'हाँ' },
+          { english: 'இல்லை', tamil: 'இல்லை', hindi: 'नहीं' },
+          { english: 'நன்றி', tamil: 'நன்றி', hindi: 'धन्यवाद' },
+        ],
+        correctAnswer: 1,
+        hint: 'Not yes.',
+        hintI18n: {
+          english: 'Not yes.',
+          tamil: 'ஆம் அல்ல.',
+          hindi: 'हाँ नहीं।',
+        },
+        explanation: 'இல்லை is used to say No.',
+        explanationI18n: {
+          english: 'இல்லை is used to say No.',
+          tamil: 'இல்லை என்பது No சொல்லப் பயன்படும்.',
+          hindi: 'इल्लै का उपयोग No कहने के लिए होता है।',
+        },
+        explanationAudioUrl: '',
+        maxAttempts: 3,
+        timeLimitSeconds: 30,
+        feedback: {
+          correct: 'Correct! இல்லை = No.',
+          incorrect: 'Almost. Look for the opposite of ஆம்.',
+        },
+        feedbackI18n: {
+          correct: { english: 'Correct! இல்லை = No.', tamil: 'சரி! இல்லை = No.', hindi: 'सही! इल्लै = No.' },
+          incorrect: { english: 'Almost. Look for the opposite of ஆம்.', tamil: 'கிட்டத்தட்ட. ஆம் என்பதின் எதிர்ச்சொல்லை பாருங்கள்.', hindi: 'लगभग। हाँ के विपरीत शब्द देखें।' },
+        },
+        position: 4,
+      },
+      {
+        id: 'ta-6',
+        type: 'multiple_choice',
+        question: 'Pick a greeting you can use any time.',
+        questionI18n: {
+          english: 'Pick a greeting you can use any time.',
+          tamil: 'எப்போது வேண்டுமானாலும் பயன்படுத்தக்கூடிய வாழ்த்தைத் தேர்ந்தெடுக்கவும்.',
+          hindi: 'ऐसा अभिवादन चुनें जो आप कभी भी कह सकते हैं।',
+        },
+        questionImageUrl: '/images/greeting-options.svg',
+        questionAudioUrl: '',
+        options: ['வணக்கம்', 'பிரியாவிடை', 'நன்றி'],
+        optionsI18n: [
+          { english: 'வணக்கம்', tamil: 'வணக்கம்', hindi: 'नमस्ते' },
+          { english: 'பிரியாவிடை', tamil: 'பிரியாவிடை', hindi: 'अलविदा' },
+          { english: 'நன்றி', tamil: 'நன்றி', hindi: 'धन्यवाद' },
+        ],
+        correctAnswer: 0,
+        hint: 'It is “Hello”.',
+        hintI18n: {
+          english: 'It is “Hello”.',
+          tamil: 'இது “Hello”.',
+          hindi: 'यह “Hello” है।',
+        },
+        explanation: 'வணக்கம் is a general greeting.',
+        explanationI18n: {
+          english: 'வணக்கம் is a general greeting.',
+          tamil: 'வணக்கம் என்பது பொதுவான வாழ்த்து.',
+          hindi: 'वணக்கம் एक सामान्य अभिवादन है।',
+        },
+        explanationAudioUrl: '',
+        maxAttempts: 3,
+        timeLimitSeconds: 30,
+        feedback: {
+          correct: 'Great greeting choice!',
+          incorrect: 'Try again. Pick the greeting word.',
+        },
+        feedbackI18n: {
+          correct: { english: 'Great greeting choice!', tamil: 'சிறந்த தேர்வு!', hindi: 'बहुत बढ़िया!' },
+          incorrect: { english: 'Try again. Pick the greeting word.', tamil: 'மீண்டும் முயற்சி. வாழ்த்து சொல்லைத் தேர்ந்தெடுக்கவும்.', hindi: 'फिर से कोशिश करें। अभिवादन वाला शब्द चुनें।' },
+        },
+        position: 5,
+      },
+    ],
+  },
+
+  'lesson-hindi-essentials': {
+    _id: 'lesson-hindi-essentials',
+    title: 'Hindi Foundations: Everyday Greetings',
+    titleI18n: {
+      english: 'Hindi Foundations: Everyday Greetings',
+      tamil: 'இந்தி அடித்தளம்: தினசரி வாழ்த்துகள்',
+      hindi: 'हिंदी की बुनियाद: रोज़मर्रा के अभिवादन',
+    },
+        textContent: `In this lesson you will practice a few useful Hindi words.
+
+    Try reading slowly and clearly:
+    - “नमस्ते” (Namaste) = Hello
+    - “धन्यवाद” (Dhanyavaad) = Thank you
+    - “कृपया” (Kripya) = Please
+    - “हाँ” (Haan) = Yes
+    - “नहीं” (Nahin) = No`,
+    textContentI18n: {
+      english: `In this lesson you will practice a few useful Hindi words.
+
+    Try reading slowly and clearly:
+    - “नमस्ते” (Namaste) = Hello
+    - “धन्यवाद” (Dhanyavaad) = Thank you
+    - “कृपया” (Kripya) = Please
+    - “हाँ” (Haan) = Yes
+    - “नहीं” (Nahin) = No`,
+      tamil: `இந்தப் பாடத்தில் சில பயனுள்ள இந்தி சொற்களைப் பயிற்சி செய்வோம்.
+
+    மெதுவாகவும் தெளிவாகவும் வாசிக்க முயற்சிக்கவும்:
+    - “नमस्ते” (Namaste) = Hello
+    - “धन्यवाद” (Dhanyavaad) = Thank you
+    - “कृपया” (Kripya) = Please
+    - “हाँ” (Haan) = Yes
+    - “नहीं” (Nahin) = No`,
+      hindi: `इस पाठ में आप कुछ उपयोगी हिंदी शब्दों का अभ्यास करेंगे।
+
+    धीरे और साफ़ पढ़ने की कोशिश करें:
+    - “नमस्ते” (Namaste) = Hello
+    - “धन्यवाद” (Dhanyavaad) = Thank you
+    - “कृपया” (Kripya) = Please
+    - “हाँ” (Haan) = Yes
+    - “नहीं” (Nahin) = No`,
+    },
+    audioUrl: '',
+    visuals: [
+      { iconUrl: '/visuals/hello.svg', description: 'Practice “नमस्ते” (Namaste) as a greeting.' },
+      { iconUrl: '/visuals/speech.svg', description: 'Say “धन्यवाद” (Dhanyavaad) to say thank you.' },
+    ],
+    highlights: [
+      { id: 'hi-h1', phrase: 'नमस्ते', emphasisType: 'background', color: '#ddd6fe', position: 0 },
+      { id: 'hi-h2', phrase: 'धन्यवाद', emphasisType: 'underline' },
+    ],
+    visualAids: [
+      { id: 'hi-v1', imageUrl: '/visuals/hello.svg', altText: 'Hello icon', relatedPhrase: 'नमस्ते', placement: 'inline' },
+      { id: 'hi-v2', imageUrl: '/visuals/speech.svg', altText: 'Speech bubble icon', relatedPhrase: 'धन्यवाद', placement: 'below' },
+    ],
+    interactions: [
+      {
+        id: 'hi-1',
+        type: 'multiple_choice',
+        question: 'नमस्ते means…',
+        questionI18n: {
+          english: 'नमस्ते means…',
+          tamil: '“नमस्ते” என்றால்…',
+          hindi: '“नमस्ते” का अर्थ है…',
+        },
+        questionImageUrl: '/images/greeting-hello.svg',
+        questionAudioUrl: '',
+        options: ['Hello', 'Thank you', 'Good night'],
+        optionsI18n: [
+          { english: 'Hello', tamil: 'Hello', hindi: 'Hello' },
+          { english: 'Thank you', tamil: 'Thank you', hindi: 'Thank you' },
+          { english: 'Good night', tamil: 'Good night', hindi: 'Good night' },
+        ],
+        correctAnswer: 0,
+        hint: 'It is used to greet someone.',
+        hintI18n: {
+          english: 'It is used to greet someone.',
+          tamil: 'இது ஒருவரை வாழ்த்த பயன்படுத்தப்படுகிறது.',
+          hindi: 'यह अभिवादन करने के लिए उपयोग होता है।',
+        },
+        explanation: 'नमस्ते is a common Hindi greeting (Hello).',
+        explanationI18n: {
+          english: 'नमस्ते is a common Hindi greeting (Hello).',
+          tamil: 'नमस्ते என்பது பொதுவான இந்தி வாழ்த்து (Hello).',
+          hindi: 'नमस्ते एक सामान्य हिंदी अभिवादन है (Hello)।',
+        },
+        explanationAudioUrl: '',
+        maxAttempts: 3,
+        timeLimitSeconds: 30,
+        feedback: {
+          correct: 'Great! नमस्ते = Hello.',
+          incorrect: 'Try again. Think: greeting.',
+        },
+        feedbackI18n: {
+          correct: { english: 'Great! नमस्ते = Hello.', tamil: 'சரி! नमस्ते = Hello.', hindi: 'बहुत बढ़िया! नमस्ते = Hello.' },
+          incorrect: { english: 'Try again. Think: greeting.', tamil: 'மீண்டும் முயற்சி. வாழ்த்து என்று நினையுங்கள்.', hindi: 'फिर से कोशिश करें। अभिवादन सोचें।' },
+        },
+        position: 0,
+      },
+      {
+        id: 'hi-2',
+        type: 'multiple_choice',
+        question: 'Choose “Thank you” in Hindi.',
+        questionI18n: {
+          english: 'Choose “Thank you” in Hindi.',
+          tamil: 'இந்தியில் “Thank you” என்பதைத் தேர்ந்தெடுக்கவும்.',
+          hindi: 'हिंदी में “Thank you” चुनें।',
+        },
+        questionImageUrl: '/images/greeting-options.svg',
+        questionAudioUrl: '',
+        options: ['धन्यवाद', 'नमस्ते', 'नहीं'],
+        optionsI18n: [
+          { english: 'धन्यवाद', tamil: 'धन्यवाद', hindi: 'धन्यवाद' },
+          { english: 'नमस्ते', tamil: 'नमस्ते', hindi: 'नमस्ते' },
+          { english: 'नहीं', tamil: 'नहीं', hindi: 'नहीं' },
+        ],
+        correctAnswer: 0,
+        hint: 'You say it after someone helps you.',
+        hintI18n: {
+          english: 'You say it after someone helps you.',
+          tamil: 'யாராவது உதவிய பிறகு இதை சொல்வீர்கள்.',
+          hindi: 'जब कोई आपकी मदद करे, तब आप यह कहते हैं।',
+        },
+        explanation: 'धन्यवाद means Thank you.',
+        explanationI18n: {
+          english: 'धन्यवाद means Thank you.',
+          tamil: 'धन्यवाद என்றால் Thank you.',
+          hindi: 'धन्यवाद का मतलब Thank you है।',
+        },
+        explanationAudioUrl: '',
+        maxAttempts: 3,
+        timeLimitSeconds: 30,
+        feedback: {
+          correct: 'Nice! धन्यवाद = Thank you.',
+          incorrect: 'Good try. Pick the word used for thanks.',
+        },
+        feedbackI18n: {
+          correct: { english: 'Nice! धन्यवाद = Thank you.', tamil: 'சிறப்பு! धन्यवाद = Thank you.', hindi: 'अच्छा! धन्यवाद = Thank you.' },
+          incorrect: { english: 'Good try. Pick the word used for thanks.', tamil: 'நல்ல முயற்சி. நன்றி சொல்லும் சொல்லைப் பாருங்கள்.', hindi: 'अच्छी कोशिश। धन्यवाद वाले शब्द को देखें।' },
+        },
+        position: 1,
+      },
+      {
+        id: 'hi-3',
+        type: 'true_false',
+        question: '“हाँ” means “Yes”.',
+        questionI18n: {
+          english: '“हाँ” means “Yes”.',
+          tamil: '“हाँ” என்றால் “Yes”.',
+          hindi: '“हाँ” का मतलब “Yes” है।',
+        },
+        questionImageUrl: '/images/responding-greeting.svg',
+        questionAudioUrl: '',
+        correctAnswer: 'True',
+        hint: 'Yes = agree.',
+        hintI18n: {
+          english: 'Yes = agree.',
+          tamil: 'Yes = சம்மதம்.',
+          hindi: 'Yes = सहमत होना।',
+        },
+        explanation: 'हाँ is used to say Yes.',
+        explanationI18n: {
+          english: 'हाँ is used to say Yes.',
+          tamil: 'हाँ என்பது Yes சொல்லப் பயன்படும்.',
+          hindi: 'हाँ का उपयोग Yes कहने के लिए होता है।',
+        },
+        explanationAudioUrl: '',
+        maxAttempts: 2,
+        timeLimitSeconds: 25,
+        feedback: {
+          correct: 'Correct!',
+          incorrect: 'Try again.',
+        },
+        feedbackI18n: {
+          correct: { english: 'Correct!', tamil: 'சரி!', hindi: 'सही!' },
+          incorrect: { english: 'Try again.', tamil: 'மீண்டும் முயற்சி.', hindi: 'फिर से कोशिश करें।' },
+        },
+        position: 2,
+      },
+      {
+        id: 'hi-4',
+        type: 'click',
+        question: 'Click the polite word you add when asking for something.',
+        questionI18n: {
+          english: 'Click the polite word you add when asking for something.',
+          tamil: 'எதையாவது கேட்கும்போது மரியாதையாக சேர்க்கும் சொல்லை கிளிக் செய்யவும்.',
+          hindi: 'कुछ माँगते समय जो विनम्र शब्द जोड़ते हैं, उसे चुनें।',
+        },
+        questionImageUrl: '/images/asking-question.svg',
+        questionAudioUrl: '',
+        options: ['कृपया', 'धन्यवाद', 'अलविदा'],
+        optionsI18n: [
+          { english: 'कृपया', tamil: 'कृपया', hindi: 'कृपया' },
+          { english: 'धन्यवाद', tamil: 'धन्यवाद', hindi: 'धन्यवाद' },
+          { english: 'अलविदा', tamil: 'अलविदा', hindi: 'अलविदा' },
+        ],
+        correctAnswer: 0,
+        hint: 'It is like “Please”.',
+        hintI18n: {
+          english: 'It is like “Please”.',
+          tamil: 'இது “Please” போல.',
+          hindi: 'यह “Please” जैसा है।',
+        },
+        explanation: 'कृपया is used to say Please.',
+        explanationI18n: {
+          english: 'कृपया is used to say Please.',
+          tamil: 'कृपया என்பது Please சொல்லப் பயன்படும்.',
+          hindi: 'कृपया का उपयोग Please कहने के लिए होता है।',
+        },
+        explanationAudioUrl: '',
+        maxAttempts: 3,
+        timeLimitSeconds: 30,
+        feedback: {
+          correct: 'Well done!',
+          incorrect: 'Try again. Pick the polite request word.',
+        },
+        feedbackI18n: {
+          correct: { english: 'Well done!', tamil: 'சிறப்பு!', hindi: 'बहुत बढ़िया!' },
+          incorrect: { english: 'Try again. Pick the polite request word.', tamil: 'மீண்டும் முயற்சி. மரியாதை கேட்கும் சொல்லைத் தேர்ந்தெடுக்கவும்.', hindi: 'फिर से कोशिश करें। विनम्र अनुरोध वाला शब्द चुनें।' },
+        },
+        position: 3,
+      },
+      {
+        id: 'hi-5',
+        type: 'multiple_choice',
+        question: 'Which one means “No” in Hindi?',
+        questionI18n: {
+          english: 'Which one means “No” in Hindi?',
+          tamil: 'இந்தியில் “No” என்றால் எது?',
+          hindi: 'हिंदी में “No” कौन सा है?',
+        },
+        questionImageUrl: '/images/type-greeting.svg',
+        questionAudioUrl: '',
+        options: ['हाँ', 'नहीं', 'धन्यवाद'],
+        optionsI18n: [
+          { english: 'हाँ', tamil: 'हाँ', hindi: 'हाँ' },
+          { english: 'नहीं', tamil: 'नहीं', hindi: 'नहीं' },
+          { english: 'धन्यवाद', tamil: 'धन्यवाद', hindi: 'धन्यवाद' },
+        ],
+        correctAnswer: 1,
+        hint: 'Not yes.',
+        hintI18n: {
+          english: 'Not yes.',
+          tamil: 'ஆம் அல்ல.',
+          hindi: 'हाँ नहीं।',
+        },
+        explanation: 'नहीं is used to say No.',
+        explanationI18n: {
+          english: 'नहीं is used to say No.',
+          tamil: 'नहीं என்பது No சொல்லப் பயன்படும்.',
+          hindi: 'नहीं का उपयोग No कहने के लिए होता है।',
+        },
+        explanationAudioUrl: '',
+        maxAttempts: 3,
+        timeLimitSeconds: 30,
+        feedback: {
+          correct: 'Correct! नहीं = No.',
+          incorrect: 'Almost. Look for the opposite of हाँ.',
+        },
+        feedbackI18n: {
+          correct: { english: 'Correct! नहीं = No.', tamil: 'சரி! नहीं = No.', hindi: 'सही! नहीं = No.' },
+          incorrect: { english: 'Almost. Look for the opposite of हाँ.', tamil: 'கிட்டத்தட்ட. हाँ என்பதின் எதிர்ச்சொல்லை பாருங்கள்.', hindi: 'लगभग। हाँ के विपरीत शब्द देखें।' },
+        },
+        position: 4,
+      },
+      {
+        id: 'hi-6',
+        type: 'multiple_choice',
+        question: 'Pick a greeting you can use any time.',
+        questionI18n: {
+          english: 'Pick a greeting you can use any time.',
+          tamil: 'எப்போது வேண்டுமானாலும் பயன்படுத்தக்கூடிய வாழ்த்தைத் தேர்ந்தெடுக்கவும்.',
+          hindi: 'ऐसा अभिवादन चुनें जो आप कभी भी कह सकते हैं।',
+        },
+        questionImageUrl: '/images/greeting-options.svg',
+        questionAudioUrl: '',
+        options: ['नमस्ते', 'अलविदा', 'धन्यवाद'],
+        optionsI18n: [
+          { english: 'नमस्ते', tamil: 'नमस्ते', hindi: 'नमस्ते' },
+          { english: 'अलविदा', tamil: 'अलविदा', hindi: 'अलविदा' },
+          { english: 'धन्यवाद', tamil: 'धन्यवाद', hindi: 'धन्यवाद' },
+        ],
+        correctAnswer: 0,
+        hint: 'It is “Hello”.',
+        hintI18n: {
+          english: 'It is “Hello”.',
+          tamil: 'இது “Hello”.',
+          hindi: 'यह “Hello” है।',
+        },
+        explanation: 'नमस्ते is a general greeting.',
+        explanationI18n: {
+          english: 'नमस्ते is a general greeting.',
+          tamil: 'नमस्ते என்பது பொதுவான வாழ்த்து.',
+          hindi: 'नमस्ते एक सामान्य अभिवादन है।',
+        },
+        explanationAudioUrl: '',
+        maxAttempts: 3,
+        timeLimitSeconds: 30,
+        feedback: {
+          correct: 'Great greeting choice!',
+          incorrect: 'Try again. Pick the greeting word.',
+        },
+        feedbackI18n: {
+          correct: { english: 'Great greeting choice!', tamil: 'சிறந்த தேர்வு!', hindi: 'बहुत बढ़िया!' },
+          incorrect: { english: 'Try again. Pick the greeting word.', tamil: 'மீண்டும் முயற்சி. வாழ்த்து சொல்லைத் தேர்ந்தெடுக்கவும்.', hindi: 'फिर से कोशिश करें। अभिवादन वाला शब्द चुनें।' },
+        },
+        position: 5,
+      },
+    ],
+  },
 };
 
 export default { ...lessonSamples, ...lessonSamplesHindi, ...lessonSamplesTamil };

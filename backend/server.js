@@ -10,8 +10,16 @@ dotenv.config();
 
 const app = express();
 
-// Enable CORS for cross-origin requests
-app.use(cors());
+// Enable CORS for cross-origin requests with production URLs
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:5002',
+    process.env.FRONTEND_URL || 'http://localhost:3000',
+  ],
+  credentials: true,
+};
+app.use(cors(corsOptions));
 // Parse JSON request bodies
 app.use(express.json());
 // Parse URL-encoded request bodies
@@ -36,6 +44,7 @@ app.use('/api/users', require('./routes/users')); // User management
 app.use('/api/lessons', require('./routes/lessons')); // Lesson content
 app.use('/api/interactions', require('./routes/interactions')); // User interactions
 app.use('/api/progress', require('./routes/progress')); // Progress tracking
+app.use('/api/badges', require('./routes/badges')); // Badges/achievements
 app.use('/api/ai', require('./routes/ai')); // AI features
 app.use('/api/tts', require('./routes/tts')); // Text-to-speech
 app.use('/api/admin', require('./routes/admin')); // Admin-specific management endpoints

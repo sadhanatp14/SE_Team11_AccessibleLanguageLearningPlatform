@@ -7,11 +7,12 @@ This document describes the system architecture for the Accessible Language Lear
 - Frontend: React (Create React App)
 - Backend: Node.js + Express
 - Database: MongoDB (via Mongoose)
-- Auth: JWT (Bearer token)
+- Auth: JWT (Bearer token) with password/pattern login and optional WebAuthn ("fingerprint")
 - Optional services:
   - Text-to-Speech (TTS): Python script invoked from the backend
   - AI quiz generation: Google Gemini (with safe fallback responses)
   - Lesson search: vector search helper with text-search fallback
+  - i18n/bilingual lesson text: stored as `*I18n` subdocuments and applied by the API + UI preferences
 
 ## Repository layout
 
@@ -20,6 +21,8 @@ Top-level:
 - `frontend/`: React application
 - `backend/`: Express API server
 - `generate-audio-files.js`, `create-placeholder-audio.js`: utility scripts
+- `DOCUMENTATION.md`: consolidated technical documentation (API + schema + standards + troubleshooting)
+- `DEVDOCS.md`: deployment and DevOps documentation (CI, hosting, runtime configuration)
 
 Backend (`backend/`):
 
@@ -46,6 +49,7 @@ In local development the system typically runs as:
 - Frontend dev server: `http://localhost:3000`
   - Proxies `/api` to the backend (`frontend/package.json` `proxy`)
 - Backend API server: `http://localhost:5002`
+  - If the configured port is busy, the backend retries `PORT+1` up to `PORT_RETRIES` times.
 - MongoDB: local instance or Atlas
 - Optional Python runtime for TTS
 
@@ -55,6 +59,11 @@ In local development the system typically runs as:
 2. Frontend stores the JWT (localStorage) and uses it for subsequent API calls.
 3. Frontend Axios client in `frontend/src/utils/api.js` attaches `Authorization: Bearer <token>`.
 4. Backend middleware `backend/middleware/auth.js` validates the token and populates `req.user`.
+
+Optional fingerprint (WebAuthn) flow:
+
+- Registration: `POST /api/auth/fingerprint/register/options` then `POST /api/auth/fingerprint/register/verify` (authenticated).
+- Login: `POST /api/auth/fingerprint/login/options` then `POST /api/auth/fingerprint/login/verify` (issues JWT).
 
 ## Core domain modules
 
@@ -66,6 +75,11 @@ In local development the system typically runs as:
   - Fetch preferences after login
   - Apply preferences to the UI (themes, spacing, fonts)
 
+Language preferences (important for i18n/bilingual behavior):
+
+- `Preferences.uiLanguage`: language for general UI labels (dashboards/settings)
+- `Preferences.bilingualTextMode`: bilingual rendering for lesson/question surfaces only (`off`, `english_tamil`, `english_hindi`)
+
 ### Lessons and sections
 
 - Data models:
@@ -75,6 +89,11 @@ In local development the system typically runs as:
   - `GET /api/lessons/:id` for a lesson
   - `GET /api/lessons/:lessonId/sections` for section list
   - `GET /api/lessons/search?q=...` for searching
+
+Localization support:
+
+- Search supports optional query params such as `lang` and `contentLang` to return localized fields when `*I18n` content exists.
+- Lesson and section documents can include optional i18n fields like `titleI18n`, `textContentI18n`, `questionI18n`, `optionsI18n`, etc.
 
 ### Interactions (practice questions)
 
@@ -106,8 +125,9 @@ The platform supports audio in two ways:
 
 2. Backend TTS endpoint
    - Frontend calls `POST /api/tts/speak` with `text` and optional `speed`.
-   - Backend runs `backend/python_services/tts_gen.py` and streams MP3 bytes (`audio/mpeg`).
-   - Frontend can fall back to the browser SpeechSynthesis API when needed.
+  - Preferred path: backend runs `backend/python_services/tts_gen.py` and streams MP3 bytes (`audio/mpeg`) (requires Python + `gTTS`).
+  - Fallback path (non-test environments): backend streams a Google Translate TTS URL using `google-tts-api`.
+  - Frontend can also fall back to the browser SpeechSynthesis API when needed.
 
 Mermaid sequence diagram (TTS):
 
@@ -127,8 +147,13 @@ sequenceDiagram
 ## AI quiz generation (optional)
 
 - Backend endpoint group: `/api/ai/*`
-- Implementation uses Gemini when `GEMINI_API_KEY` is configured.
+- Implementation uses Gemini when `GEMINI_API_KEY` is configured (and `GEMINI_MODEL` may override the default model).
 - When the key is missing or the call fails, the backend returns a mock quiz payload so the UI remains usable.
+
+## Admin and roles
+
+- Backend supports role-based authorization via `authorize('admin')`.
+- Admin user creation is supported by the API (guarded by `ADMIN_REG_SECRET`), but the frontend registration UI is learner-focused and does not expose admin registration.
 
 ## Dev-only utilities
 

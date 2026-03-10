@@ -3,11 +3,13 @@ import InteractionCard from './InteractionCard';
 import VisualLesson from './VisualLesson';
 import { useAuth } from '../../context/AuthContext';
 import { usePreferences } from '../../context/PreferencesContext';
+import api from '../../utils/api';
 import { getLessonProgress, normalizeUserId, saveLessonProgress } from '../../services/dyslexiaProgressService';
 import { decorateDyslexiaText, useDyslexiaContext } from '../../utils/dyslexiaSyllableMode';
 import {
   backendTtsLangFor,
   bilingualPrimaryLanguageForMode,
+  inferTtsLanguageKeyFromText,
   isBilingualTextMode,
   resolveBilingualTextModeFromPreferences,
   speechSynthesisLangFor,
@@ -46,6 +48,13 @@ const formatTime = (seconds) => {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
+const joinUrl = (base, path) => {
+  const baseStr = String(base || '').replace(/\/+$/, '');
+  const pathStr = String(path || '');
+  const normalizedPath = pathStr.startsWith('/') ? pathStr : `/${pathStr}`;
+  return `${baseStr}${normalizedPath}`;
 };
 
 const splitParagraphs = (text, { decorateEnglish = false } = {}) => {
@@ -329,11 +338,13 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
 
     // 2. Try Backend TTS first (Reliable on all OS)
     try {
-      const ttsLangKey = contentLanguage || uiLanguage;
-      const response = await fetch('/api/tts/speak', {
+      const ttsUrl = joinUrl(api?.defaults?.baseURL || '/api', '/tts/speak');
+      const baseLangKey = contentLanguage || uiLanguage;
+      const langKey = inferTtsLanguageKeyFromText(text, baseLangKey);
+      const response = await fetch(ttsUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, speed: playbackRate, lang: backendTtsLangFor(ttsLangKey) })
+        body: JSON.stringify({ text, speed: playbackRate, lang: backendTtsLangFor(langKey) })
       });
 
       if (!response.ok) throw new Error('Backend TTS failed');
@@ -422,7 +433,6 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
         speakText(section.textContent || section.title || 'No text content');
       }
     } else {
-      // Use TTS Fallback
       if (isPlaying || window.speechSynthesis.speaking) {
         window.speechSynthesis.cancel();
         setIsPlaying(false);

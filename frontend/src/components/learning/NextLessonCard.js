@@ -25,6 +25,7 @@
 
 import React from 'react';
 import { ArrowRight, CheckCircle2, SkipForward, Sparkles } from 'lucide-react';
+import { useI18n } from '../../utils/i18n';
 import './NextLessonCard.css';
 
 const NextLessonCard = ({
@@ -37,18 +38,22 @@ const NextLessonCard = ({
   onSkip,
   allCompleted,
   completionMsg,
+  variant,
 }) => {
+  const { t } = useI18n();
+  const variantClass = variant ? ` next-lesson-card--${variant}` : '';
+
   // All lessons completed – show a celebratory message
   if (allCompleted) {
     return (
-      <div className="next-lesson-card next-lesson-card--completed" role="region" aria-label="All lessons completed">
+      <div className={`next-lesson-card next-lesson-card--completed${variantClass}`} role="region" aria-label={t('learning.nextLesson.allCompletedAria')}>
         <div className="nlc-icon nlc-icon--done">
           <CheckCircle2 size={32} aria-hidden="true" />
         </div>
         <div className="nlc-body">
-          <h3 className="nlc-title">🎉 {completionMsg || 'All Lessons Completed!'}</h3>
+          <h3 className="nlc-title">🎉 {completionMsg || t('learning.nextLesson.allCompletedTitle')}</h3>
           <p className="nlc-subtitle">
-            You've finished all {totalLessons} lessons. Revisit any lesson below to practise.
+            {t('learning.nextLesson.allCompletedSubtitle', { total: totalLessons })}
           </p>
         </div>
       </div>
@@ -66,10 +71,10 @@ const NextLessonCard = ({
     ? recommendation.descriptionSyllables
     : recommendation.description;
 
-  const progressText = `Lesson ${recommendation.position} of ${totalLessons}`;
+  const progressText = t('learning.nextLesson.progress', { position: recommendation.position, total: totalLessons });
 
   return (
-    <div className="next-lesson-card" role="region" aria-label="Recommended next lesson">
+    <div className={`next-lesson-card${variantClass}`} role="region" aria-label={t('learning.nextLesson.recommendedAria')}>
       <div className="nlc-icon">
         <Sparkles size={28} aria-hidden="true" />
       </div>
@@ -92,19 +97,19 @@ const NextLessonCard = ({
           type="button"
           className="nlc-btn nlc-btn--accept"
           onClick={() => onAccept(recommendation)}
-          aria-label={`Start lesson: ${recommendation.title}`}
+          aria-label={t('learning.nextLesson.startAria', { title: recommendation.title })}
         >
-          <span>Start This Lesson</span>
+          <span>{t('learning.nextLesson.startThisLesson')}</span>
           <ArrowRight size={18} aria-hidden="true" />
         </button>
         <button
           type="button"
           className="nlc-btn nlc-btn--skip"
           onClick={() => onSkip(recommendation)}
-          aria-label="Skip recommendation and choose manually"
+          aria-label={t('learning.nextLesson.skipAria')}
         >
           <SkipForward size={16} aria-hidden="true" />
-          <span>Skip</span>
+          <span>{t('learning.nextLesson.skip')}</span>
         </button>
       </div>
     </div>

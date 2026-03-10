@@ -5,17 +5,28 @@ import GuidedSupport from './GuidedSupport';
 import { decorateDyslexiaText, useDyslexiaContext } from '../../utils/dyslexiaSyllableMode';
 import { usePreferences } from '../../context/PreferencesContext';
 import { useI18n } from '../../utils/i18n';
+import api from '../../utils/api';
 import {
   backendTtsLangFor,
+  inferTtsLanguageKeyFromText,
   pickByLanguage,
   resolveBilingualTextModeFromPreferences,
   resolveUiLanguageFromPreferences,
+  speechRecognitionLangFor,
   speechSynthesisLangFor,
 } from '../../utils/languagePrefs';
 import { pickI18nString } from '../../utils/lessonI18n';
+import { speechTextsMatch } from '../../utils/speechCompare';
 import { Mic } from 'lucide-react';
 import BilingualText from './BilingualText';
 import './InteractionCard.css';
+
+const joinUrl = (base, path) => {
+  const baseStr = String(base || '').replace(/\/+$/, '');
+  const pathStr = String(path || '');
+  const normalizedPath = pathStr.startsWith('/') ? pathStr : `/${pathStr}`;
+  return `${baseStr}${normalizedPath}`;
+};
 
 const normalizeAnswer = (value) => {
   if (typeof value === 'boolean') return value ? 'true' : 'false';
@@ -48,6 +59,9 @@ const voiceMatchesOption = (heard, option) => {
   const heardNorm = normalizeVoiceText(heard);
   const optionNorm = normalizeVoiceText(option);
   if (!heardNorm || !optionNorm) return false;
+
+  // First try a script-aware match (handles cases like "namaste" vs "नमस्ते").
+  if (speechTextsMatch(heard, option)) return true;
 
   if (heardNorm === optionNorm) return true;
 
@@ -386,8 +400,10 @@ const InteractionCard = ({
 
     // Try Backend TTS first
     try {
-      const ttsLanguageKey = overrides.languageKey ?? resolvedContentLanguage ?? uiLanguage;
-      const response = await fetch('/api/tts/speak', {
+      const baseLanguageKey = overrides.languageKey ?? uiLanguage;
+      const ttsLanguageKey = inferTtsLanguageKeyFromText(text, baseLanguageKey);
+      const ttsUrl = joinUrl(api?.defaults?.baseURL || '/api', '/tts/speak');
+      const response = await fetch(ttsUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -450,8 +466,9 @@ const InteractionCard = ({
       if (typeof window !== 'undefined' && window.speechSynthesis) {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = overrides.rate ?? 0.85;
-        const ttsLanguageKey = overrides.languageKey ?? resolvedContentLanguage ?? uiLanguage;
-        utterance.lang = overrides.lang ?? speechSynthesisLangFor(ttsLanguageKey);
+        const baseLanguageKey = overrides.languageKey ?? uiLanguage;
+        const inferredLanguageKey = inferTtsLanguageKeyFromText(text, baseLanguageKey);
+        utterance.lang = overrides.lang ?? speechSynthesisLangFor(inferredLanguageKey);
 
         if (overrides.trackWords) {
           utterance.onboundary = (event) => {
@@ -803,7 +820,11 @@ const InteractionCard = ({
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return null;
     const recognition = new SpeechRecognition();
-    recognition.lang = speechSynthesisLangFor(resolvedContentLanguage);
+
+    // Use option text to select recognition language when possible.
+    const optionSample = Array.isArray(options) ? options.join(' ') : '';
+    const inferredKey = inferTtsLanguageKeyFromText(optionSample || interaction?.question || '', resolvedContentLanguage);
+    recognition.lang = speechRecognitionLangFor(inferredKey) || speechSynthesisLangFor(resolvedContentLanguage);
     recognition.interimResults = false;
     recognition.maxAlternatives = 5;
     return recognition;

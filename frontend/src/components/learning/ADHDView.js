@@ -8,9 +8,15 @@ import { useAuth } from '../../context/AuthContext';
 import { usePreferences } from '../../context/PreferencesContext';
 import ProfileSettings from '../ProfileSettings';
 import './ADHDView.css';
+import './BilingualText.css';
 import PronunciationPractice from './PronunciationPractice';
+import NextLessonCard from './NextLessonCard';
+import PracticeSuggestion from './PracticeSuggestion';
+import MotivationReward from './MotivationReward';
 import ReactConfetti from 'react-confetti';
 import { getSummary } from '../../services/progressService';
+import { adjustDifficulty, getCurrentDifficulty, getPerformanceSummary, recordLessonScore } from '../../services/difficultyAdjustmentService';
+import { getReviewBasedRecommendation } from '../../services/reviewRecommendationService';
 import api from '../../utils/api';
 import { useI18n } from '../../utils/i18n';
 // Icon imports for UI elements
@@ -24,6 +30,8 @@ import {
   Headphones,
   Info,
   Lightbulb,
+  Award,
+  Menu,
   Mic,
   Pause,
   Pencil,
@@ -33,17 +41,49 @@ import {
   Settings,
   Target,
   Timer,
-  ToggleLeft,
-  ToggleRight,
+  TrendingUp,
   Volume2,
+  X,
 } from 'lucide-react';
-import { backendTtsLangFor, pickByLanguage, resolveUiLanguageFromPreferences, speechSynthesisLangFor } from '../../utils/languagePrefs';
+import {
+  bilingualPrimaryLanguageForMode,
+  backendTtsLangFor,
+  inferTtsLanguageKeyFromText,
+  isBilingualTextMode,
+  pickByLanguage,
+  resolveBilingualTextModeFromPreferences,
+  resolveUiLanguageFromPreferences,
+  speechRecognitionLangFor,
+  speechSynthesisLangFor,
+} from '../../utils/languagePrefs';
+import { makeSpeechCompareForms } from '../../utils/speechCompare';
+import { pickI18nString } from '../../utils/lessonI18n';
+
+const joinUrl = (base, path) => {
+  const baseStr = String(base || '').replace(/\/+$/, '');
+  const pathStr = String(path || '');
+  const normalizedPath = pathStr.startsWith('/') ? pathStr : `/${pathStr}`;
+  return `${baseStr}${normalizedPath}`;
+};
+
+const labelForLang = (lang) => {
+  const normalized = String(lang || '').trim().toLowerCase();
+  if (normalized === 'tamil') return 'Tamil';
+  if (normalized === 'hindi') return 'Hindi';
+  return 'English';
+};
+
+const normalizeText = (value) => {
+  const text = typeof value === 'string' ? value : String(value ?? '');
+  return text.trim();
+};
 
 const ADHDView = ({ initialLessonId = null }) => {
   // Auth and preferences context
   const { user, logout } = useAuth();
   const { preferences, updatePreferences } = usePreferences();
   const uiLanguage = resolveUiLanguageFromPreferences(preferences);
+  const bilingualTextMode = resolveBilingualTextModeFromPreferences(preferences);
   const { t } = useI18n();
   const navigate = useNavigate();
 
@@ -51,6 +91,7 @@ const ADHDView = ({ initialLessonId = null }) => {
   const [timeRemaining, setTimeRemaining] = useState(null); // Time left in session
   const [isSessionActive, setIsSessionActive] = useState(false); // Is a lesson session active?
   const [showSettings, setShowSettings] = useState(false); // Show/hide settings panel
+  const [showSideMenu, setShowSideMenu] = useState(false);
   const [cooldownRemaining, setCooldownRemaining] = useState(0); // Cooldown timer after session
 
   // Lesson logic state
@@ -66,11 +107,30 @@ const ADHDView = ({ initialLessonId = null }) => {
   const [isTransitioning, setIsTransitioning] = useState(false); // UI transition state
   const [isLoading, setIsLoading] = useState(false); // Loading state for async actions
   const [playbackRate, setPlaybackRate] = useState(1); // Audio playback speed
+  const [showPracticeSuggestion, setShowPracticeSuggestion] = useState(false); // Show practice suggestion after low score
+  const [lessonsCompletedCount, setLessonsCompletedCount] = useState(0); // Track completed lessons for achievements
 
   // Window and UI state
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight }); // For confetti, etc.
   const [countdownValue, setCountdownValue] = useState(5); // Countdown before session starts
   const [dummyUpdate, setDummyUpdate] = useState(0); // Used to force re-renders on audio state changes
+
+  // FEATURE: Personalization features (next lesson, adaptive difficulty, learning path, motivation)
+  const [nextRecommendation, setNextRecommendation] = useState(null); // Next lesson recommendation
+  const [completedLessons, setCompletedLessons] = useState([]); // Completed ADHD lesson IDs
+  const [skippedRecommendationId, setSkippedRecommendationId] = useState(() => {
+    try {
+      return window.sessionStorage.getItem('adhd-next-lesson-skipped') || null;
+    } catch {
+      return null;
+    }
+  });
+  const [currentDifficulty, setCurrentDifficulty] = useState('Beginner'); // Adaptive difficulty level
+  // eslint-disable-next-line no-unused-vars
+  const [learningPath, setLearningPath] = useState(null); // Personalized learning path
+  // eslint-disable-next-line no-unused-vars
+  const [motivation, setMotivation] = useState(null); // Motivational feedback
+  const [performanceSummary, setPerformanceSummary] = useState(null); // Performance summary
 
   // Track completed lessons in this session (prevents duplicate saves)
   const savedCompletionRef = React.useRef(new Set());
@@ -82,6 +142,7 @@ const ADHDView = ({ initialLessonId = null }) => {
 
       // EPIC 6.1.1, 6.4.1: Store completion state and auto-save after lesson completion.
       const res = await api.post('/users/complete-lesson', { lessonKey });
+      setCompletedLessons((prev) => (prev.includes(lessonId) ? prev : [...prev, lessonId]));
 
       const summaryFromBackend = res?.data?.summary;
       if (summaryFromBackend) {
@@ -103,8 +164,32 @@ const ADHDView = ({ initialLessonId = null }) => {
     }
   };
 
+  // Load completed ADHD lessons from backend (source of truth for recommendation order)
+  useEffect(() => {
+    const fetchCompletedLessons = async () => {
+      try {
+        const response = await api.get('/users/completed-lessons');
+        if (response.data?.success) {
+          const lessonIds = (response.data.completedLessons || [])
+            .filter((key) => String(key).startsWith('adhd-lesson-'))
+            .map((key) => parseInt(String(key).replace('adhd-lesson-', ''), 10))
+            .filter((id) => Number.isFinite(id));
+          setCompletedLessons(lessonIds);
+        }
+      } catch (error) {
+        console.error('Error fetching completed ADHD lessons:', error);
+      }
+    };
+
+    fetchCompletedLessons();
+  }, []);
+
   const exitLesson = () => {
     window.speechSynthesis.cancel();
+    // Increment completed lessons counter if lesson was passed (EPIC 4.5)
+    if (currentLessonScore >= 20) {
+      setLessonsCompletedCount(prev => prev + 1);
+    }
     setActiveLesson(null);
     setLessonPhase('idle');
     setSteps([]);
@@ -115,6 +200,7 @@ const ADHDView = ({ initialLessonId = null }) => {
     setIsTransitioning(false);
     setIsLoading(false);
     setCountdownValue(5);
+    setShowPracticeSuggestion(false);
   };
 
   useEffect(() => {
@@ -124,6 +210,57 @@ const ADHDView = ({ initialLessonId = null }) => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // FEATURE: Load adaptive difficulty summary for ADHD
+  useEffect(() => {
+    const fetchPersonalizationData = async () => {
+      try {
+        // Load adaptive difficulty level
+        const difficulty = getCurrentDifficulty(user);
+        setCurrentDifficulty(difficulty);
+
+        // Load performance summary
+        const summary = getPerformanceSummary(user);
+        setPerformanceSummary(summary);
+      } catch (error) {
+        console.error('Error fetching personalization data:', error);
+        // Non-blocking error - continue with basic functionality
+      }
+    };
+
+    if (user?.id) {
+      fetchPersonalizationData();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  // EPIC 4.7.1-4.7.4: Build one clear review-based recommendation using past performance trends.
+  useEffect(() => {
+    const recommendation = getReviewBasedRecommendation({
+      user,
+      module: 'adhd',
+      lessons: baseLessons,
+      completedLessonIds: completedLessons,
+    });
+
+    if (!recommendation) {
+      setNextRecommendation(null);
+      return;
+    }
+
+    setNextRecommendation(recommendation);
+
+    const recommendationKey = recommendation.recommendationKey || String(recommendation.lesson?.id || '');
+    if (skippedRecommendationId && skippedRecommendationId !== recommendationKey) {
+      try {
+        window.sessionStorage.removeItem('adhd-next-lesson-skipped');
+      } catch {
+        // ignore
+      }
+      setSkippedRecommendationId(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [completedLessons, user]);
 
   // Audio handling
   // Audio handling
@@ -238,7 +375,11 @@ const ADHDView = ({ initialLessonId = null }) => {
     }
   };
 
-  const renderTextWithActiveWord = (text) => {
+  const ttsEndpoint = React.useMemo(() => {
+    return joinUrl(api?.defaults?.baseURL || '/api', '/tts/speak');
+  }, []);
+
+  const renderTextWithActiveWord = useCallback((text) => {
     if (!text) return null;
     const words = String(text).split(' ');
     return words.map((word, idx) => {
@@ -253,7 +394,298 @@ const ADHDView = ({ initialLessonId = null }) => {
         </span>
       );
     });
-  };
+  }, [activeWord]);
+
+  // Lightweight translations so bilingual mode actually shows 2 lines in ADHD lessons.
+  // (We keep lesson logic data in English; only the rendered label becomes bilingual.)
+  const EN_TO_TA = React.useMemo(
+    () =>
+      ({
+        Hello: 'வணக்கம்',
+        Hi: 'ஹாய்',
+        'Good Morning': 'காலை வணக்கம்',
+        'How are you?': 'எப்படி இருக்கிறீர்கள்?',
+        Goodbye: 'பிரியாவிடை',
+        'Good Night': 'இனிய இரவு',
+        Thanks: 'நன்றி',
+        'Thank you': 'நன்றி',
+        Sorry: 'மன்னிக்கவும்',
+        Yes: 'ஆம்',
+        No: 'இல்லை',
+        Maybe: 'ஒருவேளை',
+        'A common way to greet someone when you meet them.': 'நீங்கள் ஒருவரை சந்திக்கும் போது வாழ்த்தும் ஒரு பொதுவான வழி.',
+        'A short, friendly greeting.': 'ஒரு குறுகிய, நட்பான வாழ்த்து.',
+        'Used to say hello in the early part of the day.': 'நாளின் ஆரம்ப பகுதியில் வணக்கம் சொல்ல பயன்படுத்தப்படும்.',
+        'A friendly question to ask someone after you greet them.': 'வணக்கம் சொன்ன பிறகு ஒருவரிடம் கேட்கும் நட்பான கேள்வி.',
+        'A round fruit that can be red or green.': 'சிவப்பு அல்லது பச்சை நிறமாக இருக்கக்கூடிய வட்டமான பழம்.',
+        'A set of pages you read.': 'நீங்கள் படிக்கும் பக்கங்களின் தொகுப்பு.',
+        'A small animal that says "Meow".': '"Meow" என்று சொல்லும் ஒரு சிறிய விலங்கு.',
+        'You sit on it.': 'நீங்கள் இதில் உட்காருவீர்கள்.',
+        'The number 1. It means a single thing.': 'எண் 1. இது ஒரு தனி பொருளை குறிக்கிறது.',
+        'The number 2. One plus one equals two.': 'எண் 2. ஒன்று + ஒன்று = இரண்டு.',
+        'The number 3. It means one more than two.': 'எண் 3. இது இரண்டை விட ஒன்று அதிகம்.',
+        'A polite way to say “Hello” in Tamil.': 'தமிழில் “Hello” சொல்லும் மரியாதையான முறை.',
+        'This means “Thank you” in Tamil.': 'இது தமிழில் “Thank you” என்பதைக் குறிக்கிறது.',
+        'This means “Yes” in Tamil.': 'இது தமிழில் “Yes” என்பதைக் குறிக்கிறது.',
+        'This means “No” in Tamil.': 'இது தமிழில் “No” என்பதைக் குறிக்கிறது.',
+        'A polite way to say “Hello” in Hindi.': 'இந்தியில் “Hello” சொல்லும் மரியாதையான முறை.',
+        'This means “Thank you” in Hindi.': 'இது இந்தியில் “Thank you” என்பதைக் குறிக்கிறது.',
+        'This means “Yes” in Hindi.': 'இது இந்தியில் “Yes” என்பதைக் குறிக்கிறது.',
+        'This means “No” in Hindi.': 'இது இந்தியில் “No” என்பதைக் குறிக்கிறது.',
+        Apple: 'ஆப்பிள்',
+        Book: 'புத்தகம்',
+        Cat: 'பூனை',
+        Chair: 'நாற்காலி',
+        Car: 'கார்',
+        Table: 'மேசை',
+        Dog: 'நாய்',
+        Bird: 'பறவை',
+        Shoe: 'செருப்பு',
+        Plate: 'தட்டு',
+        One: 'ஒன்று',
+        Two: 'இரண்டு',
+        Three: 'மூன்று',
+        Ten: 'பத்து',
+        'A turtle': 'ஒரு ஆமை',
+        'A cat': 'ஒரு பூனை',
+        'A bird': 'ஒரு பறவை',
+        'A key': 'ஒரு சாவி',
+        'A book': 'ஒரு புத்தகம்',
+        'An apple': 'ஒரு ஆப்பிள்',
+        'A crow': 'ஒரு காக்கை',
+        'A rabbit': 'ஒரு முயல்',
+        Hop: 'ஹாப்',
+        Sam: 'சாம்',
+        Max: 'மேக்ஸ்',
+        'Which word means "Hello"?': '"Hello" என்றால் எந்த சொல்?',
+        'What do you say in the early part of the day?': 'நாளின் ஆரம்ப பகுதியில் நீங்கள் என்ன சொல்வீர்கள்?',
+        'Which one is a question you can ask after greeting someone?': 'வணக்கம் சொன்ன பிறகு கேட்கக்கூடிய கேள்வி எது?',
+        'When do we say "Good Morning"?': '"Good Morning" எப்போது சொல்வோம்?',
+        'Which one is a fruit?': 'எது ஒரு பழம்?',
+        'Which one is something you read?': 'எது நீங்கள் படிப்பது?',
+        'Which animal says "Meow"?': '"Meow" என்று சொல்லும் விலங்கு எது?',
+        'What do you sit on?': 'நீங்கள் எதில் உட்கார்வீர்கள்?',
+        'How many noses do you have?': 'உங்களிடம் எத்தனை மூக்குகள் உள்ளன?',
+        'How many eyes do most people have?': 'பெரும்பாலானவர்களுக்கு எத்தனை கண்கள் உள்ளன?',
+        'Which number comes after 2?': '2க்கு பிறகு எந்த எண் வருகிறது?',
+        'Select the word for 3.': '3 என்பதற்கான சொல்லைத் தேர்ந்தெடுக்கவும்.',
+        "What was the rabbit's name?": 'முயலின் பெயர் என்ன?',
+        'Who did Hop meet?': 'ஹாப் யாரை சந்தித்தான்?',
+        'What did Sam drop?': 'சாம் என்னை கீழே போட்டான்?',
+        'Which animal picked up the key?': 'சாவியை எடுத்தது எந்த விலங்கு?',
+        'In the morning': 'காலையில்',
+        'At night': 'இரவில்',
+        'At lunch': 'மதிய உணவில்',
+        'To greet': 'வணக்கம் சொல்ல',
+        'To thank': 'நன்றி சொல்ல',
+        'To say goodbye': 'பிரியாவிடை சொல்ல',
+      }),
+    []
+  );
+
+  const EN_TO_HI = React.useMemo(
+    () =>
+      ({
+        Hello: 'नमस्ते',
+        Hi: 'हाय',
+        'Good Morning': 'सुप्रभात',
+        'How are you?': 'आप कैसे हैं?',
+        Goodbye: 'अलविदा',
+        'Good Night': 'शुभ रात्रि',
+        Thanks: 'धन्यवाद',
+        'Thank you': 'धन्यवाद',
+        Sorry: 'माफ़ कीजिए',
+        Yes: 'हाँ',
+        No: 'नहीं',
+        Maybe: 'शायद',
+        'A common way to greet someone when you meet them.': 'जब आप किसी से मिलते हैं तो अभिवादन करने का एक आम तरीका।',
+        'A short, friendly greeting.': 'एक छोटा, दोस्ताना अभिवादन।',
+        'Used to say hello in the early part of the day.': 'दिन के शुरुआती हिस्से में नमस्ते/हैलो कहने के लिए।',
+        'A friendly question to ask someone after you greet them.': 'अभिवादन के बाद किसी से पूछने के लिए एक दोस्ताना सवाल।',
+        'A round fruit that can be red or green.': 'एक गोल फल जो लाल या हरा हो सकता है।',
+        'A set of pages you read.': 'पन्नों का एक संग्रह जिसे आप पढ़ते हैं।',
+        'A small animal that says "Meow".': 'एक छोटा जानवर जो "Meow" कहता है।',
+        'You sit on it.': 'आप इस पर बैठते हैं।',
+        'The number 1. It means a single thing.': 'संख्या 1। इसका मतलब एक ही चीज़ है।',
+        'The number 2. One plus one equals two.': 'संख्या 2। एक और एक मिलकर दो होते हैं।',
+        'The number 3. It means one more than two.': 'संख्या 3। यह दो से एक अधिक है।',
+        'A polite way to say “Hello” in Tamil.': 'तमिल में “Hello” कहने का एक विनम्र तरीका।',
+        'This means “Thank you” in Tamil.': 'तमिल में इसका अर्थ “Thank you” है।',
+        'This means “Yes” in Tamil.': 'तमिल में इसका अर्थ “Yes” है।',
+        'This means “No” in Tamil.': 'तमिल में इसका अर्थ “No” है।',
+        'A polite way to say “Hello” in Hindi.': 'हिंदी में “Hello” कहने का एक विनम्र तरीका।',
+        'This means “Thank you” in Hindi.': 'हिंदी में इसका अर्थ “Thank you” है।',
+        'This means “Yes” in Hindi.': 'हिंदी में इसका अर्थ “Yes” है।',
+        'This means “No” in Hindi.': 'हिंदी में इसका अर्थ “No” है।',
+        Apple: 'सेब',
+        Book: 'किताब',
+        Cat: 'बिल्ली',
+        Chair: 'कुर्सी',
+        Car: 'कार',
+        Table: 'मेज़',
+        Dog: 'कुत्ता',
+        Bird: 'पक्षी',
+        Shoe: 'जूता',
+        Plate: 'प्लेट',
+        One: 'एक',
+        Two: 'दो',
+        Three: 'तीन',
+        Ten: 'दस',
+        'A turtle': 'एक कछुआ',
+        'A cat': 'एक बिल्ली',
+        'A bird': 'एक पक्षी',
+        'A key': 'एक चाबी',
+        'A book': 'एक किताब',
+        'An apple': 'एक सेब',
+        'A crow': 'एक कौआ',
+        'A rabbit': 'एक खरगोश',
+        Hop: 'हॉप',
+        Sam: 'सैम',
+        Max: 'मैक्स',
+        'Which word means "Hello"?': '"Hello" का अर्थ कौन सा शब्द है?',
+        'What do you say in the early part of the day?': 'दिन के शुरुआती हिस्से में आप क्या कहते हैं?',
+        'Which one is a question you can ask after greeting someone?': 'अभिवादन के बाद आप कौन सा प्रश्न पूछ सकते हैं?',
+        'When do we say "Good Morning"?': '"Good Morning" कब कहते हैं?',
+        'Which one is a fruit?': 'कौन सा फल है?',
+        'Which one is something you read?': 'कौन सी चीज़ आप पढ़ते हैं?',
+        'Which animal says "Meow"?': '"Meow" कहने वाला जानवर कौन सा है?',
+        'What do you sit on?': 'आप किस पर बैठते हैं?',
+        'How many noses do you have?': 'आपके पास कितनी नाकें हैं?',
+        'How many eyes do most people have?': 'अधिकांश लोगों की कितनी आँखें होती हैं?',
+        'Which number comes after 2?': '2 के बाद कौन सा अंक आता है?',
+        'Select the word for 3.': '3 के लिए शब्द चुनें।',
+        "What was the rabbit's name?": 'खरगोश का नाम क्या था?',
+        'Who did Hop meet?': 'हॉप किससे मिला?',
+        'What did Sam drop?': 'सैम ने क्या गिराया?',
+        'Which animal picked up the key?': 'चाबी किस जानवर ने उठाई?',
+        'In the morning': 'सुबह',
+        'At night': 'रात में',
+        'At lunch': 'दोपहर के खाने में',
+        'To greet': 'नमस्ते करने के लिए',
+        'To thank': 'धन्यवाद कहने के लिए',
+        'To say goodbye': 'अलविदा कहने के लिए',
+      }),
+    []
+  );
+
+  const TA_TO_EN = React.useMemo(
+    () =>
+      ({
+        'வணக்கம் (Vanakkam)': 'Hello',
+        வணக்கம்: 'Hello',
+        'நன்றி (Nandri)': 'Thank you',
+        நன்றி: 'Thank you',
+        'ஆம் (Aam)': 'Yes',
+        ஆம்: 'Yes',
+        'இல்லை (Illai)': 'No',
+        இல்லை: 'No',
+        'வணக்கம் means…': 'What does வணக்கம் mean?',
+        'Choose “Thank you” in Tamil.': 'Choose “Thank you” in Tamil.',
+        'Which one means “No”?': 'Which one means “No”?',
+      }),
+    []
+  );
+
+  const HI_TO_EN = React.useMemo(
+    () =>
+      ({
+        'नमस्ते (Namaste)': 'Hello',
+        नमस्ते: 'Hello',
+        'धन्यवाद (Dhanyavaad)': 'Thank you',
+        धन्यवाद: 'Thank you',
+        'हाँ (Haan)': 'Yes',
+        हाँ: 'Yes',
+        'नहीं (Nahin)': 'No',
+        नहीं: 'No',
+        'नमस्ते means…': 'What does नमस्ते mean?',
+        'Choose “Thank you” in Hindi.': 'Choose “Thank you” in Hindi.',
+        'Which one means “Yes”?': 'Which one means “Yes”?',
+      }),
+    []
+  );
+
+  const buildAdhdI18n = useCallback(
+    (text, defaultLang = 'english') => {
+      const raw = typeof text === 'string' ? text : String(text ?? '');
+      const trimmed = raw.trim();
+      if (!trimmed) return null;
+
+      const inferred = inferTtsLanguageKeyFromText(trimmed, defaultLang);
+      if (inferred === 'tamil') {
+        const english = TA_TO_EN[trimmed] || '';
+        return { english, tamil: trimmed, hindi: '' };
+      }
+
+      if (inferred === 'hindi') {
+        const english = HI_TO_EN[trimmed] || '';
+        return { english, tamil: '', hindi: trimmed };
+      }
+
+      return {
+        english: trimmed,
+        tamil: EN_TO_TA[trimmed] || '',
+        hindi: EN_TO_HI[trimmed] || '',
+      };
+    },
+    [EN_TO_HI, EN_TO_TA, HI_TO_EN, TA_TO_EN]
+  );
+
+  const renderBilingualTextWithActiveWord = useCallback(
+    (
+      baseText,
+      {
+        defaultLanguage = 'english',
+        showLabels = true,
+        compact = false,
+        fullWidth = false,
+        className = '',
+      } = {}
+    ) => {
+      const enabled = isBilingualTextMode(bilingualTextMode);
+      const i18n = buildAdhdI18n(baseText, defaultLanguage);
+      const plain = normalizeText(pickI18nString(defaultLanguage, baseText, i18n));
+
+      const widthClass = fullWidth ? 'adhd-bilingual-fullwidth' : '';
+
+      const inlineWords = (text) => <span className="adhd-inline-words">{renderTextWithActiveWord(text)}</span>;
+
+      if (!enabled) {
+        return (
+          <span className={`bilingual-text bilingual-single ${compact ? 'compact' : ''} ${widthClass} ${className}`.trim()}>
+            {inlineWords(plain)}
+          </span>
+        );
+      }
+
+      const primaryLang = bilingualPrimaryLanguageForMode(bilingualTextMode);
+      const englishText = normalizeText(pickI18nString('english', baseText, i18n));
+      const primaryText = normalizeText(pickI18nString(primaryLang, baseText, i18n));
+
+      if (!primaryText || !englishText || primaryText === englishText) {
+        const single = primaryText || englishText || plain;
+        return (
+          <span className={`bilingual-text bilingual-single ${compact ? 'compact' : ''} ${widthClass} ${className}`.trim()}>
+            {inlineWords(single)}
+          </span>
+        );
+      }
+
+      return (
+        <span className={`bilingual-text ${compact ? 'compact' : ''} ${widthClass} ${className}`.trim()}>
+          <span className="bilingual-line bilingual-primary">
+            {showLabels ? <span className="bilingual-label">{labelForLang(primaryLang)}</span> : null}
+            <span className="bilingual-value">{inlineWords(primaryText)}</span>
+          </span>
+          <span className="bilingual-break" aria-hidden="true" />
+          <span className="bilingual-line bilingual-secondary">
+            {showLabels ? <span className="bilingual-label">English</span> : null}
+            <span className="bilingual-value">{inlineWords(englishText)}</span>
+          </span>
+        </span>
+      );
+    },
+    [bilingualTextMode, buildAdhdI18n, renderTextWithActiveWord]
+  );
 
   const playAudio = async (text, rate = 1, options = {}) => {
     const { trackWords = true } = options;
@@ -269,13 +701,24 @@ const ADHDView = ({ initialLessonId = null }) => {
     if (trackWords) setActiveWord('');
 
     try {
-      const response = await fetch('/api/tts/speak', {
+      const baseLangKey = activeLesson?.ttsLang || uiLanguage;
+      const ttsLanguageKey = inferTtsLanguageKeyFromText(text, baseLangKey);
+      const response = await fetch(ttsEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, speed: rate, lang: backendTtsLangFor(uiLanguage) })
+        body: JSON.stringify({ text, speed: rate, lang: backendTtsLangFor(ttsLanguageKey) })
       });
 
-      if (!response.ok) throw new Error('Audio generation failed');
+      if (!response.ok) {
+        let details = '';
+        try {
+          details = await response.text();
+        } catch {
+          // ignore
+        }
+        const suffix = details ? `: ${details.slice(0, 500)}` : '';
+        throw new Error(`Audio generation failed (${response.status})${suffix}`);
+      }
 
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -308,7 +751,9 @@ const ADHDView = ({ initialLessonId = null }) => {
       console.error("Server TTS failed, falling back to browser:", error);
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = rate;
-      utterance.lang = speechSynthesisLangFor(uiLanguage);
+      const baseLangKey = activeLesson?.ttsLang || uiLanguage;
+      const ttsLanguageKey = inferTtsLanguageKeyFromText(text, baseLangKey);
+      utterance.lang = speechSynthesisLangFor(ttsLanguageKey);
       if (trackWords) {
         utterance.onboundary = (event) => {
           if (event.name === 'word') {
@@ -675,6 +1120,131 @@ const ADHDView = ({ initialLessonId = null }) => {
         }
       ]
     }
+    ,
+    {
+      id: 5,
+      title: 'Tamil Foundations: Everyday Greetings',
+      duration: '10 min',
+      Icon: Volume2,
+      ttsLang: 'tamil',
+      steps: [
+        {
+          type: 'learn',
+          content: 'வணக்கம் (Vanakkam)',
+          explanation: 'A polite way to say “Hello” in Tamil.',
+          visual: null,
+          highlight: 'வணக்கம்',
+          hint: 'Try saying it slowly: Va-nak-kam.'
+        },
+        {
+          type: 'quiz',
+          question: 'வணக்கம் means…',
+          options: ['Hello', 'Thank you', 'Goodbye'],
+          correct: 'Hello',
+          hint: 'It is used to greet someone.'
+        },
+        {
+          type: 'learn',
+          content: 'நன்றி (Nandri)',
+          explanation: 'This means “Thank you” in Tamil.',
+          visual: null,
+          highlight: 'நன்றி',
+          hint: 'Use this after someone helps you.'
+        },
+        {
+          type: 'quiz',
+          question: 'Choose “Thank you” in Tamil.',
+          options: ['வணக்கம்', 'நன்றி', 'இல்லை'],
+          correct: 'நன்றி',
+          hint: 'It starts with ந.'
+        },
+        {
+          type: 'learn',
+          content: 'ஆம் (Aam)',
+          explanation: 'This means “Yes” in Tamil.',
+          visual: null,
+          highlight: 'ஆம்',
+          hint: 'Say it when you agree.'
+        },
+        {
+          type: 'learn',
+          content: 'இல்லை (Illai)',
+          explanation: 'This means “No” in Tamil.',
+          visual: null,
+          highlight: 'இல்லை',
+          hint: 'Say it when you disagree.'
+        },
+        {
+          type: 'quiz',
+          question: 'Which one means “No”?',
+          options: ['ஆம்', 'நன்றி', 'இல்லை'],
+          correct: 'இல்லை',
+          hint: 'It has two “ல்” sounds.'
+        }
+      ]
+    },
+    {
+      id: 6,
+      title: 'Hindi Foundations: Everyday Greetings',
+      duration: '10 min',
+      Icon: Mic,
+      ttsLang: 'hindi',
+      steps: [
+        {
+          type: 'learn',
+          content: 'नमस्ते (Namaste)',
+          explanation: 'A polite way to say “Hello” in Hindi.',
+          visual: null,
+          highlight: 'नमस्ते',
+          hint: 'Say it calmly: Na-mas-te.'
+        },
+        {
+          type: 'quiz',
+          question: 'नमस्ते means…',
+          options: ['Hello', 'Sorry', 'Good night'],
+          correct: 'Hello',
+          hint: 'It is a greeting.'
+        },
+        {
+          type: 'learn',
+          content: 'धन्यवाद (Dhanyavaad)',
+          explanation: 'This means “Thank you” in Hindi.',
+          visual: null,
+          highlight: 'धन्यवाद',
+          hint: 'Use it when someone is kind to you.'
+        },
+        {
+          type: 'quiz',
+          question: 'Choose “Thank you” in Hindi.',
+          options: ['धन्यवाद', 'नमस्ते', 'नहीं'],
+          correct: 'धन्यवाद',
+          hint: 'It is the longest word here.'
+        },
+        {
+          type: 'learn',
+          content: 'हाँ (Haan)',
+          explanation: 'This means “Yes” in Hindi.',
+          visual: null,
+          highlight: 'हाँ',
+          hint: 'Say it when you agree.'
+        },
+        {
+          type: 'learn',
+          content: 'नहीं (Nahin)',
+          explanation: 'This means “No” in Hindi.',
+          visual: null,
+          highlight: 'नहीं',
+          hint: 'Say it when you disagree.'
+        },
+        {
+          type: 'quiz',
+          question: 'Which one means “Yes”?',
+          options: ['हाँ', 'नहीं', 'नमस्ते'],
+          correct: 'हाँ',
+          hint: 'It is the shortest option.'
+        }
+      ]
+    }
   ];
 
   const pronunciationItems = React.useMemo(() => {
@@ -775,8 +1345,24 @@ const ADHDView = ({ initialLessonId = null }) => {
     const key = `adhd-lesson-${activeLesson.id}`;
     if (savedCompletionRef.current.has(key)) return;
     savedCompletionRef.current.add(key);
+
+    // EPIC 4.1.1-4.1.4: Record score and adjust difficulty by one level based on consistent trend.
+    const quizStepCount = steps.filter((step) => step?.type === 'quiz').length;
+    const maxScore = Math.max(quizStepCount * 10, 20);
+    const normalizedScore = Math.max(0, Math.min(100, Math.round((currentLessonScore / maxScore) * 100)));
+
+    recordLessonScore(user, key, normalizedScore, {
+      module: 'adhd',
+      rawScore: currentLessonScore,
+      quizStepCount,
+      maxScore,
+    });
+    const adjustment = adjustDifficulty(user);
+    setCurrentDifficulty(adjustment.newDifficulty || adjustment.currentDifficulty || 'Beginner');
+    setPerformanceSummary(getPerformanceSummary(user));
+
     saveLessonCompletion(activeLesson.id);
-  }, [lessonPhase, activeLesson, currentLessonScore]);
+  }, [lessonPhase, activeLesson, currentLessonScore, steps, user]);
 
   const handlePreviousStep = () => {
     window.speechSynthesis.cancel();
@@ -939,6 +1525,7 @@ const ADHDView = ({ initialLessonId = null }) => {
       compact(wordsToDigits),
       normalizeVoice(digitsToWords),
       compact(digitsToWords),
+      ...makeSpeechCompareForms(value),
     ].filter(Boolean);
 
     return Array.from(new Set(forms));
@@ -963,12 +1550,12 @@ const ADHDView = ({ initialLessonId = null }) => {
     return false;
   }, [makeAnswerForms]);
 
-  const initAnswerSpeechRecognition = useCallback(() => {
+  const initAnswerSpeechRecognition = useCallback((lang) => {
     if (typeof window === 'undefined') return null;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return null;
     const recognition = new SpeechRecognition();
-    recognition.lang = 'en-IN';
+    recognition.lang = lang || 'en-US';
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
     return recognition;
@@ -990,9 +1577,19 @@ const ADHDView = ({ initialLessonId = null }) => {
 
     setAnswerVoiceError('');
 
-    if (!answerRecognitionRef.current) {
-      answerRecognitionRef.current = initAnswerSpeechRecognition();
+    const options = Array.isArray(step?.options) ? step.options : [];
+    const baseLangKey = activeLesson?.ttsLang || uiLanguage;
+    const inferredLangKey = inferTtsLanguageKeyFromText(options.join(' '), baseLangKey);
+    const recognitionLang = speechRecognitionLangFor(inferredLangKey);
+
+    // Always create a fresh recognizer so `recognition.lang` matches the current option language.
+    try {
+      answerRecognitionRef.current?.stop?.();
+    } catch {
+      // ignore
     }
+
+    answerRecognitionRef.current = initAnswerSpeechRecognition(recognitionLang);
     const recognition = answerRecognitionRef.current;
     if (!recognition) {
       setAnswerVoiceError('Voice input is not supported in this browser.');
@@ -1008,8 +1605,6 @@ const ADHDView = ({ initialLessonId = null }) => {
       const transcript = event.results?.[0]?.[0]?.transcript || '';
       const cleaned = transcript.trim();
       setAnswerTranscript(cleaned);
-
-      const options = Array.isArray(step?.options) ? step.options : [];
       if (!options.length) return;
 
       const normalized = normalizeVoice(cleaned);
@@ -1047,7 +1642,7 @@ const ADHDView = ({ initialLessonId = null }) => {
     } catch (e) {
       setIsAnswerListening(false);
     }
-  }, [steps, currentStepIndex, handleAnswer, initAnswerSpeechRecognition, isTransitioning, isVoiceMatch, normalizeVoice]);
+  }, [steps, currentStepIndex, handleAnswer, initAnswerSpeechRecognition, isTransitioning, isVoiceMatch, normalizeVoice, activeLesson, uiLanguage]);
 
   useEffect(() => {
     stopAnswerListening();
@@ -1071,6 +1666,11 @@ const ADHDView = ({ initialLessonId = null }) => {
   };
 
   const currentStep = steps.length > 0 ? steps[currentStepIndex] : null;
+  const currentPathLessonId =
+    activeLesson?.id ||
+    nextRecommendation?.lesson?.id ||
+    baseLessons.find((lesson) => !completedLessons.includes(lesson.id))?.id ||
+    null;
 
   return (
     <div className="adhd-view">
@@ -1086,23 +1686,29 @@ const ADHDView = ({ initialLessonId = null }) => {
             type="button"
             onClick={() => navigate('/dashboard')}
             className="btn-minimal"
-            title="Home"
-            aria-label="Home"
+            title={t('learning.common.home')}
+            aria-label={t('learning.common.home')}
             style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
             <BookOpen size={18} aria-hidden="true" />
-            <span>Home</span>
+            <span>{t('learning.common.home')}</span>
           </button>
           <button
             type="button"
-            onClick={() => navigate('/progress')}
+            onClick={() => {
+              if (isSessionActive && !activeLesson) {
+                backToSessionStart();
+              } else {
+                navigate(-1);
+              }
+            }}
             className="btn-minimal"
-            title="Progress"
-            aria-label="Progress"
+            title={t('learning.common.back')}
+            aria-label={t('learning.common.back')}
             style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
-            <Hash size={18} aria-hidden="true" />
-            <span>Progress</span>
+            <ChevronLeft size={18} aria-hidden="true" />
+            <span>{t('learning.common.back')}</span>
           </button>
           {/* Existing controls below */}
           {isSessionActive && timeRemaining !== null && (
@@ -1111,61 +1717,124 @@ const ADHDView = ({ initialLessonId = null }) => {
               <span className="timer-text">{formatTime(timeRemaining)}</span>
             </div>
           )}
-
-          <button
-            type="button"
-            onClick={toggleDistractionFreeMode}
-            className="btn-minimal btn-distraction-toggle"
-            title={t('learning.adhd.toggleDistractionFreeTitle')}
-            aria-pressed={distractionFreeMode}
-          >
-            {distractionFreeMode ? (
-              <ToggleRight size={18} aria-hidden="true" />
-            ) : (
-              <ToggleLeft size={18} aria-hidden="true" />
-            )}
-            <span className="btn-distraction-toggle__label">{t('learning.adhd.distractionFree')}</span>
-            <span className="btn-distraction-toggle__state">{distractionFreeMode ? t('learning.common.on') : t('learning.common.off')}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={async () => {
-              const newValue = !preferences?.simplifiedLayout;
-              await updatePreferences({ simplifiedLayout: newValue });
-            }}
-            className="btn-minimal btn-simplified-toggle"
-            title="Toggle simple layout"
-            aria-pressed={preferences?.simplifiedLayout}
-          >
-            {preferences?.simplifiedLayout ? (
-              <ToggleRight size={18} aria-hidden="true" />
-            ) : (
-              <ToggleLeft size={18} aria-hidden="true" />
-            )}
-            <span className="btn-simplified-toggle__label">Simple</span>
-            <span className="btn-simplified-toggle__state">{preferences?.simplifiedLayout ? t('learning.common.on') : t('learning.common.off')}</span>
-          </button>
-
-          {isSessionActive && !activeLesson && (
-            <button
-              type="button"
-              onClick={backToSessionStart}
-              className="btn-minimal"
-              title={t('learning.adhd.backToSessionStartTitle')}
-            >
-              {t('learning.common.back')}
-            </button>
-          )}
-          <button onClick={() => setShowSettings(true)} className="btn-minimal" title={t('learning.common.settings')}>
-            <Settings size={18} aria-hidden="true" />
-            <span>Settings</span>
-          </button>
           <button type="button" onClick={logout} className="btn-logout" title={t('learning.common.logout')}>
             {t('learning.common.logout')}
           </button>
+          <button
+            type="button"
+            onClick={() => setShowSideMenu((prev) => !prev)}
+            className="btn-minimal"
+            title={t('learning.common.menu')}
+            aria-label={t('learning.common.menu')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            {showSideMenu ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
+            <span>{t('learning.common.menu')}</span>
+          </button>
         </div>
       </header>
+
+      {showSideMenu && (
+        <>
+          <div
+            onClick={() => setShowSideMenu(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.35)',
+              zIndex: 190,
+            }}
+          />
+          <aside
+            aria-label="ADHD side menu"
+            style={{
+              position: 'fixed',
+              top: 0,
+              right: 0,
+              width: '300px',
+              maxWidth: '88vw',
+              height: '100vh',
+              background: '#ffffff',
+              borderLeft: '1px solid #e5e7eb',
+              boxShadow: '-8px 0 24px rgba(15, 23, 42, 0.15)',
+              padding: '18px',
+              zIndex: 200,
+              overflowY: 'auto',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px' }}>{t('learning.common.quickControls')}</h3>
+              <button type="button" className="btn-minimal" onClick={() => setShowSideMenu(false)}>
+                <X size={16} aria-hidden="true" />
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  navigate('/progress');
+                  setShowSideMenu(false);
+                }}
+                className="btn-minimal"
+                style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: 8 }}
+              >
+                <Hash size={18} aria-hidden="true" />
+                <span>{t('learning.common.progress')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  navigate('/badges');
+                  setShowSideMenu(false);
+                }}
+                className="btn-minimal"
+                style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: 8 }}
+              >
+                <Award size={18} aria-hidden="true" />
+                <span>{t('learning.common.badges')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={toggleDistractionFreeMode}
+                className="btn-minimal"
+                style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center' }}
+              >
+                <span>{t('learning.adhd.distractionFree')}</span>
+                <span>{distractionFreeMode ? t('learning.common.on') : t('learning.common.off')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  const newValue = !preferences?.simplifiedLayout;
+                  await updatePreferences({ simplifiedLayout: newValue });
+                }}
+                className="btn-minimal"
+                style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center' }}
+              >
+                <span>{t('learning.common.simple')}</span>
+                <span>{preferences?.simplifiedLayout ? t('learning.common.on') : t('learning.common.off')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSettings(true);
+                  setShowSideMenu(false);
+                }}
+                className="btn-minimal"
+                style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: 8 }}
+              >
+                <Settings size={18} aria-hidden="true" />
+                <span>{t('learning.common.settings')}</span>
+              </button>
+            </div>
+          </aside>
+        </>
+      )}
 
       {showSettings && (
         <ProfileSettings onClose={() => setShowSettings(false)} />
@@ -1222,22 +1891,148 @@ const ADHDView = ({ initialLessonId = null }) => {
                     </div>
                   )}
 
-                  <div className="lesson-focus">
-                    <h3>{t('learning.adhd.chooseOneLesson')}</h3>
-                    <div className="lesson-list">
-                      {baseLessons.map((lesson) => (
-                        <div key={lesson.id} className="lesson-item">
-                          <div className="lesson-content">
-                            <span className="lesson-emoji" aria-hidden="true"><lesson.Icon size={22} /></span>
-                            <div className="lesson-info">
-                              <h4>{lesson.title}</h4>
-                            </div>
-                          </div>
-                          <button onClick={() => handleStartLesson(lesson)} className="btn-lesson">{t('learning.common.start')}</button>
-                        </div>
-                      ))}
+                  {/* FEATURE: Display current difficulty level */}
+                  {currentDifficulty && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '12px',
+                      padding: '12px 16px',
+                      background: 'linear-gradient(135deg, #e8f5e9, #c8e6c9)',
+                      borderRadius: '8px',
+                      marginBottom: '20px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#2e7d32'
+                    }}>
+                      <TrendingUp size={18} aria-hidden="true" />
+                      <span>{t('learning.common.currentLevelLabel')} {currentDifficulty}</span>
+                      {performanceSummary?.recentAverage > 0 && (
+                        <span style={{ marginLeft: '8px', opacity: 0.8 }}>
+                          ({performanceSummary.recentAverage.toFixed(0)}% {t('learning.common.avgAbbrev')})
+                        </span>
+                      )}
+                      {typeof performanceSummary?.completionRate === 'number' && performanceSummary.completionRate > 0 && (
+                        <span style={{ opacity: 0.8 }}>• {t('learning.common.completionLabel')} {performanceSummary.completionRate}%</span>
+                      )}
                     </div>
-                  </div>
+                  )}
+
+                  {/* FEATURE: Next lesson recommendation - using NextLessonCard component */}
+                  {nextRecommendation && (
+                    <section className="next-lesson-recommendation" aria-label="Recommended next lesson" style={{ marginBottom: '24px' }}>
+                      {nextRecommendation.allCompleted ? (
+                        <NextLessonCard
+                          allCompleted
+                          completionMsg={nextRecommendation.reason}
+                          totalLessons={nextRecommendation.totalLessons}
+                        />
+                      ) : (
+                        nextRecommendation.lesson &&
+                        skippedRecommendationId !== (nextRecommendation.recommendationKey || String(nextRecommendation.lesson.id)) && (
+                          <NextLessonCard
+                            recommendation={{
+                              title: `${nextRecommendation.recommendationType === 'review' ? t('learning.nextLesson.reviewPrefix') : t('learning.nextLesson.nextPrefix')}: ${nextRecommendation.lesson.title}`,
+                              description: `Focused lesson (${nextRecommendation.lesson.duration})`,
+                              position: nextRecommendation.position,
+                            }}
+                            reason={nextRecommendation.reason}
+                            completedCount={nextRecommendation.completedCount}
+                            totalLessons={nextRecommendation.totalLessons}
+                            onAccept={() => {
+                              if (!isSessionActive) startSession();
+                              handleStartLesson(nextRecommendation.lesson);
+                            }}
+                            onSkip={() => {
+                              const key = nextRecommendation.recommendationKey || String(nextRecommendation.lesson.id);
+                              setSkippedRecommendationId(key);
+                              try {
+                                window.sessionStorage.setItem('adhd-next-lesson-skipped', key);
+                              } catch {
+                                // ignore
+                              }
+                            }}
+                          />
+                        )
+                      )}
+                    </section>
+                  )}
+
+                  {/* EPIC 4.3: Personalized Learning Path (linear, clear, low-overload) */}
+                  <section
+                    aria-label="ADHD learning path"
+                    style={{
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      padding: '14px 16px',
+                      marginBottom: '20px'
+                    }}
+                  >
+                    <h3 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>{t('learning.common.learningPathTitle')}</h3>
+                    <div style={{ display: 'grid', gap: '8px' }}>
+                      {baseLessons.map((lesson, index) => {
+                        const isCompleted = completedLessons.includes(lesson.id);
+                        const isCurrent = currentPathLessonId === lesson.id && !isCompleted;
+                        return (
+                          <div
+                            key={`adhd-path-${lesson.id}`}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '8px 10px',
+                              borderRadius: '8px',
+                              border: isCurrent ? '1px solid #3b82f6' : '1px solid #e5e7eb',
+                              background: isCurrent ? '#eff6ff' : '#ffffff'
+                            }}
+                          >
+                            <span style={{ fontWeight: isCurrent ? 700 : 500 }}>{index + 1}. {lesson.title}</span>
+                            <span style={{ fontSize: '12px', color: isCompleted ? '#166534' : isCurrent ? '#1d4ed8' : '#6b7280' }}>
+                              {isCompleted ? `✓ ${t('learning.common.statusCompleted')}` : isCurrent ? t('learning.common.statusCurrent') : t('learning.common.statusUpcoming')}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+
+                  <section
+                    aria-label="Open all lessons page"
+                    style={{
+                      background: 'linear-gradient(135deg, #eef2ff, #dbeafe)',
+                      border: '1px solid #bfdbfe',
+                      borderRadius: '12px',
+                      padding: '14px 16px',
+                      marginBottom: '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px'
+                    }}
+                  >
+                    <div>
+                      <p style={{ margin: 0, fontWeight: 700, color: '#1e3a8a' }}>{t('learning.common.lessonsAvailableInLibrary')}</p>
+                      <p style={{ margin: '4px 0 0 0', color: '#334155', fontSize: '14px' }}>{t('learning.common.useOpenAllLessons')}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/lesson-library')}
+                      style={{
+                        border: 'none',
+                        borderRadius: '10px',
+                        background: '#2563eb',
+                        color: '#ffffff',
+                        padding: '10px 14px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {t('learning.common.openAllLessons')}
+                    </button>
+                  </section>
                 </>
               )}
             </>
@@ -1297,8 +2092,8 @@ const ADHDView = ({ initialLessonId = null }) => {
                 title="Pronunciation Practice"
                 subtitle={`Practice the words from “${activeLesson?.title || 'this lesson'}”. Complete all to proceed.`}
                 items={pronunciationItems}
-                recognitionLang="en-US"
-                ttsLang="en-US"
+                recognitionLang={speechRecognitionLangFor(activeLesson?.ttsLang || uiLanguage)}
+                ttsLang={activeLesson?.ttsLang || uiLanguage}
                 playbackRate={0.85}
                 onExit={exitLesson}
                 onComplete={() => setLessonPhase('complete')}
@@ -1346,34 +2141,61 @@ const ADHDView = ({ initialLessonId = null }) => {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                {currentLessonScore >= 20 ? (
-                  <button
-                    onClick={exitLesson}
-                    className="btn-primary"
-                    style={{
-                      padding: '1rem 2rem', fontSize: '1.1rem', borderRadius: '12px', border: 'none',
-                      background: 'var(--accent-color)', color: 'white', cursor: 'pointer', boxShadow: '0 4px 12px rgba(77, 134, 201, 0.22)'
-                    }}
-                  >
-                    {t('learning.adhd.returnToDashboard')}
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => handleStartLesson(activeLesson)}
-                    className="btn-primary"
-                    style={{
-                      padding: '1rem 2rem', fontSize: '1.1rem', borderRadius: '12px', border: 'none',
-                      background: 'var(--warning-color)', color: 'white', cursor: 'pointer', boxShadow: '0 4px 12px rgba(194, 122, 44, 0.22)'
-                    }}
-                  >
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
-                      <RotateCcw size={18} aria-hidden="true" />
-                      <span>{t('learning.adhd.tryAgain')}</span>
-                    </span>
-                  </button>
-                )}
-              </div>
+              {/* EPIC 4.5: Motivation Through Reinforcement */}
+              {currentLessonScore >= 20 && (
+                <div style={{ maxWidth: '500px', margin: '1.5rem auto', zIndex: 10, position: 'relative' }}>
+                  <MotivationReward
+                    score={currentLessonScore}
+                    maxScore={100}
+                    lesson={activeLesson}
+                    condition="adhd"
+                    totalLessonsCompleted={lessonsCompletedCount}
+                  />
+                </div>
+              )}
+
+              {!showPracticeSuggestion && currentLessonScore >= 20 && currentLessonScore < 60 && (
+                <div style={{ maxWidth: '500px', margin: '0 auto', zIndex: 10, position: 'relative' }}>
+                  <PracticeSuggestion
+                    lesson={activeLesson}
+                    score={currentLessonScore}
+                    condition="adhd"
+                    onSkip={() => exitLesson()}
+                    onStartPractice={() => setShowPracticeSuggestion(true)}
+                  />
+                </div>
+              )}
+
+              {!showPracticeSuggestion && (
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                  {currentLessonScore >= 20 ? (
+                    <button
+                      onClick={exitLesson}
+                      className="btn-primary"
+                      style={{
+                        padding: '1rem 2rem', fontSize: '1.1rem', borderRadius: '12px', border: 'none',
+                        background: 'var(--accent-color)', color: 'white', cursor: 'pointer', boxShadow: '0 4px 12px rgba(77, 134, 201, 0.22)'
+                      }}
+                    >
+                      {t('learning.adhd.returnToDashboard')}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleStartLesson(activeLesson)}
+                      className="btn-primary"
+                      style={{
+                        padding: '1rem 2rem', fontSize: '1.1rem', borderRadius: '12px', border: 'none',
+                        background: 'var(--warning-color)', color: 'white', cursor: 'pointer', boxShadow: '0 4px 12px rgba(194, 122, 44, 0.22)'
+                      }}
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
+                        <RotateCcw size={18} aria-hidden="true" />
+                        <span>{t('learning.adhd.tryAgain')}</span>
+                      </span>
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <div className="lesson-player">
@@ -1412,10 +2234,18 @@ const ADHDView = ({ initialLessonId = null }) => {
                       {currentStep.type === 'learn' && (
                         <div className="learn-mode">
                           <h2 className={currentStep.highlight ? 'highlight-text' : ''}>
-                            {renderTextWithActiveWord(currentStep.content)}
+                            {renderBilingualTextWithActiveWord(currentStep.content, {
+                              defaultLanguage: activeLesson?.ttsLang || 'english',
+                              showLabels: true,
+                            })}
                           </h2>
                           <p style={{ fontSize: '1.5rem', color: 'var(--text-primary)', fontWeight: '500', marginTop: '1rem' }}>
-                            {renderTextWithActiveWord(currentStep.explanation)}
+                            {renderBilingualTextWithActiveWord(currentStep.explanation, {
+                              defaultLanguage: 'english',
+                              showLabels: true,
+                              compact: true,
+                              fullWidth: true,
+                            })}
                           </p>
                           <button type="button" onClick={handleListenCurrentStep} className="btn-audio" title="Listen">
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
@@ -1504,14 +2334,24 @@ const ADHDView = ({ initialLessonId = null }) => {
                               border: isPlaying ? '2px solid #fbc02d' : '1px solid transparent'
                             }}
                           >
-                            {renderTextWithActiveWord(currentStep.content)}
+                            {renderBilingualTextWithActiveWord(currentStep.content, {
+                              defaultLanguage: 'english',
+                              showLabels: true,
+                              fullWidth: true,
+                            })}
                           </p>
                         </div>
                       )}
 
                       {currentStep.type === 'quiz' && (
                         <div className="quiz-mode">
-                          <h2>{renderTextWithActiveWord(currentStep.question)}</h2>
+                          <h2>
+                            {renderBilingualTextWithActiveWord(currentStep.question, {
+                              defaultLanguage: activeLesson?.ttsLang || 'english',
+                              showLabels: true,
+                              fullWidth: true,
+                            })}
+                          </h2>
                           <div className="quiz-audio-actions">
                             <button type="button" onClick={handleListenCurrentStep} className="btn-audio" title="Listen to question">
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
@@ -1551,7 +2391,11 @@ const ADHDView = ({ initialLessonId = null }) => {
                                 className="btn-option"
                                 disabled={feedback?.type === 'success' || isTransitioning}
                               >
-                                {opt}
+                                {renderBilingualTextWithActiveWord(opt, {
+                                  defaultLanguage: 'english',
+                                  showLabels: false,
+                                  compact: true,
+                                })}
                               </button>
                             ))}
                           </div>

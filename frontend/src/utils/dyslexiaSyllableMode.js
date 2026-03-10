@@ -5,6 +5,13 @@ export const DYSLEXIA_LESSON_IDS = new Set([
   'lesson-greetings',
   'lesson-vocabulary',
   'lesson-numbers',
+  'lesson-tamil-essentials',
+  'lesson-hindi-essentials',
+  // Alternate/newer dyslexia lesson ids (used in Lesson Library)
+  'lesson-basic-words',
+  'lesson-introduce-yourself',
+  'lesson-simple-sentences',
+  'lesson-short-story',
 ]);
 
 export const isDyslexiaLessonId = (lessonId) => {
@@ -118,9 +125,32 @@ export const getDyslexiaLessonTitle = (lessonId, fallbackTitle = '') => {
   const map = {
     'lesson-greetings': 'Greet-ings',
     'lesson-vocabulary': 'Ba-sic Words',
+    'lesson-basic-words': 'Ba-sic Words',
     'lesson-numbers': 'Num-bers',
+    'lesson-introduce-yourself': 'In-tro-duce Your-self',
+    'lesson-simple-sentences': 'Sim-ple Sen-ten-ces',
+    'lesson-short-story': 'Short Sto-ry',
+    'lesson-tamil-essentials': 'Ta-mil Foun-da-tions: Eve-ry-day Greet-ings',
+    'lesson-hindi-essentials': 'Hin-di Foun-da-tions: Eve-ry-day Greet-ings',
   };
   return map[id] || fallbackTitle || id;
+};
+
+export const getDyslexiaLessonDescription = (lessonId, fallbackDescription = '') => {
+  const id = String(lessonId || '');
+  const map = {
+    'lesson-greetings': 'Learn Hel-lo, Hi, and friend-ly phras-es',
+    'lesson-vocabulary': 'E-ve-ry-day words like ap-ple, chair, book',
+    'lesson-basic-words': 'Learn com-mon words you use ev-ery day',
+    'lesson-numbers': 'Count, match, and or-der num-bers',
+    'lesson-introduce-yourself': 'Learn to say your name and meet peo-ple',
+    'lesson-simple-sentences': 'Build short sen-ten-ces with con-fi-dence',
+    'lesson-short-story': 'Read a short sto-ry and prac-tice flow',
+    'lesson-tamil-essentials': 'Prac-tice greet-ings and po-lite words in Ta-mil',
+    'lesson-hindi-essentials': 'Prac-tice greet-ings and po-lite words in Hin-di',
+  };
+
+  return map[id] || fallbackDescription;
 };
 
 export const useDyslexiaContext = ({ condition, lessonId, defaultSyllableMode = true }) => {

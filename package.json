@@ -1,22 +1,12 @@
 {
-  "name": "accessible-language-learning-frontend",
-  "version": "0.1.0",
+  "name": "accessible-language-learning-platform",
+  "version": "1.0.0",
   "private": true,
-  "dependencies": {
-    "accessible-language-learning-platform": "file:..",
-    "axios": "^1.6.2",
-    "lucide-react": "^0.563.0",
-    "react": "^18.2.0",
-    "react-confetti": "^6.4.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.20.1",
-    "react-scripts": "5.0.1"
-  },
+  "description": "Accessible Language Learning Platform - Full Stack",
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "start": "echo 'Use npm start in frontend/ or backend/'",
+    "build": "cd frontend && npm run build",
+    "test": "cd backend && npm test"
   },
   "eslintConfig": {
     "extends": [

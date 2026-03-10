@@ -698,6 +698,47 @@ select:focus {
   height: 24px;
 }
 
+/* Shared utility button styles (used across multiple pages) */
+.btn-settings,
+.btn-logout {
+  padding: 8px 16px;
+  border: 1px solid var(--border-color);
+  background-color: white;
+  color: var(--text-secondary);
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 15px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.btn-settings:hover,
+.btn-logout:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.btn-syllable-toggle {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-color: #bae6fd;
+  color: #0284c7;
+}
+
+.btn-syllable-toggle:hover {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+}
+
+.btn-syllable-toggle[aria-pressed="true"] {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: white;
+  border-color: #0284c7;
+}
+
 /* Reduce color complexity - simpler palette */
 .simplified-layout .lesson-card,
 .simplified-layout .section-card {

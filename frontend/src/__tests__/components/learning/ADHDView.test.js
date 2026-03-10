@@ -164,7 +164,8 @@ describe('ADHDView Component - ADHD Learning Features', () => {
             fireEvent.click(startBtn);
 
             await waitFor(() => {
-                expect(screen.getByText('Choose One Lesson')).toBeInTheDocument();
+                // Session dashboard view is shown once session starts
+                expect(screen.getByText(/These lessons are available in Open All Lessons\./i)).toBeInTheDocument();
                 // Check if timer is running (20 mins = 20:00)
                 expect(screen.getByText('20:00')).toBeInTheDocument();
             });
@@ -186,26 +187,22 @@ describe('ADHDView Component - ADHD Learning Features', () => {
     // TEST SUITE 2: Lesson Selection & Navigation
     // ===================================================================
     describe('2. Lesson Selection & Navigation', () => {
-        beforeEach(async () => {
+        test('should show Open All Lessons CTA after session starts', async () => {
             renderWithRouter(<ADHDView />);
             fireEvent.click(screen.getByText('Start Session'));
-        });
 
-        test('should display list of lessons', async () => {
             await waitFor(() => {
-                expect(screen.getByText('Greetings')).toBeInTheDocument();
-                expect(screen.getByText('Basic Words')).toBeInTheDocument();
-                expect(screen.getByText('Numbers')).toBeInTheDocument();
-                expect(screen.getByText('Audio Stories')).toBeInTheDocument();
+                expect(screen.getByText(/These lessons are available in Open All Lessons\./i)).toBeInTheDocument();
+                expect(screen.getByRole('button', { name: /open all lessons/i })).toBeInTheDocument();
             });
         });
 
         test('should enter lesson view when a lesson is started', async () => {
             jest.useFakeTimers();
 
-            await waitFor(() => expect(screen.getByText('Choose One Lesson')).toBeInTheDocument());
-            const lessonBtn = screen.getAllByText('Start')[0]; // Greetings lesson
-            fireEvent.click(lessonBtn);
+            // Lessons are started via Lesson Library now; unit tests can simulate this
+            // by passing initialLessonId to auto-open a lesson once the session starts.
+            renderWithRouter(<ADHDView initialLessonId={1} />);
 
             await startLessonAndSkipCountdown({ lessonTitle: 'Greetings' });
 
@@ -223,9 +220,7 @@ describe('ADHDView Component - ADHD Learning Features', () => {
         test('should navigate between steps', async () => {
             jest.useFakeTimers();
 
-            await waitFor(() => expect(screen.getByText('Choose One Lesson')).toBeInTheDocument());
-            const lessonBtn = screen.getAllByText('Start')[0];
-            fireEvent.click(lessonBtn);
+            renderWithRouter(<ADHDView initialLessonId={1} />);
 
             await startLessonAndSkipCountdown({ lessonTitle: 'Greetings' });
 
@@ -259,11 +254,7 @@ describe('ADHDView Component - ADHD Learning Features', () => {
     describe('3. Interactive Quizzes & Feedback', () => {
         beforeEach(async () => {
             jest.useFakeTimers();
-            renderWithRouter(<ADHDView />);
-            fireEvent.click(screen.getByText('Start Session'));
-            await waitFor(() => expect(screen.getByText('Choose One Lesson')).toBeInTheDocument());
-            const lessonBtn = screen.getAllByText('Start')[0]; // Greetings
-            fireEvent.click(lessonBtn);
+            renderWithRouter(<ADHDView initialLessonId={1} />);
 
             await startLessonAndSkipCountdown({ lessonTitle: 'Greetings' });
 
@@ -325,12 +316,8 @@ describe('ADHDView Component - ADHD Learning Features', () => {
     describe('4. Audio Stories & Playback', () => {
         beforeEach(async () => {
             jest.useFakeTimers();
-            renderWithRouter(<ADHDView />);
-            fireEvent.click(screen.getByText('Start Session'));
-            await waitFor(() => expect(screen.getByText('Choose One Lesson')).toBeInTheDocument());
-            // Find 'Audio Stories' lesson
-            const storyLessonStart = screen.getAllByText('Start')[3]; // index 3 is Audio Stories
-            fireEvent.click(storyLessonStart);
+            // Start Audio Stories via initialLessonId to simulate coming from Lesson Library.
+            renderWithRouter(<ADHDView initialLessonId={4} />);
 
             await startLessonAndSkipCountdown({ lessonTitle: 'Audio Stories' });
         });
@@ -369,7 +356,10 @@ describe('ADHDView Component - ADHD Learning Features', () => {
         test('should toggle distraction-free mode', async () => {
             renderWithRouter(<ADHDView />);
 
-            const toggleBtn = screen.getByText('Distraction-Free');
+            const menuBtn = screen.getByRole('button', { name: /menu/i });
+            fireEvent.click(menuBtn);
+
+            const toggleBtn = screen.getByRole('button', { name: /distraction-free/i });
             fireEvent.click(toggleBtn);
 
             await waitFor(() => {

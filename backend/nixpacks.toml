@@ -1,0 +1,20 @@
+# Railway / Nixpacks config for the backend service.
+# Purpose: ensure Python + pip are available so /api/tts/speak (gTTS) works.
+
+# Force-enable the Python provider even though our requirements file is not at the
+# backend root (it's under python_services/).
+providers = ['node', 'python']
+
+[phases.setup]
+# Ensure python exists in the build + runtime image.
+nixPkgs = ['python3']
+
+[phases.install]
+# Run Node install and Python deps install.
+cmds = [
+  "npm ci",
+  "python3 -m pip install --no-cache-dir -r python_services/requirements.txt"
+]
+
+[start]
+cmd = "npm start"
