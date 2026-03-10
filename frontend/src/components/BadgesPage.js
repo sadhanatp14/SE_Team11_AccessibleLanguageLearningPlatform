@@ -5,6 +5,11 @@ import { useAuth } from '../context/AuthContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { useI18n } from '../utils/i18n';
 import { getBadges } from '../services/badgesService';
+import { decorateDyslexiaText, useDyslexiaSyllableMode } from '../utils/dyslexiaSyllableMode';
+import SyllableModeToggle from './common/SyllableModeToggle';
+import './learning/DyslexiaView.css';
+import './learning/AutismView.css';
+import './BadgesPage.css';
 
 const iconFor = (key) => {
   switch (key) {
@@ -33,7 +38,11 @@ const BadgesPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { preferences, applyPreferences } = usePreferences();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+
+  const [syllableMode] = useDyslexiaSyllableMode(true);
+  const condition = String(user?.learningCondition || '').toLowerCase();
+  const applyDyslexiaSyllables = condition === 'dyslexia' && Boolean(syllableMode) && lang === 'english';
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -84,6 +93,9 @@ const BadgesPage = () => {
     const isStarted = !isEarned && progressValue > 0 && progressValue < 100;
     const statusLabel = isEarned ? t('badges.earned') : isStarted ? t('badges.inProgress') : t('badges.locked');
 
+    const badgeName = applyDyslexiaSyllables ? decorateDyslexiaText(badge.name) : badge.name;
+    const badgeDescription = applyDyslexiaSyllables ? decorateDyslexiaText(badge.description) : badge.description;
+
     return (
       <div
         style={{
@@ -114,7 +126,7 @@ const BadgesPage = () => {
 
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'baseline' }}>
-            <h3 style={{ margin: 0, fontSize: '16px', color: 'var(--text-primary)' }}>{badge.name}</h3>
+            <h3 style={{ margin: 0, fontSize: '16px', color: 'var(--text-primary)' }}>{badgeName}</h3>
             <span
               style={{
                 fontSize: '12px',
@@ -129,7 +141,7 @@ const BadgesPage = () => {
               {statusLabel}
             </span>
           </div>
-          <p style={{ margin: '6px 0 10px 0', color: 'var(--text-secondary)' }}>{badge.description}</p>
+          <p style={{ margin: '6px 0 10px 0', color: 'var(--text-secondary)' }}>{badgeDescription}</p>
 
           {variant !== 'earnedOnly' && !isEarned ? (
             <div>
@@ -157,6 +169,7 @@ const BadgesPage = () => {
           </h1>
         </div>
         <div className={user?.learningCondition === 'autism' ? 'header-actions' : 'nav-menu'}>
+          {condition === 'dyslexia' ? <SyllableModeToggle /> : null}
           <button
             type="button"
             onClick={() => navigate(-1)}

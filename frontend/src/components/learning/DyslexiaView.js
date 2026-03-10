@@ -466,8 +466,10 @@ const DyslexiaView = () => {
               <button
                 type="button"
                 onClick={toggleSyllableMode}
-                className="btn-settings"
+                className="btn-settings btn-syllable-toggle"
                 style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center' }}
+                aria-pressed={syllableMode ? 'true' : 'false'}
+                title={t('learning.dyslexia.toggleSyllableTitle')}
               >
                 <span>{t('learning.dyslexia.syllableMode')}</span>
                 <span>{syllableMode ? t('learning.common.on') : t('learning.common.off')}</span>

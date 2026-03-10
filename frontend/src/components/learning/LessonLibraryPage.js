@@ -7,6 +7,8 @@ import { useI18n } from '../../utils/i18n';
 import api from '../../utils/api';
 import { resolveUiLanguageFromPreferences } from '../../utils/languagePrefs';
 import { pickI18nString } from '../../utils/lessonI18n';
+import { getDyslexiaLessonDescription, getDyslexiaLessonTitle, useDyslexiaSyllableMode } from '../../utils/dyslexiaSyllableMode';
+import SyllableModeToggle from '../common/SyllableModeToggle';
 
 const LANGUAGE_KEYS = ['en', 'ta', 'hi'];
 
@@ -267,12 +269,14 @@ const LessonLibraryPage = () => {
   const { t } = useI18n();
 
   const uiLanguage = useMemo(() => resolveUiLanguageFromPreferences(preferences), [preferences]);
+  const [syllableMode] = useDyslexiaSyllableMode(true);
 
   const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [completedLessonKeys, setCompletedLessonKeys] = useState([]);
 
   const condition = String(user?.learningCondition || 'dyslexia').toLowerCase();
   const lessons = useMemo(() => LESSON_LIBRARY[condition] || LESSON_LIBRARY.dyslexia, [condition]);
+  const applyDyslexiaSyllables = condition === 'dyslexia' && Boolean(syllableMode) && uiLanguage === 'english';
   const conditionLabel = useMemo(() => {
     if (condition === 'dyslexia') return t('learning.library.condition.dyslexia');
     if (condition === 'adhd') return t('learning.library.condition.adhd');
@@ -425,6 +429,18 @@ const LessonLibraryPage = () => {
     return pickI18nString(uiLanguage, baseText, i18n);
   };
 
+  const renderLessonTitle = (lesson) => {
+    const base = renderLibraryText(lesson?.title, lesson?.titleI18n);
+    if (!applyDyslexiaSyllables) return base;
+    return lesson?.apiId ? getDyslexiaLessonTitle(lesson.apiId, base) : base;
+  };
+
+  const renderLessonDescription = (lesson) => {
+    const base = renderLibraryText(lesson?.description, lesson?.descriptionI18n);
+    if (!applyDyslexiaSyllables) return base;
+    return lesson?.apiId ? getDyslexiaLessonDescription(lesson.apiId, base) : base;
+  };
+
   return (
     <div
       id="learning-container"
@@ -436,7 +452,7 @@ const LessonLibraryPage = () => {
       }}
     >
       <div style={{ maxWidth: '980px', margin: '0 auto' }}>
-        <div style={{ marginBottom: '16px' }}>
+        <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={() => navigate('/dashboard')}
@@ -456,6 +472,8 @@ const LessonLibraryPage = () => {
             <ChevronLeft size={16} aria-hidden="true" />
             <span>{t('learning.common.backToDashboard')}</span>
           </button>
+
+          {condition === 'dyslexia' ? <SyllableModeToggle /> : null}
         </div>
 
         <section
@@ -569,8 +587,8 @@ const LessonLibraryPage = () => {
                   </div>
                 ) : null}
               </div>
-              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--text-primary)' }}>{renderLibraryText(lesson.title, lesson.titleI18n)}</h3>
-              <p style={{ margin: 0, color: 'var(--text-secondary)', flex: 1 }}>{renderLibraryText(lesson.description, lesson.descriptionI18n)}</p>
+              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--text-primary)' }}>{renderLessonTitle(lesson)}</h3>
+              <p style={{ margin: 0, color: 'var(--text-secondary)', flex: 1 }}>{renderLessonDescription(lesson)}</p>
               <button
                 type="button"
                 onClick={() => handleOpenLesson(lesson)}

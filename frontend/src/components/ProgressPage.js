@@ -10,6 +10,7 @@ import api from '../utils/api';
 import { Award, BookOpen } from 'lucide-react';
 import { getDyslexiaLessonTitle, useDyslexiaSyllableMode } from '../utils/dyslexiaSyllableMode';
 import { useI18n } from '../utils/i18n';
+import SyllableModeToggle from './common/SyllableModeToggle';
 
 /**
  * ProgressPage
@@ -320,6 +321,7 @@ const ProgressPage = () => {
         </div>
         <div className={user?.learningCondition === 'autism' ? 'header-actions' : 'nav-menu'}>
           <span className="user-name">{t('progress.hello', { name: user?.name || '' })}</span>
+          {condition === 'dyslexia' ? <SyllableModeToggle /> : null}
           <button type="button" onClick={() => navigate('/dashboard')} className={user?.learningCondition === 'autism' ? 'btn-settings' : 'btn-settings'} title={t('progress.backToLearning')}>
             {t('app.back')}
           </button>
