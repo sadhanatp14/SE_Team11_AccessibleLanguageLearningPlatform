@@ -1,16 +1,46 @@
+/**
+ * auth.test.js — Route integration tests
+ *
+ * Tests the four route groups mounted in `backend/routes/auth.js`:
+ *  - POST /api/auth/register  — new-user registration with validation & preference seeding
+ *  - POST /api/auth/login     — credential verification and JWT issuance
+ *  - GET  /api/auth/me        — return the current authenticated user's profile
+ *  - POST /api/auth/logout    — invalidate the session token
+ *
+ * Test approach:
+ *  - Spins up a minimal Express app with the auth router mounted so real HTTP
+ *    request/response cycles are exercised end-to-end (no mocked middleware).
+ *  - Uses in-memory MongoDB (configured in jest setup) for isolated, repeatable tests.
+ *  - Each `describe` block sets up its own preconditions via `beforeEach`.
+ */
+
+// supertest — issues real HTTP requests against the in-process Express app
 const request = require('supertest');
+// express — needed to assemble the minimal test app
 const express = require('express');
+// mongoose — available for direct DB queries used in assertion helpers
 const mongoose = require('mongoose');
+// Subject under test — the full auth router
 const authRouter = require('../auth');
+// User model — used in assertions that inspect the DB directly
 const User = require('../../models/User');
+// Preferences model — used to verify condition-specific defaults after registration
 const Preferences = require('../../models/Preferences');
 
-// Create Express app for testing
+// Minimal Express app — only the auth router is mounted so tests are self-contained
 const app = express();
 app.use(express.json());
 app.use('/api/auth', authRouter);
 
 describe('Authentication Routes', () => {
+    /**
+     * POST /api/auth/register
+     * Creates a new User document, seeds condition-specific Preferences, and
+     * returns a JWT token + sanitised user object on success.
+     * Validates required fields, email format, password length, age range,
+     * learning-condition enum, duplicate email, minor/parent-email rules,
+     * and the optional admin-role flow guarded by ADMIN_REG_SECRET.
+     */
     describe('POST /api/auth/register', () => {
         it('should register a new user with valid data', async () => {
             const userData = {
@@ -36,7 +66,8 @@ describe('Authentication Routes', () => {
                 role: 'learner',
             });
 
-            // admin key tests
+            // --- Admin-key sub-scenarios bundled inside the happy-path test ---
+            // Attempt registration with an incorrect admin key — should be rejected
             const adminData = {
                 name: 'AdminUser',
                 email: 'adminkey@example.com',
@@ -50,7 +81,7 @@ describe('Authentication Routes', () => {
             expect([403, 500]).toContain(badRes.status); // either forbidden or error
             expect(badRes.body.success).toBe(false);
 
-            // now set secret and try again
+            // Set the correct secret in the environment, then retry — should succeed
             process.env.ADMIN_REG_SECRET = 'secret123';
             adminData.adminKey = 'secret123';
             const goodRes = await request(app).post('/api/auth/register').send(adminData);
@@ -309,9 +340,14 @@ describe('Authentication Routes', () => {
         });
     });
 
+    /**
+     * POST /api/auth/login
+     * Validates credentials, checks account active state, updates lastLogin,
+     * and returns a signed JWT with the user's profile and preferences.
+     */
     describe('POST /api/auth/login', () => {
         beforeEach(async () => {
-            // Create a test user before each login test
+            // Seed a known user before each login test so we have valid credentials to test against
             await request(app).post('/api/auth/register').send({
                 name: 'Login Test User',
                 email: 'login@example.com',
@@ -394,7 +430,7 @@ describe('Authentication Routes', () => {
             const userBefore = await User.findOne({ email: 'login@example.com' });
             const lastLoginBefore = userBefore.lastLogin;
 
-            // Wait a bit to ensure timestamp difference
+            // Small delay ensures the new timestamp is strictly greater than the previous one
             await new Promise((resolve) => setTimeout(resolve, 100));
 
             await request(app)
@@ -413,7 +449,7 @@ describe('Authentication Routes', () => {
         });
 
         it('should reject login for inactive accounts', async () => {
-            // Deactivate the user
+            // Deactivate the user directly in the DB to simulate an admin-disabled account
             await User.findOneAndUpdate({ email: 'login@example.com' }, { isActive: false });
 
             const response = await request(app)
@@ -440,17 +476,22 @@ describe('Authentication Routes', () => {
             const token = response.body.token;
             expect(token).toBeDefined();
             expect(typeof token).toBe('string');
-            // JWT tokens have 3 parts separated by dots
+            // A well-formed JWT always has exactly 3 base64url segments separated by dots
             expect(token.split('.').length).toBe(3);
         });
     });
 
+    /**
+     * GET /api/auth/me
+     * Returns the authenticated user's full profile (including preferences).
+     * Requires a valid Bearer token; rejects on missing, invalid, or malformed headers.
+     */
     describe('GET /api/auth/me', () => {
         let authToken;
         let userId;
 
         beforeEach(async () => {
-            // Register and login to get a token
+            // Register a fresh user and capture the token for use in each test
             const registerResponse = await request(app).post('/api/auth/register').send({
                 name: 'Auth Test User',
                 email: 'authtest@example.com',
@@ -506,10 +547,16 @@ describe('Authentication Routes', () => {
         });
     });
 
+    /**
+     * POST /api/auth/logout
+     * Requires a valid Bearer token; clears the session server-side and
+     * returns a 200 confirmation message.
+     */
     describe('POST /api/auth/logout', () => {
         let authToken;
 
         beforeEach(async () => {
+            // Register a user and capture the token so we can test authenticated logout
             const registerResponse = await request(app).post('/api/auth/register').send({
                 name: 'Logout Test User',
                 email: 'logout@example.com',

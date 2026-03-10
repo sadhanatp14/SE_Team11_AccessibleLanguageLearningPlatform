@@ -1,4 +1,21 @@
+/**
+ * auth.js — Express authentication & authorisation middleware
+ *
+ * Exports three middleware functions for use on protected routes:
+ *  - protect                  — verifies JWT bearer token; attaches req.user (password excluded)
+ *  - requireParentalApproval  — blocks minor accounts that lack the x-parental-approval header
+ *  - authorize(...roles)      — role-based access control; must run after `protect`
+ *
+ * Contracts:
+ *  - Any handler downstream of `protect` may safely read req.user.
+ *  - `authorize` reads req.user.role; calling it without `protect` first will throw.
+ *  - `requireParentalApproval` uses a simple header gate as a placeholder; replace
+ *    with a real approval workflow before production use.
+ */
+
+// jsonwebtoken — signs and verifies JWT bearer tokens
 const jwt = require('jsonwebtoken');
+// User model — used to resolve the decoded token ID to a full user document
 const User = require('../models/User');
 
 /**
@@ -13,15 +30,23 @@ const User = require('../models/User');
  * - `requireParentalApproval` is a lightweight gate for minor accounts
  */
 
-// EPIC 1.2.3: Token verification middleware to protect private routes
-// Protect routes - verify JWT token
 /**
- * Verifies JWT from `Authorization: Bearer <token>` header.
- * Failure cases:
- * - missing token -> 401
- * - invalid/expired token -> 401
- * - user not found -> 404
- * - user is deactivated -> 403
+ * Verify the JWT bearer token and attach the authenticated user to `req.user`.
+ *
+ * Reads:  Authorization: Bearer <token>
+ * Writes: req.user (User document, password field excluded via schema select:false)
+ *
+ * Rejection cases:
+ *  - Missing or malformed header  → 401 Not authorized
+ *  - Invalid or expired token     → 401 Not authorized (jwt.verify throws)
+ *  - No matching user in DB       → 404 User not found
+ *  - User account is deactivated  → 403 Account deactivated
+ *
+ * EPIC 1.2.3: Token verification middleware to protect private routes.
+ *
+ * @param {import('express').Request}      req
+ * @param {import('express').Response}     res
+ * @param {import('express').NextFunction} next
  */
 exports.protect = async (req, res, next) => {
   let token;
@@ -67,6 +92,8 @@ exports.protect = async (req, res, next) => {
 
     next();
   } catch (error) {
+    // jwt.verify() throws JsonWebTokenError (bad signature) or TokenExpiredError —
+    // both are treated as 401 so callers cannot distinguish between the two cases
     return res.status(401).json({
       success: false,
       message: 'Not authorized to access this route',
@@ -75,17 +102,29 @@ exports.protect = async (req, res, next) => {
   }
 };
 
-// Check parental approval for minors
 /**
- * Simple minor gate.
- * Current implementation uses `x-parental-approval` header as a placeholder.
- * In a production system this would be replaced with a real approval workflow.
+ * Guard routes that require parental consent for minor accounts.
+ *
+ * Passes through (calls next()) when:
+ *  (a) The user is not flagged as a minor, OR
+ *  (b) The `x-parental-approval: true` request header is present.
+ *
+ * Rejects with 403 when a minor user makes a request without the approval header.
+ *
+ * NOTE: The header-based check is a placeholder suitable for development/testing.
+ *       Replace with a verified approval token or a real out-of-band workflow
+ *       before production use.
+ *
+ * EPIC 1.1.4 / 1.2: Parental approval gate.
+ *
+ * @param {import('express').Request}      req - req.user must be set by `protect` first.
+ * @param {import('express').Response}     res
+ * @param {import('express').NextFunction} next
  */
 exports.requireParentalApproval = async (req, res, next) => {
-  // EPIC 1.1.4 / 1.2: Parental approval gate (placeholder header-based check)
   if (req.user.isMinor && req.user.requiresParentalApproval) {
-    // Check if this action requires parental approval
-    // This is a placeholder - implement actual parental approval logic
+    // Check for the parental-approval signal in the request headers
+    // TODO: replace with a verified approval token or database flag lookup
     const hasApproval = req.headers['x-parental-approval'];
     
     if (!hasApproval) {
@@ -100,14 +139,24 @@ exports.requireParentalApproval = async (req, res, next) => {
   next();
 };
 
-// Authorize specific roles
 /**
- * Role-based authorization.
- * Usage: `authorize('admin')` or `authorize('admin', 'parent')`.
- * Assumes `protect` already ran and set `req.user`.
+ * Role-based access control middleware factory.
+ *
+ * Returns a middleware that passes through only when req.user.role is listed
+ * in the variadic `roles` argument.  All other roles receive a 403 response.
+ *
+ * Usage (in a route definition):
+ *   router.delete('/users/:id', protect, authorize('admin'), handler);
+ *   router.get('/reports',      protect, authorize('admin', 'parent'), handler);
+ *
+ * IMPORTANT: Must be composed after `protect` so req.user is already populated.
+ *
+ * @param {...string} roles - One or more allowed role names ('admin', 'parent', 'learner').
+ * @returns {import('express').RequestHandler} Express middleware function.
  */
 exports.authorize = (...roles) => {
   return (req, res, next) => {
+    // Reject immediately if the user's role is not in the allow-list
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,

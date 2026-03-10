@@ -1,14 +1,41 @@
+/**
+ * auth.test.js — Middleware unit tests
+ *
+ * Tests the three auth middleware functions exported from `backend/middleware/auth.js`:
+ *  - protect               — validates JWT bearer tokens and attaches req.user
+ *  - requireParentalApproval — blocks minor users who lack the x-parental-approval header
+ *  - authorize             — role-based access control (variadic allowed-roles check)
+ *
+ * Test approach:
+ *  - Uses in-memory MongoDB (configured in jest setup) so real User documents can be
+ *    created and looked up without a running server.
+ *  - Express request / response objects are replaced with lightweight mock factories
+ *    so middleware can be called directly without spinning up an HTTP server.
+ */
+
+// jsonwebtoken — used to forge valid, expired, and fake tokens for test scenarios
 const jwt = require('jsonwebtoken');
+// mongoose — used to generate a fake ObjectId for the non-existent-user test
 const mongoose = require('mongoose');
+// Subject under test — the three middleware functions
 const { protect, requireParentalApproval, authorize } = require('../auth');
+// User model — used to create real DB documents that the middleware looks up
 const User = require('../../models/User');
 
-// Mock Express request and response
+/**
+ * Minimal Express request mock.
+ * @param {object} headers - Request headers map (e.g. { authorization: 'Bearer ...' }).
+ * @param {object|null} user  - Pre-populated req.user (used for tests that skip `protect`).
+ */
 const mockRequest = (headers = {}, user = null) => ({
     headers,
     user,
 });
 
+/**
+ * Minimal Express response mock.
+ * Chains are supported (res.status(x).json(y)) via mockReturnValue(res).
+ */
 const mockResponse = () => {
     const res = {};
     res.status = jest.fn().mockReturnValue(res);
@@ -16,15 +43,22 @@ const mockResponse = () => {
     return res;
 };
 
+// Shared next() spy — cleared in each beforeEach to prevent cross-test bleed
 const mockNext = jest.fn();
 
 describe('Auth Middleware', () => {
+    /**
+     * protect middleware
+     * Verifies the Authorization: Bearer <token> header, decodes the JWT,
+     * fetches the matching User, and attaches it to req.user.
+     * Rejects with 401/403/404 on any failure.
+     */
     describe('protect middleware', () => {
         let testUser;
         let validToken;
 
         beforeEach(async () => {
-            // Create a test user
+            // Create a fresh test user for each case
             testUser = await User.create({
                 name: 'Middleware Test User',
                 email: 'middleware@example.com',
@@ -32,12 +66,12 @@ describe('Auth Middleware', () => {
                 learningCondition: 'none',
             });
 
-            // Generate a valid token
+            // Sign a token that is valid for 1 hour using the same secret as the middleware
             validToken = jwt.sign({ id: testUser._id }, process.env.JWT_SECRET, {
                 expiresIn: '1h',
             });
 
-            // Clear mock calls
+            // Reset the shared spy so previous test calls don't bleed
             mockNext.mockClear();
         });
 
@@ -83,7 +117,7 @@ describe('Auth Middleware', () => {
         });
 
         it('should reject request with expired token', async () => {
-            // Create an expired token
+            // Forge a token with a negative expiry so it is already expired on creation
             const expiredToken = jwt.sign({ id: testUser._id }, process.env.JWT_SECRET, {
                 expiresIn: '-1h', // Expired 1 hour ago
             });
@@ -100,7 +134,7 @@ describe('Auth Middleware', () => {
         });
 
         it('should reject request for non-existent user', async () => {
-            // Create token with non-existent user ID
+            // Generate a valid-looking token whose payload ID has no matching DB document
             const fakeId = new mongoose.Types.ObjectId();
             const fakeToken = jwt.sign({ id: fakeId }, process.env.JWT_SECRET, {
                 expiresIn: '1h',
@@ -122,7 +156,7 @@ describe('Auth Middleware', () => {
         });
 
         it('should reject request for inactive user', async () => {
-            // Deactivate the user
+            // Deactivate the user mid-test to simulate a disabled account
             testUser.isActive = false;
             await testUser.save();
 
@@ -165,6 +199,13 @@ describe('Auth Middleware', () => {
         });
     });
 
+    /**
+     * requireParentalApproval middleware
+     * Runs after `protect`. Allows the request through when:
+     *  (a) the user is not flagged as a minor, OR
+     *  (b) the x-parental-approval: true header is present.
+     * Otherwise returns 403.
+     */
     describe('requireParentalApproval middleware', () => {
         beforeEach(() => {
             mockNext.mockClear();
@@ -220,6 +261,11 @@ describe('Auth Middleware', () => {
         });
     });
 
+    /**
+     * authorize(...roles) middleware factory
+     * Returns a middleware that allows the request only when req.user.role
+     * is included in the variadic `roles` list.  Otherwise returns 403.
+     */
     describe('authorize middleware', () => {
         beforeEach(() => {
             mockNext.mockClear();

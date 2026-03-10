@@ -255,7 +255,7 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
     try {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = playbackRate;
-      utterance.lang = speechSynthesisLangFor(uiLanguage);
+      utterance.lang = speechSynthesisLangFor(contentLanguage || uiLanguage);
       utterance.volume = 0;
 
       utterance.onboundary = (event) => {
@@ -382,6 +382,7 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
       // 3. Fallback to Browser TTS
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = playbackRate;
+      utterance.lang = speechSynthesisLangFor(contentLanguage || uiLanguage);
 
       utterance.onboundary = (event) => {
         if (event.name === 'word') {
