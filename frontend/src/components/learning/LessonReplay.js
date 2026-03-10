@@ -1,3 +1,25 @@
+/**
+ * LessonReplay.js
+ *
+ * Core lesson player component. Given a lessonId it:
+ *  1. Loads ordered lesson sections from the backend (or local sample data).
+ *  2. Restores saved progress so learners can resume where they left off.
+ *  3. Drives step-by-step navigation through sections (EPIC 2.2.1-2.2.4).
+ *  4. Supports one-tap replay of any previously completed section (EPIC 2.6.1-2.6.4).
+ *  5. Records per-interaction results, calculates a percentage score, and
+ *     persists completion to the backend with adaptive-difficulty scoring (EPIC 4.1).
+ *  6. Gates lesson completion behind pronunciation practice when highlights exist (EPIC 3.3).
+ *
+ * Props received from LessonPage:
+ *  lessonId        – Unique lesson slug or MongoDB ObjectId
+ *  isSample        – True when using local fallback data (no API calls)
+ *  lessonTitle     – Pre-resolved display title (syllable-decorated for dyslexia)
+ *  lessonSubtitle  – Short reading-time + interaction-count summary
+ *  notice          – Error / fallback notice string from LessonPage
+ *  onRetry         – Callback to retry loading the lesson
+ *  onExit          – Callback to navigate back (history or dashboard)
+ *  onComplete      – Callback invoked after lesson completion redirect
+ */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import LessonLayout from './LessonLayout';
 import LessonNav from './LessonNav';
@@ -15,11 +37,25 @@ import './LessonReplay.css';
 import { resolveUiLanguageFromPreferences } from '../../utils/languagePrefs';
 import { localizeLessonSectionsPayload } from '../../utils/lessonI18n';
 
+/**
+ * LessonReplay – Stateful lesson player.
+ *
+ * @param {string}   lessonId        - Unique lesson identifier from the URL.
+ * @param {boolean}  isSample        - Whether to use local sample data instead of the API.
+ * @param {string}   lessonTitle     - Display title (may be syllable-split for dyslexia users).
+ * @param {string}   lessonSubtitle  - Short subtitle ("About X min • Y interactions").
+ * @param {string}   notice          - Optional error/warning string from the parent.
+ * @param {Function} onRetry         - Triggered when the user presses "Retry" after a load error.
+ * @param {Function} onExit          - Triggered when the user presses the Back button.
+ * @param {Function} onComplete      - Triggered after the lesson completion flow finishes.
+ */
 const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice, onRetry, onExit, onComplete }) => {
   const { user } = useAuth();
   const { preferences } = usePreferences();
   const { t } = useI18n();
   const uiLanguage = resolveUiLanguageFromPreferences(preferences);
+  // Derive the content language from the learner's condition and the lesson ID suffix.
+  // Dyslexia/ADHD users can study Tamil or Hindi content identified by '-hindi' / '-tamil'.
   const contentLanguage = useMemo(() => {
     const condition = String(user?.learningCondition || '').toLowerCase();
     if (condition === 'dyslexia' || condition === 'adhd') {
@@ -30,22 +66,34 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
     }
     return uiLanguage;
   }, [uiLanguage, user?.learningCondition, lessonId]);
+  // Ordered array of lesson section objects fetched from the API or local samples
   const [sections, setSections] = useState([]);
+  // Progress document for the current user+lesson (currentSectionId, completedSections, completed)
   const [progress, setProgress] = useState(null);
+  // ID of the section the learner is currently working through (not replaying)
   const [activeSectionId, setActiveSectionId] = useState('');
+  // ID of a previously completed section the learner is replaying; empty string when not in replay
   const [replaySectionId, setReplaySectionId] = useState('');
+  // ID of the section whose interaction is currently focused (highlights the timeline item)
   const [currentInteractionSectionId, setCurrentInteractionSectionId] = useState('');
+  // True while section data or progress data is being fetched
   const [isLoading, setIsLoading] = useState(true);
+  // User-visible error string shown in the guidance area and timeline error state
   const [error, setError] = useState('');
+  // Incrementing key that re-triggers the load effect when the user presses Retry
   const [reloadKey, setReloadKey] = useState(0);
+  // Short positive message shown after section/lesson completion or on progress resume
   const [successMessage, setSuccessMessage] = useState('');
   // Track which sections have had all their interactions completed by the user
   const [completedInteractionSections, setCompletedInteractionSections] = useState(new Set());
   // Warning message shown when user tries to proceed without completing the section
   const [incompleteWarning, setIncompleteWarning] = useState('');
 
+  // When true, the PronunciationPractice overlay replaces the section content (EPIC 3.3)
   const [showPronunciationPractice, setShowPronunciationPractice] = useState(false);
+  // Becomes true once the learner finishes pronunciation practice so the gate is not shown again
   const [practiceDone, setPracticeDone] = useState(false);
+  // Stores the completion arguments while the learner is inside the pronunciation practice gate
   const pendingCompletionRef = useRef(null);
 
   // Track interaction results for performance scoring
@@ -132,11 +180,14 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
     };
   }, [lessonId, isSample, reloadKey, t, uiLanguage, contentLanguage]);
 
+  /** Increment reloadKey to re-trigger the data-loading effect (EPIC 6.5.4). */
   const handleRetryLoad = () => {
     setReloadKey((n) => n + 1);
   };
 
 
+  // Lightweight array used for timeline rendering and navigation index calculations.
+  // Avoids passing full section objects into non-rendering logic.
   const sectionList = useMemo(() => {
     return sections.map((section) => ({
       id: section._id || section.id,
@@ -156,11 +207,15 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
 
   const condition = user?.learningCondition || '';
   const dyslexia = useDyslexiaContext({ condition, lessonId, defaultSyllableMode: true });
+  // Syllable-decorated version of sectionList shown in the timeline for dyslexia users.
+  // When syllable mode is off, returns the original sectionList directly.
   const displaySectionList = useMemo(() => {
     if (!dyslexia.applySyllables) return sectionList;
     return sectionList.map((s) => ({ ...s, title: decorateDyslexiaText(s.title) }));
   }, [dyslexia.applySyllables, sectionList]);
 
+  // O(1) section lookup map: sectionId → full section object.
+  // Used by the navigation handler and the section renderer.
   const sectionMap = useMemo(() => {
     const map = new Map();
     sections.forEach((section) => {
@@ -169,6 +224,11 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
     return map;
   }, [sections]);
 
+  /**
+   * Flatten all unique highlight phrases from every section into the format
+   * expected by <PronunciationPractice>. De-duplicated by lowercased value.
+   * An empty array disables the EPIC 3.3 pronunciation gate entirely.
+   */
   const pronunciationItems = useMemo(() => {
     const phrases = [];
     for (const section of sections) {
@@ -191,6 +251,19 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
     }));
   }, [sections, lessonId]);
 
+  /**
+   * Persist lesson completion and fire the adaptive difficulty pipeline.
+   *
+   * Calculates a percentage score from tracked interaction results, then:
+   *  - Real lessons: calls updateProgress() (EPIC 6.4.1), recordLessonScore() and
+   *    adjustDifficulty() (EPIC 4.1), dispatches a 'progress:updated' event,
+   *    shows a success message, and eventually calls onComplete().
+   *  - Sample lessons: updates local state only, still records the score and
+   *    calls /users/complete-lesson to log the event server-side.
+   *
+   * @param {string}   displayedSectionId - ID of the last visible section.
+   * @param {string[]} nextCompleted      - Updated list of completed section IDs.
+   */
   const completeLesson = useCallback(async ({ displayedSectionId, nextCompleted }) => {
     if (!displayedSectionId) return;
 
@@ -317,10 +390,16 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
     }, 3000);
   }, [isSample, lessonId, sections, interactionResults, user, onComplete, t]);
 
+  // ----- Derived display values -----
+  // The section currently being shown – a replayed section takes precedence over the active one
   const displayedSectionId = replaySectionId || activeSectionId;
+  // Full section object for the currently displayed section (passed to LessonSectionView)
   const displayedSection = displayedSectionId ? sectionMap.get(displayedSectionId) : null;
+  // Array of section IDs already completed (available for replay)
   const completedSections = progress?.completedSections || [];
+  // True when the user is viewing a previously completed section, not the active one
   const isReplay = Boolean(replaySectionId);
+  // Most recently completed section; used as the target when the user taps the Replay button
   const lastCompletedSectionId = completedSections[completedSections.length - 1] || '';
 
   // Appreciation messages shown when a section's interactions are completed
@@ -348,6 +427,11 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
     }));
   }, []);
 
+  /**
+   * Called by LessonSectionView when all interactions in a section are answered.
+   * Updates the completedInteractionSections Set and marks the section for
+   * the appreciation-message effect.
+   */
   const handleSectionComplete = React.useCallback((sectionId, isComplete) => {
     if (!sectionId) return;
     setCompletedInteractionSections((prev) => {
@@ -366,10 +450,19 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
     }
   }, []);
 
+  /**
+   * Called when the focused interaction changes within a section.
+   * Syncs currentInteractionSectionId so the timeline highlights the active step.
+   */
   const handleInteractionChange = React.useCallback((sectionId, interactionIndex) => {
     setCurrentInteractionSectionId(sectionId);
   }, []);
 
+  /**
+   * Timeline click handler: selects a section for replay.
+   * - Clicking the active section exits replay mode.
+   * - Any other section is only navigable if it has been completed (EPIC 2.6.4).
+   */
   const handleSelectSection = (sectionId) => {
     if (!sectionId) return;
     if (sectionId === activeSectionId) {
@@ -398,8 +491,22 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
     }
   };
 
+  /** Returns the 0-based index of sectionId in displaySectionList, or -1 if not found. */
   const getSectionIndex = (sectionId) => displaySectionList.findIndex((section) => section.id === sectionId);
 
+  /**
+   * Navigate forward (+1) or backward (-1) through the lesson sections.
+   *
+   * Forward navigation:
+   *  - Blocks if the current section has incomplete interactions.
+   *  - If past the last section, triggers lesson completion (with optional pronunciation gate).
+   *  - Saves progress to the backend after every forward step (EPIC 6.4.1).
+   *
+   * Backward navigation:
+   *  - Enters replay mode for the previous completed section (EPIC 2.6.3-2.6.4).
+   *
+   * @param {number} direction - +1 for forward, -1 for backward.
+   */
   const handleNavigate = async (direction) => {
     if (!displayedSectionId) return;
     // Clear any previous warning when navigating
@@ -515,17 +622,25 @@ const LessonReplay = ({ lessonId, isSample, lessonTitle, lessonSubtitle, notice,
   }, [pendingAutoAdvanceSectionId, displayedSectionId, replaySectionId]);
 
 
+  // ----- Navigation-derived values (recalculated every render) -----
+  // Previous/next section objects used to determine button enabled states
   const prevSection = displayedSectionId ? displaySectionList[getSectionIndex(displayedSectionId) - 1] : null;
   const nextSection = displayedSectionId ? displaySectionList[getSectionIndex(displayedSectionId) + 1] : null;
+  // True when the user is on the final section and not replaying → Next button label becomes "Finish"
   const isLastSection = !isReplay && Boolean(displayedSectionId) && getSectionIndex(displayedSectionId) === displaySectionList.length - 1;
+  // Back is only allowed when the previous section has been completed (supports replay navigation)
   const canGoBack = Boolean(prevSection && completedSections.includes(prevSection.id));
+  // Next is allowed when moving forward through active sections or replaying through completed ones
   const canGoNext = Boolean(
     !isReplay && displayedSectionId && (nextSection || isLastSection)
   ) || Boolean(
     isReplay && nextSection && completedSections.includes(nextSection.id)
   );
+  // Replay toggle is enabled as soon as at least one section has been completed
   const canReplay = Boolean(lastCompletedSectionId) || isReplay;
 
+  // Priority-ordered guidance text for the lesson guidance area.
+  // Warnings > success feedback > errors > parent notices > contextual hints.
   const guidanceText = incompleteWarning
     ? incompleteWarning
     : successMessage
