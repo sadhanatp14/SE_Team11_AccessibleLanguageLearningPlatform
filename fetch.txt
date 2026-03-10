@@ -1,2 +1,0 @@
-From https://github.com/sadhanatp14/SE_Team11_AccessibleLanguageLearningPlatform
- * [new branch]      Autism     -> origin/Autism
