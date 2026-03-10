@@ -1,32 +1,9 @@
-/**
- * LessonNav.js
- *
- * Three-button navigation bar rendered in the footer of every lesson step.
- * Provides Back, Replay, and Next (or "Finish") controls in fixed positions.
- *
- * Related EPICs:
- *  - EPIC 2.2.3: Manual step navigation via next/back buttons.
- *  - EPIC 2.6.1-2.6.4: One-tap replay entry and replay navigation.
- *  - EPIC 2.7.2: Buttons kept in fixed, predictable positions for consistency.
- */
 import React from 'react';
 import './LessonNav.css';
 
 import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import { useI18n } from '../../utils/i18n';
 
-/**
- * LessonNav – Lesson footer navigation bar.
- *
- * @param {Function} onBack    - Navigate to the previous section.
- * @param {Function} onNext    - Navigate to the next section or finish the lesson.
- * @param {Function} onReplay  - Toggle replay mode for the current section.
- * @param {boolean}  canGoBack - Whether the Back button should be enabled.
- * @param {boolean}  canGoNext - Whether the Next/Finish button should be enabled.
- * @param {boolean}  canReplay - Whether the Replay button should be enabled.
- * @param {boolean}  isReplay  - True when the user is in replay mode (styles button as active).
- * @param {string}   nextLabel - Label override for the Next button (e.g. "Finish").
- */
 const LessonNav = ({
   onBack,
   onNext,

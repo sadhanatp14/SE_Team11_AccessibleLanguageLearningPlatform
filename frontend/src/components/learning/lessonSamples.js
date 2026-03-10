@@ -1,6 +1,3 @@
-import lessonSamplesHindi from './lessonSamplesHindi';
-import lessonSamplesTamil from './lessonSamplesTamil';
-
 const lessonSamples = {
   'lesson-greetings': {
     _id: 'lesson-greetings',
@@ -1484,4 +1481,4 @@ const lessonSamples = {
   },
 };
 
-export default { ...lessonSamples, ...lessonSamplesHindi, ...lessonSamplesTamil };
+export default lessonSamples;

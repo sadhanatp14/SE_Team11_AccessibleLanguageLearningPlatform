@@ -1,51 +1,34 @@
-/**
- * recommendationController.js
- *
- * Provides a lightweight "next lesson" recommendation engine.
- *
- * Exported route handler:
- *  - GET /api/progress/next-lesson  →  exports.getNextLesson
- *
- * Recommendation strategy (linear progression):
- *  1. Retrieve all lessons ordered by creation time (_id ascending) as the
- *     canonical sequence — avoids requiring a dedicated `order` field on Lesson.
- *  2. Load the user's completed lesson IDs from UserProgress.
- *  3. Walk the ordered list and return the first lesson not yet completed.
- *
- * Edge cases:
- *  - No lessons in the system       → { recommendation: null, reason }
- *  - All lessons already completed  → { recommendation: null, allCompleted: true }
- *  - User hasn't started anything   → first lesson is recommended
- *  - Invalid / unauthenticated user → 401 handled by `protect` middleware upstream
- */
-
-// Mongoose — used for ObjectId safety in sub-queries (via imported models)
 const mongoose = require('mongoose');
-// Lesson model — source of truth for available lessons and their metadata
 const Lesson = require('../models/Lesson');
-// UserProgress model — tracks which lessons a user has completed
 const UserProgress = require('../models/UserProgress');
 
 /**
+ * Recommendation Controller
+ * -------------------------
+ * Determines the single best "next lesson" for a learner based on their
+ * completion history.
+ *
+ * Strategy:
+ * 1. Fetch all lessons in creation order (_id ascending) as the canonical
+ *    sequence. This avoids requiring a dedicated `order` field on the Lesson
+ *    model while still producing a stable, deterministic ordering.
+ * 2. Load the set of lessons the user has already completed.
+ * 3. Walk the ordered list and return the **first incomplete** lesson.
+ *
+ * Edge cases handled:
+ * - No lessons exist in the system → { recommendation: null, reason }
+ * - User has completed every lesson → { recommendation: null, allCompleted: true }
+ * - User has not started any lessons → first lesson is recommended
+ * - Invalid / missing user → 401 handled by auth middleware upstream
+ */
+
+/**
  * GET /api/progress/next-lesson
- *
- * Return the single recommended next lesson for the current user.
- *
- * The recommendation is purely sequential: the first lesson in creation order
- * that the user has not yet completed.  When every lesson is done, the response
- * includes `allCompleted: true` so the UI can display a congratulatory message
- * instead of a lesson card.
- *
- * @param {import('express').Request}  req - req.user.id from `protect` middleware.
- * @param {import('express').Response} res - JSON:
- *   On success (lesson found):    { success, recommendation: { lessonId, title, description, position, totalLessons }, lastCompleted, completedCount }
- *   On all-complete:              { success, recommendation: null, allCompleted: true, lastCompleted, reason }
- *   On no lessons in system:      { success, recommendation: null, reason }
- *   On error:                     { success: false, message, error }
+ * @desc   Return the single recommended next lesson for the current user.
+ * @access Private (requires `protect` middleware)
  */
 exports.getNextLesson = async (req, res) => {
   try {
-    // Extract the authenticated user's ID (injected by the `protect` middleware)
     const userId = req.user.id;
 
     // 1. Fetch all lessons sorted by creation order (ascending _id).
@@ -62,8 +45,7 @@ exports.getNextLesson = async (req, res) => {
       });
     }
 
-    // Step 2: Fetch completed lesson IDs for this user from UserProgress.
-    // Only select `lessonId` to keep the query lightweight — we only need IDs.
+    // 2. Fetch completed lesson IDs for this user.
     const completedRecords = await UserProgress.find({
       userId,
       completed: true,
@@ -71,28 +53,24 @@ exports.getNextLesson = async (req, res) => {
       .select('lessonId')
       .lean();
 
-    // Convert to a Set of strings for O(1) membership checks in the loop below
     const completedIds = new Set(
       completedRecords.map((r) => r.lessonId.toString())
     );
 
-    // Step 3: Walk the ordered lesson list to find the last completed lesson
-    // and the first incomplete one in a single pass.
-    let lastCompleted = null; // most recently completed lesson (by position order)
-    let nextLesson    = null; // first lesson the user has NOT yet completed
+    // 3. Find the last completed lesson and the next incomplete one.
+    let lastCompleted = null;
+    let nextLesson = null;
 
     for (let i = 0; i < allLessons.length; i++) {
       const lessonId = allLessons[i]._id.toString();
       if (completedIds.has(lessonId)) {
-        // Keep updating so we end up with the last completed lesson in sequence
         lastCompleted = allLessons[i];
       } else if (!nextLesson) {
-        // Lock in the first incomplete lesson and stop overwriting it
         nextLesson = allLessons[i];
       }
     }
 
-    // Step 4: All lessons completed — return a congratulatory response with no next-lesson card
+    // 4. All lessons completed
     if (!nextLesson) {
       return res.json({
         success: true,
@@ -105,8 +83,7 @@ exports.getNextLesson = async (req, res) => {
       });
     }
 
-    // Step 5: Build the recommendation response.
-    // Compute 1-based position so the UI can display "Lesson 3 of 10" etc.
+    // 5. Build the recommendation response.
     const currentIndex = allLessons.findIndex(
       (l) => l._id.toString() === nextLesson._id.toString()
     );
@@ -126,7 +103,6 @@ exports.getNextLesson = async (req, res) => {
       completedCount: completedIds.size,
     });
   } catch (error) {
-    // Unexpected DB or runtime error — log server-side and return a safe 500
     console.error('Error computing next-lesson recommendation:', error);
     return res.status(500).json({
       success: false,

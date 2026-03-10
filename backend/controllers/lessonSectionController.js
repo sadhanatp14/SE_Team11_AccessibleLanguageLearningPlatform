@@ -1,28 +1,5 @@
-/**
- * lessonSectionController.js
- *
- * Serves ordered lesson sections for step-by-step lesson flows.
- *
- * A lesson is divided into multiple LessonSection documents, each containing
- * title, textContent, highlights, visuals, and an `interactions[]` sub-array.
- * Sections are always returned sorted by their `order` field so the frontend
- * can render them sequentially without any client-side sorting.
- *
- * Localisation pipeline (applied to every user-facing string in each section):
- *  1. `pickI18nString`               – select the right language variant.
- *  2. `replaceQuotedSegments`        – inject content-language text into quoted spans.
- *  3. `buildOptionTokenReplacements` – build a token→translation map from option arrays.
- *  4. `applyTokenReplacements`       – substitute tokens with their localised equivalents.
- *
- * Exposes:
- *  - GET /api/lessons/:lessonId/sections  → exports.getLessonSections
- */
-
-// Mongoose – used to validate the lessonId route parameter as a MongoDB ObjectId
 const mongoose = require('mongoose');
-// LessonSection Mongoose model
 const LessonSection = require('../models/LessonSection');
-// i18n utilities for language normalisation and string localisation
 const {
   normalizeUiLanguage,
   pickI18nString,
@@ -32,29 +9,24 @@ const {
 } = require('../utils/i18n');
 
 /**
- * GET /api/lessons/:lessonId/sections[?lang=<uiLang>][&contentLang=<contentLang>]
- *
- * Return all LessonSection documents for the given lesson, sorted by `order`,
- * with every user-facing string localised to the requested language.
- *
- * Query parameters:
- *  - lang        : UI language (e.g. 'english', 'tamil', 'hindi'). Defaults to 'english'.
- *  - contentLang : Language for lesson body / interaction content. Falls back to `lang`
- *                  when omitted, allowing bilingual layouts (UI in English, content in Tamil).
- *
- * Response: { success: true, sections: LessonSection[], count: number }
- *
- * @param {import('express').Request}  req - Route param: lessonId; query: lang, contentLang.
- * @param {import('express').Response} res - JSON response.
+ * Lesson Section Controller
+ * -------------------------
+ * Provides sectioned lesson content for step-by-step lesson flows.
+ * Sections are fetched by `lessonId` and sorted by `order`.
+ */
+
+// @route   GET /api/lessons/:lessonId/sections
+// @desc    Get lesson sections for a lesson
+// @access  Private
+/**
+ * Returns ordered sections for a given lesson.
+ * Route params: { lessonId }
  */
 exports.getLessonSections = async (req, res) => {
   const { lessonId } = req.params;
-  // Normalise language strings to lowercase (e.g. 'English' -> 'english')
   const uiLanguage = normalizeUiLanguage(req.query.lang);
-  // contentLang allows the lesson body to be in a different language than the UI chrome
   const contentLanguage = normalizeUiLanguage(req.query.contentLang || uiLanguage);
 
-  // Validate the lessonId before querying MongoDB to return a clear 400 instead of a cast error
   if (!mongoose.Types.ObjectId.isValid(lessonId)) {
     return res.status(400).json({
       success: false,
@@ -63,16 +35,12 @@ exports.getLessonSections = async (req, res) => {
   }
 
   try {
-    // Step 1: Fetch sections from MongoDB sorted by `order` ascending.
     // `lean()` returns plain JS objects (faster + smaller) since we don't mutate documents here.
     const sections = await LessonSection.find({ lessonId })
       .sort({ order: 1 })
       .lean();
 
-    // Step 2: Localise every section's user-facing strings to the requested languages.
     const localized = (sections || []).map((section) => {
-      // Step 2a: Build a global token-replacement map from all interaction options in this
-      // section so that content-language tokens inside title/textContent are also resolved.
       const globalReplacements = Array.isArray(section.interactions)
         ? section.interactions.flatMap((interaction) => {
             const options = Array.isArray(interaction?.options) ? interaction.options : undefined;
@@ -81,22 +49,17 @@ exports.getLessonSections = async (req, res) => {
           })
         : [];
 
-      // Step 2b: Localise every field of every interaction in this section.
       const interactions = Array.isArray(section.interactions)
         ? section.interactions.map((interaction) => {
             const options = Array.isArray(interaction.options) ? interaction.options : undefined;
             const optionsI18n = Array.isArray(interaction.optionsI18n) ? interaction.optionsI18n : undefined;
-            // Per-interaction token map (built from this interaction's own options)
             const tokenReplacements = buildOptionTokenReplacements(uiLanguage, contentLanguage, options, optionsI18n);
-            // Resolve each option string to the content language
             const localizedOptions = options
               ? options.map((opt, idx) => pickI18nString(contentLanguage, opt, optionsI18n?.[idx]))
               : options;
 
             return {
               ...interaction,
-              // Each string field goes through: pick language variant → inject quoted
-              // content-language segments → substitute option tokens.
               question: applyTokenReplacements(
                 replaceQuotedSegments(
                   pickI18nString(uiLanguage, interaction.question, interaction.questionI18n),
@@ -104,7 +67,6 @@ exports.getLessonSections = async (req, res) => {
                 ),
                 tokenReplacements
               ),
-              // Options are resolved directly to content language (no token substitution needed)
               options: localizedOptions,
               hint: applyTokenReplacements(
                 replaceQuotedSegments(
@@ -120,8 +82,6 @@ exports.getLessonSections = async (req, res) => {
                 ),
                 tokenReplacements
               ),
-              // Feedback is a sub-object with `correct` and `incorrect` variants;
-              // preserve the full object shape when feedback is absent (null/undefined)
               feedback: interaction.feedback
                 ? {
                     ...interaction.feedback,
@@ -143,10 +103,8 @@ exports.getLessonSections = async (req, res) => {
                 : interaction.feedback,
             };
           })
-        : section.interactions; // preserve null/undefined as-is when no interactions exist
+        : section.interactions;
 
-      // Step 2c: Assemble the localised section, overwriting only the text fields;
-      // all other section fields (id, order, highlights, visuals, etc.) pass through unchanged.
       return {
         ...section,
         title: applyTokenReplacements(pickI18nString(uiLanguage, section.title, section.titleI18n), globalReplacements),
@@ -155,7 +113,6 @@ exports.getLessonSections = async (req, res) => {
       };
     });
 
-    // Step 3: Respond with the localised sections array and a convenience count field
     return res.json({
       success: true,
       sections: localized,

@@ -1,34 +1,7 @@
-/**
- * User.test.js — Model unit tests
- *
- * Tests the User Mongoose model defined in `backend/models/User.js`.
- *
- * Covers five areas:
- *  1. Password Hashing    — bcrypt pre-save hook: hash on create, skip if unchanged, rehash on change
- *  2. matchPassword       — bcrypt comparison helper: correct/incorrect/case-sensitive checks
- *  3. Schema Validation   — required fields, format rules, enum values, age range, defaults
- *  4. Default Values      — field defaults: requiresParentalApproval, isMinor, completedLessons
- *  5. Password Selection  — schema `select: false` ensures password is never returned by default
- *
- * Test approach:
- *  - Uses in-memory MongoDB (configured in jest setup) for fast, isolated tests.
- *  - All User.create() calls use unique email addresses to avoid unique-index collisions.
- */
-
-// mongoose — available for ObjectId or schema-level assertions if needed
 const mongoose = require('mongoose');
-// Subject under test — the User Mongoose model
 const User = require('../User');
 
-/** Top-level suite wrapping all User model test groups. */
 describe('User Model', () => {
-    /**
-     * Password Hashing
-     * Verifies the Mongoose pre-save hook that bcrypt-hashes the password field.
-     *  - On create: the stored value must differ from the plain-text input.
-     *  - On unrelated field save: the hash must remain identical (no unnecessary rehash).
-     *  - On password change: a new hash must be produced and must not equal the plain text.
-     */
     describe('Password Hashing', () => {
         it('should hash password on user creation', async () => {
             const userData = {
@@ -42,8 +15,7 @@ describe('User Model', () => {
 
             expect(user.password).toBeDefined();
             expect(user.password).not.toBe('plainPassword123');
-            // bcrypt hashes are at least 60 characters; > 20 is a pragmatic lower bound
-            expect(user.password.length).toBeGreaterThan(20);
+            expect(user.password.length).toBeGreaterThan(20); // Bcrypt hashes are long
         });
 
         it('should not rehash password if not modified', async () => {
@@ -56,7 +28,7 @@ describe('User Model', () => {
 
             const originalHash = user.password;
 
-            // Save a non-password field — the pre-save hook should skip hashing
+            // Update a different field
             user.name = 'Updated Name';
             await user.save();
 
@@ -73,7 +45,7 @@ describe('User Model', () => {
 
             const originalHash = user.password;
 
-            // Assign a new plain-text password — pre-save hook must produce a fresh hash
+            // Update password
             user.password = 'newPassword456';
             await user.save();
 
@@ -82,16 +54,10 @@ describe('User Model', () => {
         });
     });
 
-    /**
-     * matchPassword Method
-     * Verifies the User instance method that compares a plain-text candidate against
-     * the stored bcrypt hash.  bcrypt comparisons are inherently case-sensitive.
-     */
     describe('matchPassword Method', () => {
         let user;
 
         beforeEach(async () => {
-            // Create a fresh user before each test so all three cases share the same hash
             user = await User.create({
                 name: 'Test User',
                 email: 'match@example.com',
@@ -116,18 +82,6 @@ describe('User Model', () => {
         });
     });
 
-    /**
-     * Schema Validation
-     * Confirms that the User schema enforces all field-level constraints:
-     *  - Required fields: name, email, password, learningCondition
-     *  - Format: email must be a valid address
-     *  - Uniqueness: duplicate emails are rejected (MongoDB unique index)
-     *  - Enum: learningCondition must be one of ['dyslexia','adhd','autism','none']
-     *  - Enum: role must be one of ['learner','parent','admin']
-     *  - Range: age must be between 3 and 100 inclusive
-     *  - Transform: email is lower-cased; name is trimmed
-     *  - Defaults: role defaults to 'learner'; isActive defaults to true
-     */
     describe('Schema Validation', () => {
         it('should require name', async () => {
             const userData = {
@@ -190,7 +144,7 @@ describe('User Model', () => {
 
             await User.create(userData);
 
-            // Second create with the same email must throw a MongoDB duplicate-key (E11000) error
+            // Try to create another user with same email
             await expect(User.create(userData)).rejects.toThrow();
         });
 
@@ -206,7 +160,6 @@ describe('User Model', () => {
         });
 
         it('should accept valid learning conditions', async () => {
-            // All four allowed enum values must be accepted without throwing
             const conditions = ['dyslexia', 'adhd', 'autism', 'none'];
 
             for (const condition of conditions) {
@@ -222,7 +175,6 @@ describe('User Model', () => {
         });
 
         it('should validate age range', async () => {
-            // Ages outside the allowed min:3 / max:100 range must all be rejected
             const invalidAges = [2, 101, -5];
 
             for (const age of invalidAges) {
@@ -239,7 +191,6 @@ describe('User Model', () => {
         });
 
         it('should accept valid ages', async () => {
-            // Boundary and mid-range values must all be stored without error
             const validAges = [3, 10, 25, 50, 100];
 
             for (const age of validAges) {
@@ -312,11 +263,6 @@ describe('User Model', () => {
         });
     });
 
-    /**
-     * Default Values
-     * Confirms that fields with schema-level defaults are populated correctly
-     * when a new User document is created without explicitly providing those fields.
-     */
     describe('Default Values', () => {
         it('should set requiresParentalApproval to false by default', async () => {
             const user = await User.create({
@@ -352,13 +298,6 @@ describe('User Model', () => {
         });
     });
 
-    /**
-     * Password Selection
-     * Verifies the schema's `select: false` on the password field:
-     *  - A standard findOne() must NOT include the password in the returned document.
-     *  - A findOne() with `.select('+password')` MUST include it.
-     * This prevents accidental password leakage in API responses.
-     */
     describe('Password Selection', () => {
         it('should not return password by default', async () => {
             await User.create({
