@@ -1638,7 +1638,7 @@ const MemoryCardFlipGame = ({ uiText, buttonClassName = 'btn-settings' }) => {
         className="memory-grid"
         role="grid"
         aria-label={uiText('Memory grid')}
-        style={{ ['--memory-cols']: gridCols }}
+        style={{ '--memory-cols': gridCols }}
       >
         {deck.map((card, idx) => {
           const isFlipped = flipped.includes(idx) || matched.has(card.pairId);
@@ -1686,6 +1686,7 @@ const MemoryCardFlipGame = ({ uiText, buttonClassName = 'btn-settings' }) => {
   );
 };
 
+// eslint-disable-next-line no-unused-vars
 const QuickTapWordGame = ({ uiText, buttonClassName = 'btn-settings' }) => {
   const ROUNDS = useMemo(
     () => [
@@ -2080,7 +2081,7 @@ const MoodMatchGame = ({ uiText, buttonClassName = 'btn-settings' }) => {
   const options = useMemo(() => {
     const distractors = shuffleArray(EMOTIONS.filter((e) => e.id !== current.id)).slice(0, 2);
     return shuffleArray([current, ...distractors]);
-  }, [EMOTIONS, current.id]);
+  }, [EMOTIONS, current]);
 
   const choose = (optId) => {
     if (isCorrect) return;
