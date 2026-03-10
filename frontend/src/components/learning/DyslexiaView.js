@@ -376,7 +376,7 @@ const DyslexiaView = () => {
           <button
             type="button"
             onClick={() => navigate('/badges')}
-            className="btn-settings btn-badges"
+            className="btn-settings"
             title={t('learning.common.badges')}
             aria-label={t('learning.common.badges')}
             style={{ display: 'flex', alignItems: 'center', gap: 6 }}
