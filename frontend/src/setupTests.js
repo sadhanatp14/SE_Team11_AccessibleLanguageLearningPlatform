@@ -53,3 +53,23 @@ beforeAll(() => {
 afterAll(() => {
     console.error = originalError;
 });
+
+// Mock HTMLMediaElement methods (audio/video playback)
+window.HTMLMediaElement.prototype.play = jest.fn(() => Promise.resolve());
+window.HTMLMediaElement.prototype.pause = jest.fn();
+window.HTMLMediaElement.prototype.load = jest.fn();
+
+// Mock Audio constructor globally
+global.Audio = jest.fn().mockImplementation(() => ({
+    play: jest.fn(() => Promise.resolve()),
+    pause: jest.fn(),
+    load: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    playbackRate: 1,
+    currentTime: 0,
+    duration: 0,
+    paused: true,
+    ended: false,
+    src: '',
+}));
