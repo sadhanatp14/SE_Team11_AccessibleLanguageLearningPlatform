@@ -304,6 +304,9 @@ const DyslexiaView = () => {
     [syllableMode, isEnglish]
   );
 
+  const nameSuffix = user?.name ? ` ${user.name}` : '';
+  const welcomeBaseTitle = isEnglish ? 'Welcome' : t('learning.dyslexia.welcomeTitle');
+
   /**
    * UI copy dictionary – every user-facing string has a normal and a
    * syllable-split variant. The `uiText` helper selects the right one
@@ -311,7 +314,7 @@ const DyslexiaView = () => {
    */
   const copy = {
     greeting: uiText(t('learning.dyslexia.greeting'), 'Hel-lo'),
-    welcomeTitle: uiText(t('learning.dyslexia.welcomeTitle'), 'Wel-come to Your Learn-ing Space'),
+    welcomeTitle: uiText(`${welcomeBaseTitle}${nameSuffix}`, `Wel-come${nameSuffix}`),
     welcomeBody: uiText(
       t('learning.dyslexia.welcomeBody'),
       'Dyslexia is about how the brain processes language sounds (not vision). Reading can take extra time, so try decoding words in parts (syllables) like: fan–tas–tic. This space supports you with clear fonts, proper spacing, and visual cues to make reading easier.'
