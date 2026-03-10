@@ -386,7 +386,7 @@ const InteractionCard = ({
 
     // Try Backend TTS first
     try {
-      const ttsLanguageKey = overrides.languageKey ?? uiLanguage;
+      const ttsLanguageKey = overrides.languageKey ?? resolvedContentLanguage ?? uiLanguage;
       const response = await fetch('/api/tts/speak', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -450,7 +450,7 @@ const InteractionCard = ({
       if (typeof window !== 'undefined' && window.speechSynthesis) {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = overrides.rate ?? 0.85;
-        const ttsLanguageKey = overrides.languageKey ?? uiLanguage;
+        const ttsLanguageKey = overrides.languageKey ?? resolvedContentLanguage ?? uiLanguage;
         utterance.lang = overrides.lang ?? speechSynthesisLangFor(ttsLanguageKey);
 
         if (overrides.trackWords) {
@@ -468,7 +468,7 @@ const InteractionCard = ({
         window.speechSynthesis.speak(utterance);
       }
     }
-  }, [enableTts, startInstructionBoundaryTracking, stripWordPunctuation, uiLanguage]);
+  }, [enableTts, startInstructionBoundaryTracking, stripWordPunctuation, uiLanguage, resolvedContentLanguage]);
 
   useEffect(() => {
     if (!isInstructionsOpen) return undefined;

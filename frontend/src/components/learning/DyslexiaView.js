@@ -99,6 +99,9 @@ const DyslexiaView = () => {
    * The apiId suffix changes based on the selected language so the correct
    * lesson content (English / Hindi / Tamil) is loaded.
    */
+  // Language suffix appended to each lesson's apiId so the backend
+  // returns content in the correct language. Empty string for English,
+  // e.g. "lesson-greetings" (English) vs "lesson-greetings-hindi" (Hindi).
   const langSuffix = lang === 'hindi' ? '-hindi' : lang === 'tamil' ? '-tamil' : '';
 
   const lessons = [
@@ -259,14 +262,28 @@ const DyslexiaView = () => {
     [syllableMode, isEnglish]
   );
 
+  /**
+   * Memoised callback that maps an English progress-status string
+   * ("Completed", "In Progress", "Not Started") to its localised
+   * equivalent for non-English languages. When the UI is already in
+   * English the raw value is returned as-is. The normalisation step
+   * (lowercasing + substring check) keeps the mapping resilient to
+   * minor variations in the stored status strings.
+   *
+   * @param {string|undefined} status – raw status from lesson progress data
+   * @returns {string} localised status label
+   */
   const displayStatus = React.useCallback(
     (status) => {
       const value = status || 'Not Started';
+      // English UI – no translation needed
       if (isEnglish) return value;
+      // Normalise to lowercase for case-insensitive comparison
       const normalized = String(value).toLowerCase();
       if (normalized.includes('complete')) return t('learning.common.statusCompleted');
       if (normalized.includes('progress')) return t('learning.common.statusInProgress');
       if (normalized.includes('not started') || normalized.includes('not-started')) return t('learning.common.statusNotStarted');
+      // Fallback: return the original value if no translation key matches
       return value;
     },
     [isEnglish, t]
@@ -277,6 +294,10 @@ const DyslexiaView = () => {
    * syllable-split variant. The `uiText` helper selects the right one
    * based on the current syllableMode state.
    */
+  // Each key holds the result of uiText(normal, syllable):
+  // – Normal variant uses the i18n translation function t()
+  // – Syllable variant is an English-only hand-crafted split
+  // The active variant depends on syllableMode and the current language.
   const copy = {
     greeting: uiText(t('learning.dyslexia.greeting'), 'Hel-lo'),
     welcomeTitle: uiText(t('learning.dyslexia.welcomeTitle'), 'Wel-come to Your Learn-ing Space'),
@@ -321,8 +342,19 @@ const DyslexiaView = () => {
 
   return (
     <div className="dyslexia-view">
-      {/* Navigation Bar */}
+      {/*
+        ── Navigation Bar ──
+        Top-level navbar containing:
+        1. Brand logo + label
+        2. Home button      – returns to the main dashboard
+        3. Progress button   – navigates to the progress overview page
+        4. Syllable toggle   – enables / disables syllable-split text (EPIC 1.4.2)
+        5. Simple layout toggle – hides non-essential UI sections for reduced cognitive load
+        6. Settings button   – opens the ProfileSettings modal
+        7. Logout button     – signs the user out via AuthContext
+      */}
       <nav className="navbar">
+        {/* Brand logo and application title */}
         <div className="nav-brand">
           <h1 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <BookOpen size={22} aria-hidden="true" />
@@ -330,6 +362,7 @@ const DyslexiaView = () => {
           </h1>
         </div>
         <div className="nav-menu">
+          {/* Home button – navigates back to the main dashboard */}
           <button
             type="button"
             onClick={() => navigate('/dashboard')}
@@ -341,6 +374,7 @@ const DyslexiaView = () => {
             <BookOpen size={18} aria-hidden="true" />
             <span>Home</span>
           </button>
+          {/* Progress button – navigates to the learner's progress/analytics page */}
           <button
             type="button"
             onClick={() => navigate('/progress')}
@@ -352,6 +386,12 @@ const DyslexiaView = () => {
             <Hash size={18} aria-hidden="true" />
             <span>Progress</span>
           </button>
+          {/*
+            Syllable Mode toggle (EPIC 1.4.2)
+            When pressed, all UI text switches between normal and
+            syllable-split variants to aid phonological decoding.
+            aria-pressed communicates the toggle state to screen readers.
+          */}
           <button
             type="button"
             onClick={toggleSyllableMode}
@@ -368,9 +408,17 @@ const DyslexiaView = () => {
             <span className="btn-syllable-toggle__label">{t('learning.dyslexia.syllableMode')}</span>
             <span className="btn-syllable-toggle__state">{syllableMode ? t('learning.common.on') : t('learning.common.off')}</span>
           </button>
+          {/*
+            Simplified Layout toggle
+            Hides secondary UI sections (reading guide, progress meta,
+            performance indicator) to reduce visual clutter and
+            cognitive load for users who prefer a minimal interface.
+            The preference is persisted via the PreferencesContext.
+          */}
           <button
             type="button"
             onClick={async () => {
+              // Toggle the simplifiedLayout flag and persist it
               const newValue = !preferences?.simplifiedLayout;
               await updateAccessibilitySettings({ simplifiedLayout: newValue });
             }}
@@ -387,6 +435,7 @@ const DyslexiaView = () => {
             <span className="btn-simplified-toggle__label">Simple</span>
             <span className="btn-simplified-toggle__state">{preferences?.simplifiedLayout ? t('learning.common.on') : t('learning.common.off')}</span>
           </button>
+          {/* Settings button – opens the ProfileSettings modal overlay */}
           <button
             type="button"
             onClick={() => setShowSettings(true)}
@@ -397,6 +446,7 @@ const DyslexiaView = () => {
             <Settings size={18} aria-hidden="true" />
             <span>Settings</span>
           </button>
+          {/* Logout button – calls AuthContext.logout to end the session */}
           <button onClick={logout} className="btn-logout">
             {t('learning.common.logout')}
           </button>
@@ -417,11 +467,20 @@ const DyslexiaView = () => {
           </p>
         </div>
 
-        {/* Reading Guide - only show in normal mode, hide in simplified */}
+        {/*
+          ── Reading Guide Section ──
+          Three evidence-based tips for dyslexic readers:
+          1. Sounds First  – encourages speaking words aloud (phonological awareness)
+          2. Break It Down – demonstrates syllable splitting with a visual chip
+          3. Spelling Is Sound-Based – reassures that phonetic spelling is normal
+
+          Hidden when simplified layout is active to reduce cognitive load.
+        */}
         {!preferences?.simplifiedLayout && (
           <section className="guide-section" aria-label={t('learning.dyslexia.guideTitle')}>
             <h3>{copy.guideTitle}</h3>
             <div className="guide-grid">
+            {/* Guide Card 1 – Sounds First: phonological awareness tip */}
             <div className="guide-card">
               <div className="guide-card__title">
                 <Volume2 size={18} aria-hidden="true" />
@@ -431,6 +490,7 @@ const DyslexiaView = () => {
                 {copy.guideSoundsBody}
               </p>
             </div>
+            {/* Guide Card 2 – Break It Down: syllable decoding demonstration */}
             <div className="guide-card">
               <div className="guide-card__title">
                 <BookOpen size={18} aria-hidden="true" />
@@ -438,10 +498,12 @@ const DyslexiaView = () => {
               </div>
               <p>
                 {copy.guideBreakBodyPrefix}{' '}
+                {/* syllable-chip renders the word with visible syllable delimiters */}
                 <span className="syllable-chip">{copy.guideBreakChip}</span>.
                 {' '}{copy.guideBreakBodySuffix}
               </p>
             </div>
+            {/* Guide Card 3 – Spelling Is Sound-Based: reassurance about phonetic spelling */}
             <div className="guide-card">
               <div className="guide-card__title">
                 <Info size={18} aria-hidden="true" />
@@ -455,10 +517,21 @@ const DyslexiaView = () => {
         </section>
         )}
 
-        {/* Next-Lesson Recommendation — shown prominently above the lessons grid */}
+        {/*
+          ── Next-Lesson Recommendation ──
+          Shown prominently above the lessons grid to guide the learner
+          towards the most appropriate next lesson.
+
+          Two states:
+          A) allCompleted === true  → congratulatory card, all lessons done
+          B) recommendation exists  → card with "Start" / "Skip" actions
+             - Hidden if the learner has already skipped this recommendation
+               during the current session (tracked via nextLessonService).
+        */}
         {recommendation && (
           <section className="lessons-section" aria-label="Recommended next lesson">
             {recommendation.allCompleted ? (
+              /* State A: All lessons completed – show congratulations message */
               <NextLessonCard
                 allCompleted
                 completionMsg={recommendation.reason}
@@ -466,6 +539,7 @@ const DyslexiaView = () => {
                 syllableMode={syllableMode}
               />
             ) : (
+              /* State B: Recommended lesson available and not skipped */
               recommendation.recommendation &&
               !isRecommendationSkipped(recommendation.recommendation.apiId) &&
               !recommendation._skipped && (
@@ -487,6 +561,12 @@ const DyslexiaView = () => {
         <div className="lessons-section">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h3>{copy.lessonsTitle}</h3>
+            {/*
+              Performance Indicator pill
+              Displays the learner's adaptive difficulty level (e.g. "Beginner")
+              and their recent average score percentage.
+              Hidden in simplified layout or when no lessons have been attempted.
+            */}
             {!preferences?.simplifiedLayout && performanceSummary && performanceSummary.totalLessons > 0 && (
               <div className="performance-indicator" style={{ 
                 display: 'flex', 
@@ -508,46 +588,72 @@ const DyslexiaView = () => {
               </div>
             )}
           </div>
+          {/*
+            ── Lesson Card Loop ──
+            Iterates over the static `lessons` array and renders a card
+            for each one. Each card shows:
+              • Icon with a coloured gradient circle
+              • Localised title and description (syllable-split if active)
+              • Difficulty badge (driven by the adaptive difficulty system)
+              • Status pill ("Not Started" / "In Progress" / "Completed")
+              • Progress bar (percentage of correctly answered interactions)
+              • "Start Learning" CTA button
+            The progress data is sourced from localStorage via dyslexiaProgressService.
+          */}
           <div className="lessons-grid">
             {lessons.map((lesson) => {
               // Look up stored progress for this lesson; default to 'Not Started' / 0 correct
               const progress = lessonProgress?.[lesson.apiId] || { status: 'Not Started', correctCount: 0 };
               // Use the stored totalInteractions from progress if available, otherwise fall back to the lesson definition
               const total = progress.totalInteractions || lesson.totalInteractions || 1;
-              // Calculate completion percentage based on the actual number of interactions in the lesson
+              // Calculate completion percentage: cap at 100% to handle edge cases
               const percent = Math.min(100, Math.round(((progress.correctCount || 0) / total) * 100));
               // Convert status text to a CSS-safe class name (e.g. "Not Started" → "not-started")
               const statusClass = (progress.status || 'Not Started').replace(/\s+/g, '-').toLowerCase();
-              // Use adaptive difficulty level instead of hardcoded "Beginner"
+              // Use adaptive difficulty level from the difficulty adjustment system
               const difficultyLevel = currentDifficulty || lesson.level;
+
+              // Resolve the display title: use syllable variant when syllableMode
+              // is active (English only); otherwise use the i18n translated key
               const lessonTitle = isEnglish
                 ? (syllableMode ? lesson.titleSyllables : lesson.title)
                 : t(lesson.titleKey);
+              // Same logic for the lesson description
               const lessonDescription = isEnglish
                 ? (syllableMode ? lesson.descriptionSyllables : lesson.description)
                 : t(lesson.descriptionKey);
+              // Level badge label – localised for non-English languages
               const lessonLevel = isEnglish ? difficultyLevel : t('learning.common.beginner');
               return (
                 <div key={lesson.id} className="lesson-card">
+                  {/* Gradient icon circle – colour defined per lesson */}
                   <div className="lesson-icon" style={{ background: `linear-gradient(135deg, ${lesson.color}88, ${lesson.color})` }}>
                     <lesson.Icon size={28} aria-hidden="true" />
                   </div>
+                  {/* Lesson title (syllable-split or normal) */}
                   <h4>{lessonTitle}</h4>
+                  {/* Short description of what the lesson covers */}
                   <p className="lesson-description">{lessonDescription}</p>
+                  {/* Meta information and progress bar – hidden in simplified layout */}
                   {!preferences?.simplifiedLayout && (
                     <>
                       <div className="lesson-meta">
+                        {/* Difficulty badge (adaptive) */}
                         <span className="badge">{lessonLevel}</span>
+                        {/* Status pill – colour varies by status via CSS class */}
                         <span className={`status-pill status-${statusClass}`}>{displayStatus(progress.status)}</span>
                       </div>
                       <div className="lesson-progress">
+                        {/* Visual progress bar filled to `percent`% */}
                         <div className="progress-bar-container">
                           <div className="progress-bar-fill" style={{ width: `${percent}%` }} />
                         </div>
+                        {/* Textual progress label, e.g. "45% Complete" */}
                         <span className="progress-text">{t('learning.common.percentComplete', { percent })}</span>
                       </div>
                     </>
                   )}
+                  {/* CTA button – navigates to the lesson page */}
                   <button className="btn btn-primary btn-block" onClick={() => handleStartLesson(lesson)}>
                     {copy.lessonCta}
                   </button>
@@ -557,18 +663,28 @@ const DyslexiaView = () => {
           </div>
         </div>
 
-        {/* Tips Section */}
+        {/*
+          ── Tips Section ──
+          Three actionable learning tips displayed as cards:
+          1. Break It Down      – encourages tackling one lesson at a time
+          2. Use Audio          – promotes multi-sensory learning via audio
+          3. Practice Regularly – advocates short, frequent study sessions
+          All text respects syllable mode when active (English only).
+        */}
         <div className="tips-section">
           <h3>{copy.tipsTitle}</h3>
           <div className="tips-grid">
+            {/* Tip 1 – Break It Down */}
             <div className="tip-card">
               <h4>{copy.tipBreakTitle}</h4>
               <p>{copy.tipBreakBody}</p>
             </div>
+            {/* Tip 2 – Use Audio */}
             <div className="tip-card">
               <h4>{copy.tipAudioTitle}</h4>
               <p>{copy.tipAudioBody}</p>
             </div>
+            {/* Tip 3 – Practice Regularly */}
             <div className="tip-card">
               <h4>{copy.tipPracticeTitle}</h4>
               <p>{copy.tipPracticeBody}</p>

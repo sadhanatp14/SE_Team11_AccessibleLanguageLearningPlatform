@@ -6,6 +6,7 @@ import { usePreferences } from '../../context/PreferencesContext';
 import { getLessonProgress, normalizeUserId, saveLessonProgress } from '../../services/dyslexiaProgressService';
 import { decorateDyslexiaText, useDyslexiaContext } from '../../utils/dyslexiaSyllableMode';
 import {
+  backendTtsLangFor,
   bilingualPrimaryLanguageForMode,
   isBilingualTextMode,
   resolveBilingualTextModeFromPreferences,
@@ -245,7 +246,7 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
     try {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = playbackRate;
-      utterance.lang = speechSynthesisLangFor(uiLanguage);
+      utterance.lang = speechSynthesisLangFor(contentLanguage || uiLanguage);
       utterance.volume = 0;
 
       utterance.onboundary = (event) => {
@@ -328,10 +329,11 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
 
     // 2. Try Backend TTS first (Reliable on all OS)
     try {
+      const ttsLangKey = contentLanguage || uiLanguage;
       const response = await fetch('/api/tts/speak', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, speed: playbackRate })
+        body: JSON.stringify({ text, speed: playbackRate, lang: backendTtsLangFor(ttsLangKey) })
       });
 
       if (!response.ok) throw new Error('Backend TTS failed');
@@ -369,6 +371,7 @@ const LessonSectionView = ({ section, lessonId, isReplay, useLocalSubmission, on
       // 3. Fallback to Browser TTS
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = playbackRate;
+      utterance.lang = speechSynthesisLangFor(contentLanguage || uiLanguage);
 
       utterance.onboundary = (event) => {
         if (event.name === 'word') {
