@@ -25,6 +25,7 @@ import {
   BookOpen,
   ChevronLeft,
   Dumbbell,
+  Gamepad2,
   Hand,
   Hash,
   Headphones,
@@ -1709,6 +1710,17 @@ const ADHDView = ({ initialLessonId = null }) => {
           >
             <ChevronLeft size={18} aria-hidden="true" />
             <span>{t('learning.common.back')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/games')}
+            className="btn-minimal"
+            title={t('learning.common.games')}
+            aria-label={t('learning.common.games')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <Gamepad2 size={18} aria-hidden="true" />
+            <span>{t('learning.common.games')}</span>
           </button>
           {/* Existing controls below */}
           {isSessionActive && timeRemaining !== null && (

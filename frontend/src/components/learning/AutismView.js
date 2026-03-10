@@ -28,6 +28,7 @@ import {
   BookOpen,
   Check,
   ChevronLeft,
+  Gamepad2,
   Hand,
   Hash,
   Info,
@@ -2809,6 +2810,17 @@ const AutismView = ({ initialLessonId = null }) => {
           >
             <ChevronLeft size={18} aria-hidden="true" />
             <span>{t('learning.common.back')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/games')}
+            className="btn-settings"
+            title={t('learning.common.games')}
+            aria-label={t('learning.common.games')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <Gamepad2 size={18} aria-hidden="true" />
+            <span>{t('learning.common.games')}</span>
           </button>
           <button onClick={logout} className="btn-exit">
             {t('learning.common.logout')}

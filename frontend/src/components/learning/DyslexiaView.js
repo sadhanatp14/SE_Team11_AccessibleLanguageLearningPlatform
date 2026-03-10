@@ -43,7 +43,7 @@ import NextLessonCard from './NextLessonCard';
 // Reusable profile/settings modal component
 import ProfileSettings from '../ProfileSettings';
 // Icon components from lucide-react used in the UI
-import { Award, BookOpen, ChevronLeft, Hash, Info, Languages, Menu, MessageCircle, Settings, Volume2, TrendingUp, X } from 'lucide-react';
+import { Award, BookOpen, ChevronLeft, Gamepad2, Hash, Info, Languages, Menu, MessageCircle, Settings, Volume2, TrendingUp, X } from 'lucide-react';
 // Custom hook that persists the syllable-mode preference in localStorage
 import { useDyslexiaSyllableMode } from '../../utils/dyslexiaSyllableMode';
 import { useI18n } from '../../utils/i18n';
@@ -383,6 +383,17 @@ const DyslexiaView = () => {
           >
             <ChevronLeft size={18} aria-hidden="true" />
             <span>{t('learning.common.back')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/games')}
+            className="btn-settings"
+            title={t('learning.common.games')}
+            aria-label={t('learning.common.games')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <Gamepad2 size={18} aria-hidden="true" />
+            <span>{t('learning.common.games')}</span>
           </button>
           <button onClick={logout} className="btn-logout">
             {t('learning.common.logout')}

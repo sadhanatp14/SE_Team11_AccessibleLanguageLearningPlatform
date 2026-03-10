@@ -134,6 +134,10 @@ describe('ADHDView Component - ADHD Learning Features', () => {
         api.get.mockResolvedValue({ data: { success: true, completedLessons: [] } });
         api.post.mockResolvedValue({ data: { success: true } });
 
+        // Prevent cross-test leakage: other suites mock fetch to succeed for backend TTS.
+        // For these ADHDView tests, keep fetch failing so the component uses browser TTS.
+        global.fetch = jest.fn().mockRejectedValue(new Error('Network request failed'));
+
         // Reset preferences mock
         mockPreferences = {
             distractionFreeMode: false,
