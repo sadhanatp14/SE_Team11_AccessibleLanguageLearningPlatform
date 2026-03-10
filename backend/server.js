@@ -44,6 +44,7 @@ app.use('/api/users', require('./routes/users')); // User management
 app.use('/api/lessons', require('./routes/lessons')); // Lesson content
 app.use('/api/interactions', require('./routes/interactions')); // User interactions
 app.use('/api/progress', require('./routes/progress')); // Progress tracking
+app.use('/api/badges', require('./routes/badges')); // Badges/achievements
 app.use('/api/ai', require('./routes/ai')); // AI features
 app.use('/api/tts', require('./routes/tts')); // Text-to-speech
 app.use('/api/admin', require('./routes/admin')); // Admin-specific management endpoints

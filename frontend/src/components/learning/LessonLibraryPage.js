@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, BookOpen, ChevronLeft } from 'lucide-react';
+import { ArrowRight, Award, BookOpen, ChevronLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { usePreferences } from '../../context/PreferencesContext';
 import { useI18n } from '../../utils/i18n';
+import api from '../../utils/api';
 import { resolveUiLanguageFromPreferences } from '../../utils/languagePrefs';
 import { pickI18nString } from '../../utils/lessonI18n';
 
@@ -268,6 +269,7 @@ const LessonLibraryPage = () => {
   const uiLanguage = useMemo(() => resolveUiLanguageFromPreferences(preferences), [preferences]);
 
   const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [completedLessonKeys, setCompletedLessonKeys] = useState([]);
 
   const condition = String(user?.learningCondition || 'dyslexia').toLowerCase();
   const lessons = useMemo(() => LESSON_LIBRARY[condition] || LESSON_LIBRARY.dyslexia, [condition]);
@@ -347,6 +349,46 @@ const LessonLibraryPage = () => {
     const safeSelectedLanguage = LANGUAGE_KEYS.includes(selectedLanguage) ? selectedLanguage : 'en';
     return lessons.filter((lesson) => (lesson.language || 'en') === safeSelectedLanguage);
   }, [lessons, selectedLanguage]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadCompleted = async () => {
+      try {
+        const res = await api.get('/users/completed-lessons');
+        if (!mounted) return;
+        if (res?.data?.success && Array.isArray(res.data.completedLessons)) {
+          setCompletedLessonKeys(res.data.completedLessons);
+        } else {
+          setCompletedLessonKeys([]);
+        }
+      } catch (e) {
+        mounted && setCompletedLessonKeys([]);
+      }
+    };
+
+    loadCompleted();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const completedLessonKeySet = useMemo(() => {
+    return new Set(completedLessonKeys.filter((k) => typeof k === 'string'));
+  }, [completedLessonKeys]);
+
+  const completionKeyForLesson = (lesson) => {
+    if (condition === 'dyslexia') {
+      return lesson?.apiId ? `sample-${lesson.apiId}` : '';
+    }
+    if (condition === 'adhd') {
+      return lesson?.id ? `adhd-lesson-${lesson.id}` : '';
+    }
+    if (condition === 'autism') {
+      return lesson?.id ? `autism-lesson-${lesson.id}` : '';
+    }
+    return '';
+  };
 
   useEffect(() => {
     if (languageAvailability[selectedLanguage] > 0) return;
@@ -504,7 +546,29 @@ const LessonLibraryPage = () => {
                 e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.05)';
               }}
             >
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>{t('learning.library.lessonNumber', { number: index + 1 })}</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>{t('learning.library.lessonNumber', { number: index + 1 })}</div>
+                {completedLessonKeySet.has(completionKeyForLesson(lesson)) ? (
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: '12px',
+                      fontWeight: 800,
+                      padding: '4px 10px',
+                      borderRadius: '999px',
+                      background: 'rgba(34, 197, 94, 0.12)',
+                      color: '#166534',
+                    }}
+                    aria-label={t('badges.completed')}
+                    title={t('badges.completed')}
+                  >
+                    <Award size={14} aria-hidden="true" />
+                    <span>{t('badges.completed')}</span>
+                  </div>
+                ) : null}
+              </div>
               <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--text-primary)' }}>{renderLibraryText(lesson.title, lesson.titleI18n)}</h3>
               <p style={{ margin: 0, color: 'var(--text-secondary)', flex: 1 }}>{renderLibraryText(lesson.description, lesson.descriptionI18n)}</p>
               <button

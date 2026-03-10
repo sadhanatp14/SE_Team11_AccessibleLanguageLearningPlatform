@@ -127,6 +127,19 @@
   color: #1e293b;
 }
 
+/* Badges button hover: slightly darker shade for Autism view */
+.btn-settings.btn-badges:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.btn-settings.btn-badges:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.22);
+  border-color: #94a3b8;
+}
+
 /* Logout should animate to a darker red on Autism view */
 .btn-exit:hover {
   background: #fff1f2;

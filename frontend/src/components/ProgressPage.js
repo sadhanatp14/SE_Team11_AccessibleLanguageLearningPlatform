@@ -7,7 +7,7 @@ import './learning/DyslexiaView.css';
 import './learning/AutismView.css';
 import { getAllLessonProgress, normalizeUserId } from '../services/dyslexiaProgressService';
 import api from '../utils/api';
-import { BookOpen } from 'lucide-react';
+import { Award, BookOpen } from 'lucide-react';
 import { getDyslexiaLessonTitle, useDyslexiaSyllableMode } from '../utils/dyslexiaSyllableMode';
 import { useI18n } from '../utils/i18n';
 
@@ -433,12 +433,23 @@ const ProgressPage = () => {
             <div className={user?.learningCondition === 'autism' ? 'lessons-simple-grid' : 'lessons-grid'}>
               {filteredLessonCards.map((l) => {
                 const statusClass = (l.status || 'Not Started').replace(/\s+/g, '-').toLowerCase();
+                const isCompleted = l.status === 'Completed' || Number(l.percent || 0) >= 100;
                 return (
                   <div key={l.id} className={user?.learningCondition === 'autism' ? 'lesson-simple-card' : 'lesson-card'}>
                     <div className="lesson-icon" aria-hidden="true"><BookOpen size={22} /></div>
                     <h4>{l.title}</h4>
                     <div className="lesson-meta">
                       <span className={`status-pill status-${statusClass}`}>{l.statusLabel}</span>
+                      {isCompleted ? (
+                        <span
+                          className="status-pill"
+                          style={{ background: 'rgba(34, 197, 94, 0.12)', color: '#166534', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                          aria-label={t('badges.completed')}
+                        >
+                          <Award size={14} aria-hidden="true" />
+                          {t('badges.completed')}
+                        </span>
+                      ) : null}
                     </div>
                     <div className="lesson-progress">
                       <div className="progress-bar-container">

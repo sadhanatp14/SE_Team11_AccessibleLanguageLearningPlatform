@@ -13,6 +13,7 @@ import ProtectedRoute from './components/ProtectedRoute'; // Wrapper for protect
 import LessonPage from './components/learning/LessonPage'; // Individual lesson view
 import LessonLibraryPage from './components/learning/LessonLibraryPage'; // Dedicated page to browse all lessons
 import ProgressPage from './components/ProgressPage'; // Progress tracking page
+import BadgesPage from './components/BadgesPage';
 import AdminUsersList from './components/admin/AdminUsersList';
 import AdminUserDetail from './components/admin/AdminUserDetail';
 import { useI18n } from './utils/i18n';
@@ -144,6 +145,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ProgressPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/badges"
+              element={
+                <ProtectedRoute>
+                  <BadgesPage />
                 </ProtectedRoute>
               }
             />

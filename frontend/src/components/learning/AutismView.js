@@ -32,6 +32,7 @@ import {
   Hash,
   Info,
   Lightbulb,
+  Award,
   Menu,
   Mic,
   Pause,
@@ -2797,6 +2798,17 @@ const AutismView = ({ initialLessonId = null }) => {
           >
             <BookOpen size={18} aria-hidden="true" />
             <span>{t('learning.common.home')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/badges')}
+            className="btn-settings btn-badges"
+            title={t('learning.common.badges')}
+            aria-label={t('learning.common.badges')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <Award size={18} aria-hidden="true" />
+            <span>{t('learning.common.badges')}</span>
           </button>
           <button
             type="button"
