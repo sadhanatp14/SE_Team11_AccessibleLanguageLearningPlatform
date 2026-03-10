@@ -1,21 +1,3 @@
-/**
- * LessonLibraryPage.js
- *
- * Full-screen lesson catalogue where learners can browse and launch any available
- * lesson regardless of the adaptive learning-path recommendation.
- *
- * Features:
- *  - Shows lessons filtered by the learner's condition (dyslexia, ADHD, autism).
- *  - Language filter tabs (English / Tamil / Hindi) derived from lesson metadata.
- *  - Automatically syncs the selected language with the user's UI language preference.
- *  - Marks completed lessons with an Award badge via /users/completed-lessons API.
- *  - Applies all user preferences (contrast, font, spacing, distraction-free mode).
- *  - Supports syllable-mode title decoration for dyslexia learners (EPIC 1.4.2).
- *
- * Navigation:
- *  - Dyslexia lessons: navigate to /lessons/:apiId directly.
- *  - ADHD / Autism lessons: navigate to /dashboard with openCondition + openLessonId state.
- */
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Award, BookOpen, ChevronLeft } from 'lucide-react';
@@ -28,27 +10,14 @@ import { pickI18nString } from '../../utils/lessonI18n';
 import { getDyslexiaLessonDescription, getDyslexiaLessonTitle, useDyslexiaSyllableMode } from '../../utils/dyslexiaSyllableMode';
 import SyllableModeToggle from '../common/SyllableModeToggle';
 
-// Supported language filter keys – order determines the display order of the tab bar.
 const LANGUAGE_KEYS = ['en', 'ta', 'hi'];
 
-// Fallback English display labels used when i18n strings are not yet loaded.
 const languageLabel = {
   en: 'English',
   ta: 'Tamil',
   hi: 'Hindi',
 };
 
-/**
- * Static lesson catalogue grouped by learning condition.
- * Each entry describes one lesson card in the library UI.
- *  - id             : 1-based position within the condition group.
- *  - title          : English display title.
- *  - titleI18n      : Tamil/Hindi display title overrides.
- *  - description    : English card summary.
- *  - descriptionI18n: Tamil/Hindi summary overrides.
- *  - apiId          : Backend lesson slug used for routing (dyslexia only).
- *  - language       : Primary content language key ('en' | 'ta' | 'hi').
- */
 const LESSON_LIBRARY = {
   dyslexia: [
     {
@@ -287,45 +256,27 @@ const LESSON_LIBRARY = {
   ],
 };
 
-// Fallback English condition labels used when i18n strings are not yet loaded.
 const labelByCondition = {
   dyslexia: 'Dyslexia',
   adhd: 'ADHD',
   autism: 'Autism',
 };
 
-/**
- * LessonLibraryPage – Displays the full, filterable lesson catalogue.
- * Learners can browse all lessons for their condition and open any one directly,
- * bypassing the adaptive recommendation order used in the condition dashboards.
- */
 const LessonLibraryPage = () => {
-  // React Router hook for programmatic navigation
   const navigate = useNavigate();
-  // Current authenticated user (provides learningCondition)
   const { user } = useAuth();
-  // User accessibility preferences (contrast, font, spacing, etc.)
   const { preferences } = usePreferences();
-  // i18n translation helper
   const { t } = useI18n();
 
-  // Resolved verbose UI language ('english' | 'tamil' | 'hindi')
   const uiLanguage = useMemo(() => resolveUiLanguageFromPreferences(preferences), [preferences]);
-  // Syllable mode state for dyslexia users (EPIC 1.4.2)
   const [syllableMode] = useDyslexiaSyllableMode(true);
 
-  // The currently selected language filter tab key ('en' | 'ta' | 'hi')
   const [selectedLanguage, setSelectedLanguage] = useState('en');
-  // Array of completion key strings returned by the /users/completed-lessons endpoint
   const [completedLessonKeys, setCompletedLessonKeys] = useState([]);
 
-  // Normalised condition string – defaults to 'dyslexia' when user has no condition set
   const condition = String(user?.learningCondition || 'dyslexia').toLowerCase();
-  // Lesson array for the active condition, falling back to the dyslexia set
   const lessons = useMemo(() => LESSON_LIBRARY[condition] || LESSON_LIBRARY.dyslexia, [condition]);
-  // True when syllable-mode decoration should be applied to English lesson titles
   const applyDyslexiaSyllables = condition === 'dyslexia' && Boolean(syllableMode) && uiLanguage === 'english';
-  // Localised condition label shown in the page header
   const conditionLabel = useMemo(() => {
     if (condition === 'dyslexia') return t('learning.library.condition.dyslexia');
     if (condition === 'adhd') return t('learning.library.condition.adhd');
@@ -333,12 +284,6 @@ const LessonLibraryPage = () => {
     return labelByCondition[condition] || t('learning.library.condition.learning');
   }, [condition, t]);
 
-  /**
-   * Build the CSS class string for the page container from the user's
-   * accessibility preferences. Applies contrast, font, spacing, and
-   * distraction-free classes so the library inherits the same look-and-feel
-   * as the condition-specific dashboards.
-   */
   const containerClassName = useMemo(() => {
     const classes = ['lesson-library', 'motion-enabled'];
 
@@ -378,8 +323,6 @@ const LessonLibraryPage = () => {
     return classes.join(' ');
   }, [condition, preferences?.contrastTheme, preferences?.distractionFreeMode, preferences?.fontFamily, preferences?.fontSize, preferences?.letterSpacing, preferences?.lineHeight, preferences?.reduceAnimations, preferences?.wordSpacing]);
 
-  // Count lessons available per language key. Used to disable tabs with no lessons
-  // and display the lesson-count badge on each tab button.
   const languageAvailability = useMemo(() => {
     const availability = { en: 0, ta: 0, hi: 0 };
     lessons.forEach((lesson) => {
@@ -391,8 +334,6 @@ const LessonLibraryPage = () => {
     return availability;
   }, [lessons]);
 
-  // Convert the verbose UI language to the short filter key so the tab auto-selects
-  // to match the user's language preference when preferences change.
   const preferredUiLanguageKey = useMemo(() => {
     const uiLang = resolveUiLanguageFromPreferences(preferences);
     if (uiLang === 'tamil') return 'ta';
@@ -408,15 +349,11 @@ const LessonLibraryPage = () => {
     };
   }, [t]);
 
-  // Subset of the condition's lesson list matching the active language filter tab.
-  // The safe-check prevents crashes if selectedLanguage is set to an unknown key.
   const filteredLessons = useMemo(() => {
     const safeSelectedLanguage = LANGUAGE_KEYS.includes(selectedLanguage) ? selectedLanguage : 'en';
     return lessons.filter((lesson) => (lesson.language || 'en') === safeSelectedLanguage);
   }, [lessons, selectedLanguage]);
 
-  // Fetch the learner's completed lesson keys from the backend on mount.
-  // Keys are matched against completionKeyForLesson() to show the Award badge on cards.
   useEffect(() => {
     let mounted = true;
 
@@ -440,18 +377,10 @@ const LessonLibraryPage = () => {
     };
   }, []);
 
-  // Convert the completed-lessons array to a Set for O(1) lookup during card rendering.
   const completedLessonKeySet = useMemo(() => {
     return new Set(completedLessonKeys.filter((k) => typeof k === 'string'));
   }, [completedLessonKeys]);
 
-  /**
-   * Derive the completion key string that identifies whether a lesson is completed.
-   * The format must match the strings stored by the backend's complete-lesson endpoint:
-   *  - dyslexia: "sample-{apiId}"
-   *  - adhd:     "adhd-lesson-{id}"
-   *  - autism:   "autism-lesson-{id}"
-   */
   const completionKeyForLesson = (lesson) => {
     if (condition === 'dyslexia') {
       return lesson?.apiId ? `sample-${lesson.apiId}` : '';
@@ -482,12 +411,6 @@ const LessonLibraryPage = () => {
     setSelectedLanguage(firstAvailable);
   }, [languageAvailability, preferredUiLanguageKey]);
 
-  /**
-   * Open a lesson when the learner clicks "Start Lesson".
-   *  - Dyslexia: navigates directly to the LessonPage route (/lessons/:apiId).
-   *  - ADHD / Autism: navigates to the Dashboard with route state that triggers
-   *    the condition-specific lesson modal to open immediately.
-   */
   const handleOpenLesson = (lesson) => {
     if (condition === 'dyslexia') {
       navigate(`/lessons/${lesson.apiId}`);
@@ -502,28 +425,16 @@ const LessonLibraryPage = () => {
     });
   };
 
-  /**
-   * Pick the correct localised string for the current UI language.
-   * Falls back to baseText when the i18n map has no entry for the language.
-   */
   const renderLibraryText = (baseText, i18n) => {
     return pickI18nString(uiLanguage, baseText, i18n);
   };
 
-  /**
-   * Resolve the display title for a lesson card.
-   * Applies syllable-mode decoration for dyslexia learners in English mode.
-   */
   const renderLessonTitle = (lesson) => {
     const base = renderLibraryText(lesson?.title, lesson?.titleI18n);
     if (!applyDyslexiaSyllables) return base;
     return lesson?.apiId ? getDyslexiaLessonTitle(lesson.apiId, base) : base;
   };
 
-  /**
-   * Resolve the display description for a lesson card.
-   * Applies syllable-mode decoration for dyslexia learners in English mode.
-   */
   const renderLessonDescription = (lesson) => {
     const base = renderLibraryText(lesson?.description, lesson?.descriptionI18n);
     if (!applyDyslexiaSyllables) return base;

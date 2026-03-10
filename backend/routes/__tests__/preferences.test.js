@@ -1,55 +1,24 @@
-/**
- * preferences.test.js — Route integration tests
- *
- * Tests all six route groups mounted in `backend/routes/preferences.js`:
- *  GET    /api/preferences                  — Retrieve the current user's Preferences document
- *  PUT    /api/preferences                  — Full overwrite of all preference fields
- *  PATCH  /api/preferences/accessibility    — Partial update of accessibility fields
- *  PATCH  /api/preferences/dyslexia         — Partial update of dyslexia-specific fields
- *  PATCH  /api/preferences/adhd             — Partial update of ADHD-specific fields
- *  PATCH  /api/preferences/autism           — Partial update of autism-specific fields
- *  DELETE /api/preferences/reset            — Reset preferences to condition-specific defaults
- *
- * Test approach:
- *  - Mounts both the auth router and the preferences router on a minimal Express app
- *    so that register/login and preference updates exercise real HTTP cycles end-to-end.
- *  - Uses in-memory MongoDB (configured in jest setup) for isolated, repeatable tests.
- *  - A dyslexia user is registered in beforeEach and its token / IDs are shared across
- *    tests within each describe block.
- */
-
-// supertest — issues real HTTP requests against the in-process Express app
 const request = require('supertest');
-// express — assembles the minimal test app
 const express = require('express');
-// mongoose — available for direct DB queries used in assertion helpers
 const mongoose = require('mongoose');
-// Routers under test
 const preferencesRouter = require('../preferences');
 const authRouter = require('../auth');
-// User model — used to look up the seeded preferences ID after registration
 const User = require('../../models/User');
-// Preferences model — used for direct DB reads/deletes in edge-case tests
 const Preferences = require('../../models/Preferences');
 
-// Minimal Express app — auth router is mounted so registration/token issuance works in-process
+// Create Express app for testing
 const app = express();
 app.use(express.json());
 app.use('/api/auth', authRouter);
 app.use('/api/preferences', preferencesRouter);
 
-/**
- * Top-level describe wraps all preference route suites.
- * Shared state (authToken, userId, preferencesId) is reset before every test
- * via the outer beforeEach so each test starts with a clean dyslexia user.
- */
 describe('Preferences Routes', () => {
-    let authToken;      // Bearer token for the test user
-    let userId;         // MongoDB ObjectId string of the test user
-    let preferencesId;  // MongoDB ObjectId of the seeded Preferences document
+    let authToken;
+    let userId;
+    let preferencesId;
 
     beforeEach(async () => {
-        // Register a fresh dyslexia user — this also seeds condition-specific defaults
+        // Register a user and get auth token
         const registerResponse = await request(app).post('/api/auth/register').send({
             name: 'Preferences Test User',
             email: 'preftest@example.com',
@@ -60,17 +29,11 @@ describe('Preferences Routes', () => {
         authToken = registerResponse.body.token;
         userId = registerResponse.body.user.id;
 
-        // Fetch the preferences ObjectId from the User document so tests can reference it directly
+        // Get the preferences ID
         const user = await User.findById(userId);
         preferencesId = user.preferences;
     });
 
-    /**
-     * GET /api/preferences
-     * Returns the Preferences document linked to the authenticated user.
-     * Must return condition-specific defaults for dyslexia users and 404
-     * when the document has been deleted.
-     */
     describe('GET /api/preferences', () => {
         it('should get user preferences with valid token', async () => {
             const response = await request(app)
@@ -102,7 +65,7 @@ describe('Preferences Routes', () => {
         });
 
         it('should return 404 if preferences not found', async () => {
-            // Remove the Preferences document to simulate a data-integrity gap
+            // Delete preferences
             await Preferences.findByIdAndDelete(preferencesId);
 
             const response = await request(app)
@@ -115,13 +78,6 @@ describe('Preferences Routes', () => {
         });
     });
 
-    /**
-     * PUT /api/preferences
-     * Full overwrite of the user's Preferences document.
-     * Accepts fields from all condition groups (general, dyslexia, ADHD, autism).
-     * Creates a new Preferences document when none exists (upsert behaviour).
-     * Bumps the lastModified timestamp on every successful write.
-     */
     describe('PUT /api/preferences', () => {
         it('should update general preferences', async () => {
             const updates = {
@@ -200,7 +156,7 @@ describe('Preferences Routes', () => {
         });
 
         it('should create preferences if they do not exist', async () => {
-            // Remove the existing document to verify the route upserts correctly
+            // Delete existing preferences
             await Preferences.findByIdAndDelete(preferencesId);
 
             const updates = {
@@ -232,7 +188,6 @@ describe('Preferences Routes', () => {
             const prefsBefore = await Preferences.findById(preferencesId);
             const lastModifiedBefore = prefsBefore.lastModified;
 
-            // Small delay ensures the new timestamp is strictly greater than the original
             await new Promise((resolve) => setTimeout(resolve, 100));
 
             await request(app)
@@ -250,19 +205,13 @@ describe('Preferences Routes', () => {
         });
     });
 
-    /**
-     * PATCH /api/preferences/accessibility
-     * Partial update — only the fields included in the request body are changed.
-     * Special rule: uiLanguage is locked to 'english' while bilingualTextMode is active;
-     * the field change is silently ignored in that case and must be tested explicitly.
-     */
     describe('PATCH /api/preferences/accessibility', () => {
         it('should update specific accessibility settings', async () => {
             const updates = {
                 fontSize: 'extra-large',
                 contrastTheme: 'yellow-black',
                 learningPace: 'fast',
-                // uiLanguage is ignored when bilingualTextMode is active — verified in assertions below
+                // uiLanguage changes are ignored while bilingual mode is enabled.
                 uiLanguage: 'tamil',
                 bilingualTextMode: 'english_tamil',
             };
@@ -283,14 +232,13 @@ describe('Preferences Routes', () => {
         });
 
         it('should allow updating uiLanguage when bilingual text is off', async () => {
-            // Step 1: Turn off bilingual mode so the uiLanguage lock is lifted
+            // First ensure bilingual is off
             await request(app)
                 .patch('/api/preferences/accessibility')
                 .set('Authorization', `Bearer ${authToken}`)
                 .send({ bilingualTextMode: 'off' })
                 .expect(200);
 
-            // Step 2: Now a uiLanguage change should be accepted
             const response = await request(app)
                 .patch('/api/preferences/accessibility')
                 .set('Authorization', `Bearer ${authToken}`)
@@ -316,7 +264,7 @@ describe('Preferences Routes', () => {
                 .expect(200);
 
             expect(response.body.preferences.fontSize).toBe('small');
-            // Fields not included in the PATCH body must retain their pre-update values
+            // Other fields should remain unchanged
             expect(response.body.preferences.contrastTheme).toBe(originalPrefs.contrastTheme);
         });
 
@@ -330,11 +278,6 @@ describe('Preferences Routes', () => {
         });
     });
 
-    /**
-     * PATCH /api/preferences/dyslexia
-     * Partial update scoped to dyslexia-specific fields:
-     * fontFamily, letterSpacing, wordSpacing, lineHeight, colorOverlay.
-     */
     describe('PATCH /api/preferences/dyslexia', () => {
         it('should update dyslexia-specific settings', async () => {
             const updates = {
@@ -370,11 +313,6 @@ describe('Preferences Routes', () => {
         });
     });
 
-    /**
-     * PATCH /api/preferences/adhd
-     * Partial update scoped to ADHD-specific fields:
-     * learningPace, sessionDuration, breakReminders.
-     */
     describe('PATCH /api/preferences/adhd', () => {
         it('should update ADHD-specific settings', async () => {
             const updates = {
@@ -406,11 +344,6 @@ describe('Preferences Routes', () => {
         });
     });
 
-    /**
-     * PATCH /api/preferences/autism
-     * Partial update scoped to autism-specific fields:
-     * distractionFreeMode, reduceAnimations, simplifiedLayout, soundEffects.
-     */
     describe('PATCH /api/preferences/autism', () => {
         it('should update autism-specific settings', async () => {
             const updates = {
@@ -444,15 +377,9 @@ describe('Preferences Routes', () => {
         });
     });
 
-    /**
-     * DELETE /api/preferences/reset
-     * Wipes the current Preferences document and re-seeds condition-specific defaults
-     * based on the authenticated user's learningCondition.
-     * Verified for dyslexia (outer beforeEach user), ADHD, and autism users.
-     */
     describe('DELETE /api/preferences/reset', () => {
         it('should reset preferences to dyslexia defaults', async () => {
-            // First modify preferences so reset has visible work to undo
+            // First, modify preferences
             await request(app)
                 .put('/api/preferences')
                 .set('Authorization', `Bearer ${authToken}`)
@@ -476,7 +403,7 @@ describe('Preferences Routes', () => {
         });
 
         it('should reset to ADHD defaults for ADHD users', async () => {
-            // Register a separate ADHD user — the outer beforeEach user has learningCondition 'dyslexia'
+            // Create ADHD user
             const adhdResponse = await request(app).post('/api/auth/register').send({
                 name: 'ADHD User',
                 email: 'adhd@example.com',
@@ -497,7 +424,7 @@ describe('Preferences Routes', () => {
         });
 
         it('should reset to autism defaults for autism users', async () => {
-            // Register a separate autism user — each condition has a different set of defaults
+            // Create autism user
             const autismResponse = await request(app).post('/api/auth/register').send({
                 name: 'Autism User',
                 email: 'autism@example.com',

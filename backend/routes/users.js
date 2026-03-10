@@ -1,42 +1,14 @@
-/**
- * @module routes/users
- * @description Express router for user profile and lesson-completion endpoints.
- *
- * All routes require a valid JWT (via the `protect` middleware).
- * This router complements the auth router by handling post-login user actions
- * that are not strictly authentication operations.
- *
- * Mounted routes:
- *   GET  /api/users/profile            — Retrieve the authenticated user's profile
- *   PUT  /api/users/profile            — Update name, age, or parentEmail
- *   POST /api/users/complete-lesson    — Mark a lesson as completed (EPIC 6.x)
- *   GET  /api/users/completed-lessons  — List all completed lesson keys (EPIC 6.3)
- *
- * Design notes:
- *   - `complete-lesson` is intentionally idempotent: re-submitting the same
- *     `lessonKey` refreshes the `completedAt` timestamp but does not duplicate
- *     the key in `completedLessons`.
- *   - Progress sync (UserProgress upsert) inside `complete-lesson` is best-effort;
- *     failures are caught and logged but do not prevent the 200 response.
- */
-const express = require('express');                           // Express framework
-const router = express.Router();                              // Users sub-router
-const mongoose = require('mongoose');                         // ObjectId validation helper
-const User = require('../models/User');                       // User Mongoose model
-const Lesson = require('../models/Lesson');                   // Lesson model (progress sync)
-const UserProgress = require('../models/UserProgress');       // Progress model (upsert on completion)
-const { protect, authorize } = require('../middleware/auth'); // JWT auth middleware
+const express = require('express');
+const router = express.Router();
+const mongoose = require('mongoose');
+const User = require('../models/User');
+const Lesson = require('../models/Lesson');
+const UserProgress = require('../models/UserProgress');
+const { protect, authorize } = require('../middleware/auth');
 
-/**
- * @route   GET /api/users/profile
- * @desc    Retrieve the authenticated user's full profile document, excluding
- *          the password hash. The `preferences` ObjectId is populated with the
- *          full Preferences sub-document so the frontend has settings in one call.
- * @access  Private — requires valid JWT
- *
- * @returns {200} { success: true, user: UserDocument }
- * @returns {500} Database error.
- */
+// @route   GET /api/users/profile
+// @desc    Get user profile
+// @access  Private
 router.get('/profile', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user.id)
@@ -56,17 +28,9 @@ router.get('/profile', protect, async (req, res) => {
   }
 });
 
-/**
- * @route   PUT /api/users/profile
- * @desc    Update mutable profile fields: `name`, `age`, `parentEmail`.
- *          Uses a truthy-conditional spread so omitted or falsy values leave
- *          existing fields unchanged. `runValidators: true` enforces the schema
- *          constraints (e.g. age min/max) on the update path.
- * @access  Private — requires valid JWT
- *
- * @returns {200} { success: true, message, user: UpdatedUserDocument }
- * @returns {500} Validation or database error.
- */
+// @route   PUT /api/users/profile
+// @desc    Update user profile
+// @access  Private
 router.put('/profile', protect, async (req, res) => {
   const { name, age, parentEmail } = req.body;
 
@@ -98,30 +62,9 @@ router.put('/profile', protect, async (req, res) => {
   }
 });
 
-/**
- * @route   POST /api/users/complete-lesson
- * @desc    Mark a lesson as completed for the authenticated user (EPIC 6.x).
- *
- *          Steps:
- *            1. Validate that `lessonKey` is a non-empty string.
- *            2. Append `lessonKey` to `user.completedLessons` (idempotent — no duplicates).
- *            3. Upsert a `completedLessonsMeta` entry with the current timestamp.
- *            4. Save the user document.
- *            5. If `lessonKey` contains a valid 24-char ObjectId, upsert a
- *               `UserProgress` record for the corresponding Lesson document.
- *            6. Build and return a progress summary via `computeSummary`
- *               (falls back to a manual count query if the helper is unavailable).
- *
- *          All progress-sync steps (5–6) are best-effort: failures are caught,
- *          logged as warnings, and do not cause the route to return an error.
- *
- * @access  Private — requires valid JWT
- *
- * @returns {200} { success: true, message, completedLessons, summary }
- * @returns {400} Missing or invalid `lessonKey`.
- * @returns {404} Authenticated user not found in DB.
- * @returns {500} Unexpected server error.
- */
+// @route   POST /api/users/complete-lesson
+// @desc    Mark a lesson as completed
+// @access  Private
 router.post('/complete-lesson', protect, async (req, res) => {
   const { lessonKey } = req.body;
 
@@ -228,18 +171,9 @@ router.post('/complete-lesson', protect, async (req, res) => {
   }
 });
 
-/**
- * @route   GET /api/users/completed-lessons
- * @desc    Return the array of completed lesson keys for the authenticated user
- *          (EPIC 6.3.1–6.3.4). Used by the frontend to highlight completed items
- *          in the lesson library and to gate lesson-replay entry points.
- *          Returns an empty array (not 404) when the array field is absent.
- * @access  Private — requires valid JWT
- *
- * @returns {200} { success: true, completedLessons: string[] }
- * @returns {404} Authenticated user not found in DB.
- * @returns {500} Database error.
- */
+// @route   GET /api/users/completed-lessons
+// @desc    Get user's completed lessons
+// @access  Private
 router.get('/completed-lessons', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('completedLessons');
@@ -268,5 +202,4 @@ router.get('/completed-lessons', protect, async (req, res) => {
   }
 });
 
-// Export the users router to be mounted at /api/users in server.js
 module.exports = router;

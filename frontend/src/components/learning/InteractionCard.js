@@ -485,7 +485,7 @@ const InteractionCard = ({
         window.speechSynthesis.speak(utterance);
       }
     }
-  }, [enableTts, startInstructionBoundaryTracking, stripWordPunctuation, uiLanguage, resolvedContentLanguage]);
+  }, [enableTts, startInstructionBoundaryTracking, stripWordPunctuation, uiLanguage]);
 
   useEffect(() => {
     if (!isInstructionsOpen) return undefined;
