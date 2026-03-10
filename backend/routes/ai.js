@@ -1,23 +1,53 @@
+/**
+ * AI Routes
+ *
+ * Exposes AI-powered and personalization endpoints backed by the Google
+ * Gemini generative AI API. Every endpoint gracefully degrades to static
+ * mock data when the API key is absent or invalid, so the app remains
+ * functional in local / CI environments without a live key.
+ *
+ * Base path: /api/ai
+ *
+ * Sections:
+ *  1. Gemini setup & helpers
+ *  2. Mock-data fallbacks  (getMockData)
+ *  3. AI content generation  (POST /generate-questions, POST /story-quiz)
+ *  4. ADHD personalization   (GET /adhd/recommendations/*)
+ *  5. Autism personalization (GET /autism/recommendations/*)
+ */
+
 const express = require('express');
 const router = express.Router();
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// Initialize Gemini API
-// Use a placeholder if missing to prevent immediate crash on listener, but validate before call
+// ─── 1. Gemini setup ─────────────────────────────────────────────────────────
+
+// Read the API key from the environment. A placeholder is supplied so that
+// instantiating GoogleGenerativeAI doesn't throw immediately; the real
+// validity check happens inside isKeyValid() before any API call is made.
 const apiKey = process.env.GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(apiKey || 'mock-key');
 
-// Allow selecting a specific Gemini model via env.
-// Note: we do not attempt to list available models at runtime.
-// Set GEMINI_MODEL in backend/.env to a model your key can access.
+// Allow overriding the Gemini model via GEMINI_MODEL in backend/.env.
+// Defaults to 'gemini-2.5-flash' when not set (see resolveModelName).
+// Note: available models are not queried at runtime to keep startup fast.
 const configuredModel = process.env.GEMINI_MODEL;
 
-// Helper to generate mock data to ensure app functionality when AI fails
+// ─── 2. Mock-data fallbacks ───────────────────────────────────────────────────
+
+/**
+ * getMockData
+ *
+ * Returns pre-defined quiz questions used as a fallback whenever the Gemini
+ * API is unavailable (missing key, quota exceeded, network error, etc.).
+ *
+ * @param {string} type  - 'story-quiz' | 'questions'
+ * @param {string} topic - Lesson topic (used for topic-specific questions)
+ * @returns {Array}      - Array of quiz question objects
+ */
 const getMockData = (type, topic) => {
-    // 1. Story Quizzes (fallback if AI fails)
+    // 1. Story Quizzes – generic questions about a story's ending and lesson
     if (type === 'story-quiz') {
-        // We can try to guess the story based on content if passed, or just be generic but relevant
-        // Since we don't pass content into this helper nicely, let's assume standard stories
         return [
             {
                 type: 'quiz',
@@ -36,10 +66,11 @@ const getMockData = (type, topic) => {
         ];
     }
 
-    // 2. Lesson Quizzes (Standard Lessons)
+    // 2. Standard lesson quizzes – topic-specific sets where possible
     if (type === 'questions') {
         const lowerTopic = (topic || '').toLowerCase();
 
+        // Greetings lesson mock questions
         if (lowerTopic.includes('greetings')) {
             return [
                 {
@@ -64,6 +95,7 @@ const getMockData = (type, topic) => {
                     hint: 'Asking about their feelings.'
                 }
             ];
+        // Basic words lesson mock questions
         } else if (lowerTopic.includes('basic words')) {
             return [
                 {
@@ -88,6 +120,7 @@ const getMockData = (type, topic) => {
                     hint: 'Like rain.'
                 }
             ];
+        // Numbers lesson mock questions
         } else if (lowerTopic.includes('numbers')) {
             return [
                 {
@@ -115,7 +148,7 @@ const getMockData = (type, topic) => {
         }
     }
 
-    // Default Fallback
+    // 3. Generic fallback for any unrecognised topic
     return [
         {
             type: 'quiz',
@@ -127,26 +160,64 @@ const getMockData = (type, topic) => {
     ];
 };
 
-// Middleware-like check for valid key
+// ─── Helper utilities ─────────────────────────────────────────────────────────
+
+/**
+ * isKeyValid
+ * Returns true only when the supplied key looks like a real API key.
+ * Rejects the placeholder strings that developers typically leave in .env
+ * files before setting a proper key.
+ *
+ * @param {string} key
+ * @returns {boolean}
+ */
 const isKeyValid = (key) => {
     return key && key !== 'your_gemini_api_key_here' && key !== 'mock-key' && !key.startsWith('your_');
 };
 
+/**
+ * normalizeModelName
+ * Strips the "models/" prefix that the Gemini API sometimes includes in
+ * model names so that both "models/gemini-2.0-flash" and "gemini-2.0-flash"
+ * are treated identically.
+ *
+ * @param {string} name
+ * @returns {string}
+ */
 const normalizeModelName = (name) => {
     if (!name) return '';
     // Accept either "models/gemini-2.0-flash" or "gemini-2.0-flash"
     return name.startsWith('models/') ? name.slice('models/'.length) : name;
 };
 
+/**
+ * resolveModelName
+ * Returns the Gemini model to use for content generation.
+ * Reads GEMINI_MODEL from the environment (normalized), and falls back to
+ * 'gemini-2.5-flash' when the variable is unset.
+ *
+ * @returns {string}
+ */
 const resolveModelName = () => {
     // Default to a modern Flash model; override via GEMINI_MODEL in backend/.env
     return normalizeModelName(configuredModel) || 'gemini-2.5-flash';
 };
 
+// ─── 3. AI content generation ────────────────────────────────────────────────
+
+/**
+ * POST /api/ai/generate-questions
+ *
+ * Uses Gemini to produce 3 ADHD-friendly multiple-choice quiz questions for
+ * a given lesson topic. Falls back to getMockData if the key is invalid or
+ * the API call fails (e.g. quota exceeded, 400 bad request).
+ *
+ * Body: { topic: string, context?: string }
+ */
 router.post('/generate-questions', async (req, res) => {
     const { topic, context } = req.body;
 
-    // 1. Immediate fallback if key is obviously invalid
+    // Return mock data immediately when no valid API key is configured
     if (!isKeyValid(apiKey)) {
         console.warn("GEMINI_API_KEY invalid or not set. Returning mock data.");
         return res.json({ questions: getMockData('questions', topic) });
@@ -156,6 +227,8 @@ router.post('/generate-questions', async (req, res) => {
         const modelName = resolveModelName();
         const model = genAI.getGenerativeModel({ model: modelName });
 
+        // Build a structured prompt that instructs Gemini to output raw JSON only,
+        // which makes the response easier to parse without extra sanitisation steps
         const prompt = `
       Create 3 multiple-choice quiz questions for an ADHD-friendly language learning app.
       Topic: ${topic}.
@@ -182,28 +255,43 @@ router.post('/generate-questions', async (req, res) => {
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
+
+        // Strip any accidental markdown code fences before parsing as JSON
         const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
         const questions = JSON.parse(jsonStr);
 
         res.json({ questions });
     } catch (error) {
         console.error('Error generating questions (Falling back to mock):', error.message);
-        // 2. Fallback on API failure (e.g., quota exceeded, 400 bad request)
+        // Graceful degradation: serve mock questions so the UI never breaks
         res.json({ questions: getMockData('questions', topic) });
     }
 });
 
+/**
+ * POST /api/ai/story-quiz
+ *
+ * Generates 2 comprehension quiz questions based on a short story passage.
+ * Designed for the ADHD learner profile (concise, clear questions).
+ * Falls back to getMockData on API failure.
+ *
+ * Body: { storyText: string }
+ */
 router.post('/story-quiz', async (req, res) => {
     const { storyText } = req.body;
 
+    // Return mock data immediately when no valid API key is configured
     if (!isKeyValid(apiKey)) {
         console.warn("GEMINI_API_KEY invalid or not set. Returning mock data.");
         return res.json({ questions: getMockData('story-quiz') });
     }
 
     try {
-                const modelName = resolveModelName();
-                const model = genAI.getGenerativeModel({ model: modelName });
+        // Resolve the model name and create a Gemini model instance
+        const modelName = resolveModelName();
+        const model = genAI.getGenerativeModel({ model: modelName });
+
+        // Prompt asks for raw JSON only to simplify parsing
         const prompt = `
           Based on the following short story: "${storyText}"
           
@@ -222,6 +310,8 @@ router.post('/story-quiz', async (req, res) => {
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
+
+        // Strip any markdown code fences before parsing
         const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
         const questions = JSON.parse(jsonStr);
 
@@ -229,13 +319,20 @@ router.post('/story-quiz', async (req, res) => {
 
     } catch (error) {
         console.error('Error generating story quiz (Falling back to mock):', error.message);
+        // Graceful degradation: serve mock questions so the UI never breaks
         res.json({ questions: getMockData('story-quiz') });
     }
 });
 
-// ADHD Personalization Endpoints
+// ─── 4. ADHD personalization endpoints ───────────────────────────────────────
+// These endpoints serve recommendation and motivational data tailored to
+// learners with ADHD. Currently backed by static mock data; can be wired to
+// a real recommendation engine in future iterations.
 
-// GET /adhd/recommendations/next - Next lesson recommendation
+/**
+ * GET /api/ai/adhd/recommendations/next
+ * Returns a randomly selected next-lesson recommendation for the ADHD learner.
+ */
 router.get('/adhd/recommendations/next', async (req, res) => {
     try {
         const { user } = req;
@@ -261,7 +358,11 @@ router.get('/adhd/recommendations/next', async (req, res) => {
     }
 });
 
-// GET /adhd/recommendations/learning-path - Personalized learning path
+/**
+ * GET /api/ai/adhd/recommendations/learning-path
+ * Returns a mock 5-step learning path and the learner's current progress
+ * through it (completed count, total, and percentage).
+ */
 router.get('/adhd/recommendations/learning-path', async (req, res) => {
     try {
         const { user } = req;
@@ -293,12 +394,16 @@ router.get('/adhd/recommendations/learning-path', async (req, res) => {
     }
 });
 
-// GET /adhd/recommendations/motivation - Motivational feedback
+/**
+ * GET /api/ai/adhd/recommendations/motivation
+ * Returns a randomly selected motivational message tailored for ADHD learners.
+ * Messages are upbeat and action-oriented to support focus and engagement.
+ */
 router.get('/adhd/recommendations/motivation', async (req, res) => {
     try {
         const { user } = req;
         
-        // Mock motivational messages
+        // Pool of ADHD-friendly motivational messages (energetic, positive tone)
         const messages = [
             'Great job! You\'re making excellent progress! 🌟',
             'Keep up the amazing work! Every lesson brings you closer to fluency. 💪',
@@ -323,9 +428,15 @@ router.get('/adhd/recommendations/motivation', async (req, res) => {
     }
 });
 
-// Autism Personalization Endpoints
+// ─── 5. Autism personalization endpoints ─────────────────────────────────────
+// Mirrors the ADHD personalization section but with messaging and pacing
+// adapted for autism spectrum learners (calm tone, self-paced framing).
 
-// GET /autism/recommendations/next - Next lesson recommendation for Autism
+/**
+ * GET /api/ai/autism/recommendations/next
+ * Returns a randomly selected next-lesson recommendation for autism learners.
+ * Messaging emphasises self-paced exploration rather than urgency.
+ */
 router.get('/autism/recommendations/next', async (req, res) => {
     try {
         const { user } = req;
@@ -351,7 +462,11 @@ router.get('/autism/recommendations/next', async (req, res) => {
     }
 });
 
-// GET /autism/recommendations/learning-path - Personalized learning path for Autism
+/**
+ * GET /api/ai/autism/recommendations/learning-path
+ * Returns the same 5-step learning path structure as the ADHD variant.
+ * Separated into its own endpoint to allow independent customisation later.
+ */
 router.get('/autism/recommendations/learning-path', async (req, res) => {
     try {
         const { user } = req;
@@ -383,12 +498,16 @@ router.get('/autism/recommendations/learning-path', async (req, res) => {
     }
 });
 
-// GET /autism/recommendations/motivation - Motivational feedback for Autism
+/**
+ * GET /api/ai/autism/recommendations/motivation
+ * Returns a randomly selected motivational message tailored for autism learners.
+ * Messages use calm, reassuring language and avoid time-pressure framing.
+ */
 router.get('/autism/recommendations/motivation', async (req, res) => {
     try {
         const { user } = req;
         
-        // Mock motivational messages tailored for autism learners
+        // Pool of autism-friendly motivational messages (calm, reassuring tone)
         const messages = [
             'You\'re doing great! Take breaks when you need them. 🌟',
             'Every step counts. Learn at your own comfortable pace. 💙',
