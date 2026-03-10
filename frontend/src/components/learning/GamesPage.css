@@ -672,8 +672,8 @@
 }
 
 .autism-view .game-card {
-  background: rgba(226, 232, 240, 0.92);
-  border-color: rgba(100, 116, 139, 0.42);
+  background: linear-gradient(135deg, #e2ebf4 0%, #d0deeb 50%, #bcd0e2 100%);
+  border-color: rgba(110, 152, 187, 0.35);
 }
 
 .autism-view .game-card p {
@@ -687,7 +687,7 @@
     rgba(30, 64, 175, 0.18),
     rgba(15, 118, 110, 0.14)
   );
-  opacity: 0.68;
+  opacity: 0.75;
 }
 
 .autism-view .games-grid {

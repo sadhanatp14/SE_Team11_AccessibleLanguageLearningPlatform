@@ -2969,9 +2969,6 @@ const AutismView = ({ initialLessonId = null }) => {
                   ({performanceSummary.recentAverage.toFixed(0)}% {t('learning.common.avgAbbrev')})
                 </span>
               )}
-            {typeof performanceSummary?.completionRate === 'number' && performanceSummary.completionRate > 0 && (
-              <span style={{ opacity: 0.8 }}>• {t('learning.common.completionLabel')} {performanceSummary.completionRate}%</span>
-            )}
           </div>
         )}
 
