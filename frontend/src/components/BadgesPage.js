@@ -80,6 +80,9 @@ const BadgesPage = () => {
   const BadgeCard = ({ badge, variant }) => {
     const Icon = iconFor(badge.icon);
     const isEarned = !!badge.earned;
+    const progressValue = Number.isFinite(Number(badge.progress)) ? Number(badge.progress) : 0;
+    const isStarted = !isEarned && progressValue > 0 && progressValue < 100;
+    const statusLabel = isEarned ? t('badges.earned') : isStarted ? t('badges.inProgress') : t('badges.locked');
 
     return (
       <div
@@ -123,7 +126,7 @@ const BadgesPage = () => {
                 color: isEarned ? '#166534' : 'var(--text-secondary)',
               }}
             >
-              {isEarned ? t('badges.earned') : t('badges.locked')}
+              {statusLabel}
             </span>
           </div>
           <p style={{ margin: '6px 0 10px 0', color: 'var(--text-secondary)' }}>{badge.description}</p>
