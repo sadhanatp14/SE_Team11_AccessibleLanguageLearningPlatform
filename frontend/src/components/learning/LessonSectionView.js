@@ -1,3 +1,79 @@
+/**
+ * LessonSectionView Component
+ * 
+ * Renders individual lesson sections with rich content display, interactions,
+ * and accessibility features. The main content viewer within the lesson player.
+ * 
+ * Core Features:
+ * 
+ * 1. Content Rendering:
+ *    - Text content with paragraph formatting
+ *    - Visual media (images, illustrations) via VisualLesson
+ *    - Interactive elements via InteractionCard
+ *    - Audio narration with TTS support
+ *    - Bilingual text display
+ * 
+ * 2. Text-to-Speech (EPIC 2.4):
+ *    - Browser-based speech synthesis
+ *    - Backend TTS fallback
+ *    - Play/pause controls
+ *    - Speed adjustment
+ *    - Language-specific voices
+ * 
+ * 3. Interaction Management:
+ *    - Multiple quiz/exercise types per section
+ *    - Answer submission and validation
+ *    - Progress tracking per interaction
+ *    - Completion detection
+ *    - Score recording
+ * 
+ * 4. Dyslexia Support (EPIC 1.4):
+ *    - Syllable mode text decoration
+ *    - Visual lesson icons for vocabulary
+ *    - Dyslexia-friendly formatting
+ *    - Progress persistence to localStorage
+ * 
+ * 5. Bilingual Support (EPIC 5.3):
+ *    - Dual-language text display
+ *    - Content language resolution
+ *    - i18n string picking
+ *    - Language-aware TTS
+ * 
+ * 6. Visual Elements:
+ *    - Lucide icon integration for vocabulary
+ *    - Image display with fallbacks
+ *    - Section headers and descriptions
+ *    - Progress indicators
+ * 
+ * 7. State Management:
+ *    - Interaction completion tracking
+ *    - Audio playback state
+ *    - Section-level progress
+ *    - User preference application
+ * 
+ * Section Structure:
+ * - Header (title, description)
+ * - Content (text, images, visual lessons)
+ * - Interactions (quizzes, exercises)
+ * - Audio controls
+ * - Bilingual display
+ * 
+ * Related EPICs:
+ * - EPIC 2: Interactive lesson content
+ * - EPIC 2.4: Audio narration
+ * - EPIC 1.4: Dyslexia support
+ * - EPIC 5.3: Bilingual text mode
+ * - EPIC 6: Progress tracking
+ * 
+ * @component
+ * @requires learning/InteractionCard - Quiz/exercise rendering
+ * @requires learning/VisualLesson - Visual media display
+ * @requires learning/BilingualText - Dual-language text
+ * @requires services/dyslexiaProgressService - Progress persistence
+ * @author SE_Team11
+ * @version 2.0.0
+ */
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import InteractionCard from './InteractionCard';
 import VisualLesson from './VisualLesson';
