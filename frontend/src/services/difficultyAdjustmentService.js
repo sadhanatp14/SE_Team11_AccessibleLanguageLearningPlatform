@@ -1,4 +1,66 @@
 /**
+ * Difficulty Adjustment Service Module
+ * 
+ * Implements intelligent performance-based difficulty adjustment for the adaptive
+ * learning system, enabling personalized learning experiences that match learner capabilities.
+ * 
+ * Core Responsibilities:
+ * 
+ * 1. Performance Tracking:
+ *    - Records learner scores after each lesson completion
+ *    - Maintains performance history in localStorage per user
+ *    - Tracks recent lesson performance (configurable window size)
+ *    - Persists data across sessions
+ * 
+ * 2. Difficulty Adjustment Algorithm:
+ *    - Analyzes recent performance trends (last 3-5 lessons)
+ *    - Adjusts difficulty based on consistent performance patterns
+ *    - Ensures gradual difficulty changes (one level at a time)
+ *    - Maintains difficulty within defined bounds (Beginner to Expert)
+ *    - Prevents rapid difficulty swings with consistency checks
+ * 
+ * 3. Performance Rules:
+ *    - High performance (≥80% average): Increase difficulty by 1 level
+ *    - Low performance (<50% average): Decrease difficulty by 1 level
+ *    - Average performance (50-79%): Maintain current difficulty
+ *    - Inconsistent performance: Maintain current difficulty for stability
+ * 
+ * 4. Statistical Analysis:
+ *    - Calculates average performance over window
+ *    - Computes standard deviation to detect inconsistency
+ *    - Uses variance threshold to filter erratic performance
+ *    - Requires minimum lesson count before adjustments
+ * 
+ * 5. Difficulty Levels:
+ *    - Beginner: Introductory content
+ *    - Intermediate: Building on basics
+ *    - Advanced: Complex concepts
+ *    - Expert: Mastery-level content
+ * 
+ * Configuration:
+ * - HISTORY_WINDOW: 3 (recent lessons to consider)
+ * - MIN_LESSONS_FOR_ADJUSTMENT: 3 (minimum before adjusting)
+ * - HIGH_PERFORMANCE_THRESHOLD: 80% (trigger for increase)
+ * - LOW_PERFORMANCE_THRESHOLD: 50% (trigger for decrease)
+ * - INCONSISTENCY_THRESHOLD: 20 (standard deviation limit)
+ * 
+ * Storage:
+ * - Uses localStorage for client-side persistence
+ * - Key: 'learnerPerformanceData'
+ * - Structure: { userId: { scores: [], currentDifficulty: '' } }
+ * 
+ * Related EPICs:
+ * - EPIC 3: Adaptive Difficulty Adjustment
+ * - EPIC 3.1: Performance-based difficulty scaling
+ * - EPIC 3.2: Consistent difficulty progression
+ * - EPIC 4: Personalized Learning Engine (for Autism support)
+ * 
+ * @module services/difficultyAdjustmentService
+ * @author SE_Team11
+ * @version 1.0.0
+ */
+
+/**
  * Difficulty Adjustment Service
  * 
  * Implements performance-based difficulty adjustment for the adaptive learning system.
