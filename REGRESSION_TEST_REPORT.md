@@ -1,7 +1,6 @@
 # Regression Test Report
 **Project:** Accessible Language Learning Platform  
-**Date:** March 10, 2026  
-**Prepared by:** Bhara  
+
 **Status:** Ready for execution
 
 ---
@@ -186,10 +185,3 @@ This report is meant to be updated after each regression cycle. Keep the wording
 
 ---
 
-## 12. Sign-Off
-
-| Role | Name | Date | Status |
-|------|------|------|--------|
-| Test Engineer | Bhara | 2026-03-10 | Prepared |
-| QA Reviewer | | | Pending |
-| Development Lead | | | Pending |
