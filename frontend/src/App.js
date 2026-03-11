@@ -1,3 +1,21 @@
+/**
+ * Main Application Component for Accessible Language Learning Platform
+ * 
+ * This component serves as the root of the React application, managing:
+ * - Client-side routing with React Router
+ * - Authentication context for user sessions
+ * - User preferences and accessibility settings
+ * - System compatibility checks for browser features
+ * 
+ * Routes Structure:
+ * - Public: /login, /register
+ * - Protected: /dashboard, /lessons/:id, /progress, /accessibility-setup, /language
+ * - Admin: /admin/users, /admin/users/:id
+ * 
+ * @component
+ * @author SE_Team11
+ * @version 2.0.0
+ */
 
 // Main application entry point for the frontend
 import React from 'react';
@@ -16,6 +34,21 @@ import AdminUsersList from './components/admin/AdminUsersList';
 import AdminUserDetail from './components/admin/AdminUserDetail';
 import { useI18n } from './utils/i18n';
 
+/**
+ * SystemCheck Component
+ * 
+ * Diagnostic component that monitors and displays warnings for missing browser features.
+ * Shows dismissible alerts for:
+ * - Missing Text-to-Speech (TTS) support
+ * - Missing Voice Recognition support
+ * - No available TTS voices
+ * 
+ * The component automatically updates when TTS voices become available and can be
+ * dismissed by the user. Positioned fixed at bottom-right for non-intrusive display.
+ * 
+ * @component
+ * @returns {JSX.Element|null} Warning banner or null if no warnings or dismissed
+ */
 // Diagnostic Component: Shows system warnings for missing browser features (TTS, voice recognition)
 const SystemCheck = () => {
   const [visible, setVisible] = React.useState(true);
@@ -94,6 +127,28 @@ const SystemCheck = () => {
 };
 
 
+/**
+ * App Component
+ * 
+ * Root application component that sets up the entire application structure:
+ * 
+ * Context Providers (nested order):
+ * 1. Router - Handles client-side routing
+ * 2. AuthProvider - Manages user authentication state
+ * 3. PreferencesProvider - Manages user preferences and accessibility settings
+ * 
+ * Route Protection:
+ * - Public routes: login, register
+ * - Protected routes: require authentication
+ * - Admin routes: require admin role
+ * 
+ * System Features:
+ * - SystemCheck component monitors browser compatibility
+ * - Fallback redirects to login for unmatched routes
+ * 
+ * @component
+ * @returns {JSX.Element} The complete application with routing and providers
+ */
 // Main App component: Sets up routing and context providers
 function App() {
   return (
