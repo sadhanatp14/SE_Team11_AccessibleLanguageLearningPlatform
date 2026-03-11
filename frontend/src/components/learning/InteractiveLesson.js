@@ -1,3 +1,88 @@
+/**
+ * InteractiveLesson Component
+ * 
+ * Advanced lesson player combining text content, audio narration, visual media,
+ * and interactive elements for immersive language learning.
+ * 
+ * Core Features:
+ * 
+ * 1. Multi-Modal Content Delivery:
+ *    - Text paragraphs with formatting
+ *    - Audio narration with playback controls
+ *    - Visual media (images, videos) via VisualLesson
+ *    - Interactive quiz elements via InteractionCard
+ * 
+ * 2. Audio Player (EPIC 2.4):
+ *    - Play/pause controls
+ *    - Seek bar for navigation
+ *    - Current time and duration display
+ *    - Audio synchronization with content
+ *    - Background audio support
+ * 
+ * 3. Interactive Elements (EPIC 2.5):
+ *    - Position-based interaction triggers
+ *    - Multiple choice questions
+ *    - Fill-in-the-blank exercises
+ *    - Matching activities
+ *    - Immediate feedback
+ * 
+ * 4. Content Synchronization:
+ *    - Interactions appear at specified positions
+ *    - Paragraphs displayed progressively
+ *    - Audio synced with text content
+ *    - Visual media coordinated with text
+ * 
+ * 5. Visual Media Integration:
+ *    - Images with captions
+ *    - Video embed support
+ *    - Fallback for missing media
+ *    - Responsive media sizing
+ * 
+ * 6. Theme Support:
+ *    - Applies user theme preferences
+ *    - CSS variable injection
+ *    - Accessible color schemes
+ *    - Consistent styling
+ * 
+ * 7. State Management:
+ *    - Current interaction tracking
+ *    - Audio playback state
+ *    - Progress through content
+ *    - Interaction completion status
+ * 
+ * Content Structure:
+ * - Text paragraphs parsed from textContent
+ * - Interactions sorted by position
+ * - Audio URL for narration
+ * - Visual media URLs and metadata
+ * 
+ * Interaction Flow:
+ * 1. User reads/listens to content
+ * 2. Reaches interaction trigger point
+ * 3. Interactive element appears
+ * 4. User completes interaction
+ * 5. Feedback provided
+ * 6. Content continues
+ * 
+ * Related EPICs:
+ * - EPIC 2.4: Audio narration support
+ * - EPIC 2.5: Interactive lesson elements
+ * - EPIC 2.6: Visual media integration
+ * - EPIC 1.4-1.6: Condition-specific adaptations
+ * 
+ * @component
+ * @param {Object} props
+ * @param {Object} props.lesson - Lesson data with content and interactions
+ * @param {boolean} props.isLoading - Loading state indicator
+ * @param {string} props.error - Error message if lesson failed to load
+ * @param {Function} props.onClose - Callback to close the lesson player
+ * @requires learning/InteractionCard - Interactive element renderer
+ * @requires learning/VisualLesson - Visual media display
+ * @requires context/ThemeContext - Theme preferences
+ * @author SE_Team11
+ * @version 1.0.0
+ */
+
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ImageOff, X } from 'lucide-react';
 import InteractionCard from './InteractionCard';
@@ -7,6 +92,11 @@ import { themeToCssVars } from '../../utils/theme';
 import './LessonDisplay.css';
 import './InteractiveLesson.css';
 
+/**
+ * Format seconds into MM:SS time display
+ * @param {number} seconds - Time in seconds
+ * @returns {string} Formatted time string (e.g., "3:45")
+ */
 const formatTime = (seconds) => {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
   const mins = Math.floor(seconds / 60);
