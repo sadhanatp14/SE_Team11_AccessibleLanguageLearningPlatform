@@ -1,8 +1,63 @@
+/**
+ * BilingualText Component
+ * 
+ * Dual-language text display for lesson content, implementing EPIC 5.3
+ * (Bilingual Text Mode) to support language learning through comparative text.
+ * 
+ * Core Features:
+ * 
+ * 1. Display Modes (EPIC 5.3):
+ *    - Off: Shows content language text only
+ *    - Side-by-side: Both languages displayed together
+ *    - Sequential: Primary language then secondary
+ * 
+ * 2. Language Resolution:
+ *    - Primary language determined by bilingual mode
+ *    - Fallback to content language
+ *    - i18n string resolution for localized text
+ *    - Normalized text cleaning
+ * 
+ * 3. Visual Presentation:
+ *    - Language labels (English, Tamil, Hindi)
+ *    - Primary/secondary text sizing
+ *    - Compact mode for smaller spaces
+ *    - Clear visual separation
+ * 
+ * 4. Text Normalization:
+ *    - Trims whitespace
+ *    - Handles null/undefined values
+ *    - String type coercion
+ *    - Consistent output format
+ * 
+ * Display Logic:
+ * - bilingualTextMode='off': Single language (contentLanguage)
+ * - bilingualTextMode='side-by-side': Both languages, primary prominent
+ * - bilingualTextMode='sequential': Primary first, then secondary below
+ * 
+ * @component
+ * @param {Object} props
+ * @param {string} props.bilingualTextMode - Display mode (off, side-by-side, sequential)
+ * @param {string} props.contentLanguage - Content language code
+ * @param {string} props.baseText - Fallback text content
+ * @param {Object} props.i18n - Internationalized text object
+ * @param {boolean} props.showLabels - Whether to show language labels
+ * @param {boolean} props.compact - Whether to use compact layout
+ * @requires utils/languagePrefs - Bilingual mode utilities
+ * @requires utils/lessonI18n - i18n string resolution
+ * @author SE_Team11
+ * @version 1.0.0
+ */
+
 import React, { useMemo } from 'react';
 import { bilingualPrimaryLanguageForMode, isBilingualTextMode } from '../../utils/languagePrefs';
 import { pickI18nString } from '../../utils/lessonI18n';
 import './BilingualText.css';
 
+/**
+ * Get human-readable label for a language code
+ * @param {string} lang - Language code (english, tamil, hindi)
+ * @returns {string} Display label
+ */
 const labelForLang = (lang) => {
   const normalized = String(lang || '').trim().toLowerCase();
   if (normalized === 'tamil') return 'Tamil';
