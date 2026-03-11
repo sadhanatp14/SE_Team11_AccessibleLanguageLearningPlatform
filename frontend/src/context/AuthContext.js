@@ -1,35 +1,3 @@
-/**
- * AuthContext - Authentication State Provider
- * 
- * Global authentication context providing user session management
- * across the entire application via React Context API.
- * 
- * Core Features:
- * - JWT token-based authentication
- * - Login/Register/Logout flows
- * - Session persistence via localStorage
- * - Server-side token verification on mount
- * - User state broadcasting to all consumers
- * - Loading and error state management
- * 
- * Exposed via useAuth() hook:
- * - user: Current user object
- * - isAuthenticated: Boolean auth status
- * - loading: Auth loading state
- * - error: Auth error message
- * - login(email, password): Login handler
- * - register(userData): Registration handler
- * - logout(): Logout handler
- * 
- * Related EPICs:
- * - EPIC 1.2: User authentication
- * - EPIC 1.7: Session persistence
- * 
- * @module context/AuthContext
- * @requires utils/api - Axios HTTP client
- * @author SE_Team11
- */
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import api from '../utils/api';
 import {

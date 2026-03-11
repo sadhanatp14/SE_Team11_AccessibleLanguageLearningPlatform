@@ -1,39 +1,3 @@
-/**
- * Dashboard Component
- * 
- * Central hub for the personalized learning experience, implementing:
- * - EPIC 1.4: Condition-specific learning interfaces (Dyslexia/ADHD/Autism)
- * - EPIC 1.7.3: Accessibility preference application
- * - Deep-linking support for direct lesson access
- * 
- * The Dashboard acts as a router that:
- * 1. Determines user's learning condition from preferences/profile
- * 2. Renders appropriate specialized view (DyslexiaView/ADHDView/AutismView)
- * 3. Applies accessibility CSS classes to container (themes, font size, motion)
- * 4. Handles deep-link navigation from other pages
- * 
- * Accessibility Features Applied:
- * - Contrast themes (high-contrast, dark, light)
- * - Font size adjustments (default, large, x-large)
- * - Motion preferences (enabled/reduced)
- * - Text spacing adjustments
- * - Dyslexia-friendly fonts
- * 
- * Deep-Link Support:
- * - Can receive state via React Router to open specific lessons
- * - Format: { openCondition: 'dyslexia', openLessonId: 2 }
- * - Automatically clears deep-link state after processing
- * 
- * @component
- * @requires context/AuthContext - User authentication state
- * @requires context/PreferencesContext - User accessibility preferences
- * @requires learning/DyslexiaView - Dyslexia-specific interface
- * @requires learning/ADHDView - ADHD-specific interface
- * @requires learning/AutismView - Autism-specific interface
- * @author SE_Team11
- * @version 2.0.0
- */
-
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';

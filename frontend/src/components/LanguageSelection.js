@@ -1,76 +1,3 @@
-/**
- * LanguageSelection Component
- * 
- * Language preference selection interface implementing EPIC 5.1 (Language Selection).
- * Provides a user-friendly interface for choosing UI and content languages.
- * 
- * Core Features:
- * 
- * 1. Language Options (EPIC 5.1.1):
- *    - Multiple language choices (English, Tamil, Hindi)
- *    - Native language labels for clarity
- *    - Visual language indicators
- *    - Radio button selection interface
- * 
- * 2. Preference Persistence:
- *    - Saves selection via PreferencesContext
- *    - Backend synchronization
- *    - Loads existing preference on mount
- *    - Default to English if no preference set
- * 
- * 3. State Management:
- *    - Loading state during fetch
- *    - Saving state during updates
- *    - Success confirmation
- *    - Error handling with messages
- * 
- * 4. Navigation Integration:
- *    - Accepts 'next' route via location state
- *    - Redirects after successful save
- *    - Can route to dashboard or specified destination
- *    - Prevents navigation before save
- * 
- * 5. Visual Feedback:
- *    - Selection highlighting
- *    - Save button state changes
- *    - Success checkmark display
- *    - Error message display
- *    - Loading indicators
- * 
- * 6. Accessibility:
- *    - Icon-supported options
- *    - Clear visual states
- *    - Keyboard navigation
- *    - Screen reader labels
- *    - High contrast support
- * 
- * Workflow:
- * 1. Component loads existing language preference
- * 2. User selects desired language
- * 3. User confirms selection
- * 4. Preference saved to backend
- * 5. Success message displayed
- * 6. Auto-redirect to next route
- * 
- * Bilingual Mode Integration:
- * - Checks bilingual text mode status
- * - May lock certain language options
- * - Coordinates with content language settings
- * 
- * Related EPICs:
- * - EPIC 5: Multi-language Support
- * - EPIC 5.1: Language selection interface
- * - EPIC 5.1.1: Multiple language options
- * - EPIC 5.2: UI language localization
- * 
- * @component
- * @requires context/PreferencesContext - Preference storage and updates
- * @requires utils/i18n - Internationalization utilities
- * @requires utils/languagePrefs - Language preference helpers
- * @author SE_Team11
- * @version 1.0.0
- */
-
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle2, Globe, Languages } from 'lucide-react';
@@ -79,10 +6,6 @@ import { useI18n } from '../utils/i18n';
 import { resolveBilingualTextModeFromPreferences } from '../utils/languagePrefs';
 import './LanguageSelection.css';
 
-/**
- * LanguageSelection Component
- * Main interface for selecting UI language preference
- */
 const LanguageSelection = () => {
   const navigate = useNavigate();
   const location = useLocation();

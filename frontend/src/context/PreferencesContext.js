@@ -1,34 +1,3 @@
-/**
- * PreferencesContext - User Preferences State Provider
- * 
- * Global preferences context managing user accessibility and learning settings
- * across the application. Syncs with backend API and persists changes.
- * 
- * Core Features:
- * - Load preferences on authentication
- * - Save/update preferences to backend
- * - Accessibility settings (fontSize, colorTheme, dyslexiaMode)
- * - Learning style preferences (learningStyle, nativeLanguage, targetLanguage)
- * - Notification preferences
- * - Default preference fallbacks
- * - Loading state management
- * 
- * Exposed via usePreferences() hook:
- * - preferences: Current preference object
- * - loading: Preferences loading state
- * - updatePreferences(newPrefs): Save updated preferences
- * 
- * Related EPICs:
- * - EPIC 1.7: Preference persistence
- * - EPIC 1.4: Dyslexia accessibility settings
- * - EPIC 5: Language preference management
- * 
- * @module context/PreferencesContext
- * @requires utils/api - HTTP client
- * @requires context/AuthContext - Authentication dependency
- * @author SE_Team11
- */
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import api from '../utils/api';
 import { useAuth } from './AuthContext';

@@ -1,34 +1,3 @@
-/**
- * Login Component
- * 
- * User authentication interface implementing EPIC 1.2.1 (User Authentication).
- * Provides a secure login form that:
- * - Validates user credentials via backend API
- * - Establishes authenticated session with JWT tokens
- * - Redirects to dashboard on successful authentication
- * - Displays localized error messages on failure
- * 
- * The component delegates authentication logic to AuthContext, which handles:
- * - Backend API communication
- * - JWT token storage (localStorage/sessionStorage)
- * - Global authentication state management
- * - User session persistence
- * 
- * Features:
- * - Controlled form inputs with validation
- * - Loading state during authentication
- * - Error handling with user-friendly messages
- * - Internationalization support via i18n
- * - Animated background for visual appeal
- * - Link to registration for new users
- * 
- * @component
- * @requires context/AuthContext - Authentication state and login method
- * @requires utils/i18n - Internationalization utilities
- * @author SE_Team11
- * @version 1.0.0
- */
-
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -61,12 +30,6 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  /**
-   * Handle form input changes
-   * Updates form state for controlled inputs and clears any previous errors
-   * 
-   * @param {Event} e - Input change event
-   */
   const handleChange = (e) => {
     // Controlled inputs: update only the changed field.
     setFormData({
@@ -77,18 +40,6 @@ const Login = () => {
     setError('');
   };
 
-  /**
-   * Handle login form submission
-   * 
-   * Authenticates user credentials via AuthContext and handles routing:
-   * - On success: redirects to dashboard
-   * - On failure: displays localized error message
-   * 
-   * Implements EPIC 1.2.1: User authentication and session initiation
-   * 
-   * @async
-   * @param {Event} e - Form submission event
-   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
