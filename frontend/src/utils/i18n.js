@@ -1,69 +1,7 @@
-/**
- * Internationalization (i18n) Utility Module
- * 
- * Provides comprehensive multi-language support for the accessible learning platform,
- * enabling localization of all UI text, messages, and content.
- * 
- * Core Features:
- * 
- * 1. Translation Management:
- *    - Centralized translation dictionary for multiple languages
- *    - Nested key structure for organized translations (e.g., 'auth.login')
- *    - Support for English, Spanish, French (extensible)
- *    - Fallback to English for missing translations
- * 
- * 2. React Integration:
- *    - useI18n hook for accessing translations in components
- *    - Automatic language detection from PreferencesContext
- *    - Memoized translation function for performance
- * 
- * 3. Translation Function (t):
- *    - Dot notation key access (e.g., t('app.name'))
- *    - Dynamic variable substitution (e.g., t('welcome', { name: 'John' }))
- *    - Graceful fallback for missing keys
- * 
- * 4. Language Support (EPIC 5):
- *    - UI language localization
- *    - Content language for lessons
- *    - Separate UI and teaching language support
- *    - Dynamic language switching
- * 
- * Translation Structure:
- * - app: Application-wide strings
- * - auth: Authentication and registration
- * - language: Language selection
- * - accessibility: Accessibility setup
- * - dashboard: Main dashboard
- * - lesson: Lesson interface
- * - progress: Progress tracking
- * - profile: User profile settings
- * 
- * Usage:
- *   const { t } = useI18n();
- *   const greeting = t('auth.welcomeBack');
- *   const message = t('lesson.welcome', { name: user.name });
- * 
- * Related EPICs:
- * - EPIC 5: Multi-language Support
- * - EPIC 5.1: Language selection interface
- * - EPIC 5.2: UI language localization
- * - EPIC 5.3: Content language separation
- * 
- * @module utils/i18n
- * @requires context/PreferencesContext
- * @requires utils/languagePrefs
- * @author SE_Team11
- * @version 1.0.0
- */
-
 import { useCallback, useContext, useMemo } from 'react';
 import { PreferencesContext } from '../context/PreferencesContext';
 import { normalizePreferredLanguage } from './languagePrefs';
 
-/**
- * Translation dictionary containing all localized strings
- * Organized by language and feature area
- */
 const TRANSLATIONS = {
   english: {
     app: {
