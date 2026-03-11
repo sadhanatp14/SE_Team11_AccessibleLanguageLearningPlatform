@@ -24,7 +24,7 @@ import { useAuth } from '../../src/context/AuthContext';
 jest.mock('../frontend/src/context/AuthContext', () => ({
     useAuth: jest.fn(),
 }));
-
+//using an array of objects
 const sampleUsers = [
     { id: '1', name: 'Alice', learningCondition: 'dyslexia' },
     { id: '2', name: 'Bob', learningCondition: 'adhd' },
