@@ -1,3 +1,73 @@
+/**
+ * AutismView Component
+ * 
+ * Specialized learning dashboard for users with autism, implementing predictability,
+ * routine, and sensory-friendly features based on evidence-based practices.
+ * 
+ * Core Features (EPIC 4):
+ * 
+ * 1. Predictable Structure:
+ *    - Consistent layout and navigation
+ *    - Clear visual hierarchy
+ *    - Reduced motion options
+ *    - Minimal sensory overload
+ * 
+ * 2. Personalized Learning Engine (EPIC 4.1-4.5):
+ *    - AI-powered lesson recommendations based on performance
+ *    - Adaptive difficulty adjustment
+ *    - Personalized learning path visualization
+ *    - Performance-based feedback and encouragement
+ * 
+ * 3. Autism-Specific Components:
+ *    - AutismRecommendationCard: Shows next recommended lesson
+ *    - AutismProgressFeedback: Provides performance insights
+ *    - AutismLearningPath: Visualizes learning journey
+ * 
+ * 4. Lesson Delivery:
+ *    - Step-by-step progression with clear instructions
+ *    - Visual and text-based guidance
+ *    - Pronunciation practice with feedback
+ *    - Interactive elements with immediate response
+ * 
+ * 5. Progress Tracking:
+ *    - Backend integration for completed lessons
+ *    - Visual progress indicators
+ *    - Achievement celebrations (non-intrusive)
+ *    - Session state persistence
+ * 
+ * 6. Accessibility Features:
+ *    - Text-to-speech with browser and backend support
+ *    - Adjustable contrast and themes
+ *    - Clear, simple language
+ *    - Icon-supported navigation
+ *    - Reduced animation options
+ * 
+ * 7. Routine Support:
+ *    - Consistent session structure
+ *    - Predictable transitions
+ *    - Clear completion criteria
+ *    - Regular feedback patterns
+ * 
+ * Related EPICs:
+ *  - EPIC 4: Personalized Learning Engine for Autism
+ *  - EPIC 4.1: AI-powered recommendations
+ *  - EPIC 4.2: Adaptive difficulty
+ *  - EPIC 4.3: Learning path visualization
+ *  - EPIC 4.4: Performance analytics
+ *  - EPIC 4.5: Personalized feedback
+ *  - EPIC 6: Progress tracking and persistence
+ * 
+ * @component
+ * @param {Object} props
+ * @param {string|null} props.initialLessonId - Optional lesson ID to load initially
+ * @requires context/AuthContext - User authentication and profile
+ * @requires context/PreferencesContext - User preferences management
+ * @requires learning/AutismRecommendationCard - Lesson recommendation UI
+ * @requires learning/AutismProgressFeedback - Performance feedback UI
+ * @requires learning/AutismLearningPath - Learning path visualization
+ * @author SE_Team11
+ * @version 2.0.0
+ */
 
 // AutismView: Main learning interface for users with autism support needs.
 // Provides lesson navigation, predictable UI, reduced motion, and progress tracking.
@@ -1206,48 +1276,6 @@ const AutismView = ({ initialLessonId = null }) => {
       .toLowerCase()
       .replace(/[.,!?;:()"'{}\u005B\u005D\u201C\u201D\u2018\u2019\u2013\u2014]/g, '');
   }, []);
-
-  // EPIC 2.3.1-2.3.4: Interactive engagement with immediate feedback
-  const handleInteraction = useCallback(
-    (optionIndex) => {
-      if (currentStep?.interaction && !questionAnswered) {
-        setQuestionAnswered(true);
-        setTimerActive(false);
-        if (timerIntervalRef.current) {
-          clearInterval(timerIntervalRef.current);
-        }
-
-        const stepKey = `${selectedLesson}-${currentStepIndex}`;
-        if (optionIndex === currentStep.interaction.correct) {
-          setFeedback('Good job! That\'s correct!');
-          setStepAnsweredCorrectly((prev) => ({
-            ...prev,
-            [stepKey]: true,
-          }));
-          setWrongAnswerCount((prev) => ({
-            ...prev,
-            [stepKey]: 0,
-          }));
-        } else {
-          const currentWrongCount = wrongAnswerCount[stepKey] || 0;
-          const newWrongCount = currentWrongCount + 1;
-
-          setWrongAnswerCount((prev) => ({
-            ...prev,
-            [stepKey]: newWrongCount,
-          }));
-
-          if (newWrongCount >= 2) {
-            setFeedback('Try again. Use the hint if you need help, then press Retry to attempt again.');
-            setShowHint(true);
-          } else {
-            setFeedback('Try again! Press Retry to attempt again, or view the hint.');
-          }
-        }
-      }
-    },
-    [currentStep, currentStepIndex, questionAnswered, selectedLesson, wrongAnswerCount]
-  );
 
   const initAnswerSpeechRecognition = useCallback((preferredLanguage) => {
     if (typeof window === 'undefined') return null;
