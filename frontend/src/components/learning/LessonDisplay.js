@@ -1,3 +1,28 @@
+/**
+ * LessonDisplay Component
+ * 
+ * Standalone lesson content display with integrated audio player.
+ * Renders lesson text content as formatted paragraphs with audio playback controls.
+ * 
+ * Core Features:
+ * - Paragraph-based text content rendering
+ * - Audio player with play/pause, seek, and time display
+ * - Loading and error state handling
+ * - Modal-style display with close functionality
+ * - Time formatting utility for audio duration
+ * 
+ * Related EPICs:
+ * - EPIC 2: Lesson content display
+ * - EPIC 2.4: Audio narration playback
+ * 
+ * @component
+ * @param {Object} props.lesson - Lesson data with textContent and audioUrl
+ * @param {boolean} props.isLoading - Loading state flag
+ * @param {string} props.error - Error message if any
+ * @param {Function} props.onClose - Close handler callback
+ * @author SE_Team11
+ */
+
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ImageOff, X } from 'lucide-react';
 import './LessonDisplay.css';

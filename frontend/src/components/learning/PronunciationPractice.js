@@ -1,3 +1,90 @@
+/**
+ * PronunciationPractice Component
+ * 
+ * Interactive speech recognition component for pronunciation practice and
+ * feedback, supporting language learning with real-time voice analysis.
+ * 
+ * Core Features:
+ * 
+ * 1. Speech Recognition (Web Speech API):
+ *    - Browser-based voice recognition
+ *    - Multi-language support
+ *    - Real-time transcription
+ *    - Confidence scoring
+ *    - Alternative interpretations
+ * 
+ * 2. Text-to-Speech Playback:
+ *    - Dual-mode: Backend TTS + Browser synthesis
+ *    - Backend: High-quality audio generation
+ *    - Browser: Fallback using Web Speech API
+ *    - Adjustable speech rate/speed
+ *    - Language-specific voice selection
+ * 
+ * 3. Pronunciation Comparison:
+ *    - Normalized text matching
+ *    - Punctuation and diacritic removal
+ *    - Case-insensitive comparison
+ *    - Whitespace normalization
+ *    - Similarity scoring
+ * 
+ * 4. Visual Feedback:
+ *    - Recording indicator (animated microphone)
+ *    - Transcription display
+ *    - Match/mismatch highlighting
+ *    - Confidence level display
+ *    - Success/retry indicators
+ * 
+ * 5. User Controls:
+ *    - Listen button (plays target text)
+ *    - Record button (captures user speech)
+ *    - Retry button (reset and try again)
+ *    - Visual state indicators
+ *    - Keyboard shortcuts support
+ * 
+ * 6. Accessibility:
+ *    - Icon-supported buttons
+ *    - Clear visual states
+ *    - Audio feedback
+ *    - Screen reader compatible
+ *    - High contrast modes
+ * 
+ * Text Normalization:
+ * - Converts to lowercase
+ * - Removes punctuation
+ * - Strips diacritics (ä → a, é → e)
+ * - Normalizes whitespace
+ * - Consistent comparison format
+ * 
+ * Speech Recognition Flow:
+ * 1. User clicks microphone button
+ * 2. Browser requests microphone permission
+ * 3. Recording starts with visual indicator
+ * 4. Speech recognition processes audio
+ * 5. Transcription displayed
+ * 6. Comparison with target text
+ * 7. Feedback provided
+ * 
+ * TTS Playback Strategy:
+ * 1. Try backend TTS first (high quality)
+ * 2. Fallback to browser synthesis
+ * 3. Handle errors gracefully
+ * 4. Provide playback controls
+ * 
+ * Related EPICs:
+ * - EPIC 2.3: Pronunciation practice
+ * - EPIC 2.4: Audio narration
+ * - EPIC 1.4-1.6: Condition-specific adaptations
+ * 
+ * @component
+ * @param {Object} props
+ * @param {string} props.targetText - Text user should pronounce
+ * @param {string} props.lang - Language code for recognition (e.g., 'en-US', 'es-ES')
+ * @param {number} props.speed - Speech rate (0.5 to 2.0)
+ * @param {Function} props.onComplete - Callback when practice completed successfully
+ * @author SE_Team11
+ * @version 1.0.0
+ */
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Mic, RotateCcw, Volume2 } from 'lucide-react';
 import api from '../../utils/api';

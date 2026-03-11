@@ -1,3 +1,67 @@
+/**
+ * Language Preferences Utility Module
+ * 
+ * Lightweight language helpers for EPIC 5 (Multilingual Support), providing
+ * normalized language preference handling across the application.
+ * 
+ * Core Features:
+ * 
+ * 1. Language Normalization:
+ *    - Normalizes various input formats to canonical values
+ *    - Handles bilingual mode strings (english_tamil, english+tamil, etc.)
+ *    - Case-insensitive processing
+ *    - Fallback to English for unknown values
+ * 
+ * 2. Bilingual Mode Support (EPIC 5.3):
+ *    - Detects bilingual preference strings
+ *    - Normalizes bilingual mode values
+ *    - Extracts primary language from bilingual mode
+ *    - Checks if bilingual mode is active
+ * 
+ * 3. TTS Language Mapping:
+ *    - Maps UI languages to backend TTS language codes
+ *    - Maps UI languages to browser Speech Synthesis codes
+ *    - Consistent language code translation
+ *    - Cross-system compatibility
+ * 
+ * 4. Preference Resolution:
+ *    - Resolves UI language from preference objects
+ *    - Resolves bilingual text mode from preferences
+ *    - Handles multiple preference field names
+ *    - Graceful fallback chain
+ * 
+ * Supported Languages:
+ * - English (default)
+ * - Tamil (தமிழ்)
+ * - Hindi (हिन्दी)
+ * 
+ * Bilingual Modes:
+ * - off: Single language only
+ * - english_tamil: English + Tamil dual display
+ * - english_hindi: English + Hindi dual display
+ * 
+ * Input Normalization Examples:
+ * - 'english_tamil', 'english+tamil', 'en_ta' → 'tamil'
+ * - 'english_hindi', 'english+hindi', 'en_hi' → 'hindi'
+ * - 'tamil' → 'tamil'
+ * - 'hindi' → 'hindi'
+ * - anything else → 'english'
+ * 
+ * TTS Language Codes:
+ * - Backend TTS: 'en', 'ta', 'hi'
+ * - Browser Synthesis: 'en-US', 'ta-IN', 'hi-IN'
+ * 
+ * Related EPICs:
+ * - EPIC 5: Multi-language Support
+ * - EPIC 5.1: Language selection
+ * - EPIC 5.2: UI localization
+ * - EPIC 5.3: Bilingual text mode
+ * 
+ * @module utils/languagePrefs
+ * @author SE_Team11
+ * @version 1.0.0
+ */
+
 // Lightweight language helpers for EPIC 5 (Multilingual support).
 // We intentionally keep scope small: pick UI strings based on `preferredLanguage`
 // and map to backend/browser TTS language codes.

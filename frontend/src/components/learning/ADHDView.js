@@ -1,3 +1,64 @@
+/**
+ * ADHDView Component
+ * 
+ * Specialized learning dashboard for users with ADHD, implementing focus-enhancing
+ * features and attention management strategies.
+ * 
+ * Core Features:
+ * 
+ * 1. Session Management:
+ *    - Configurable session timers (5, 10, 15, 20, 25 minutes)
+ *    - Break reminders with countdown
+ *    - Focus mode with minimal distractions
+ *    - Pause/resume functionality
+ * 
+ * 2. Lesson Delivery:
+ *    - Chunked content for better attention span management
+ *    - Interactive elements to maintain engagement
+ *    - Progress indicators for immediate feedback
+ *    - Visual and audio cues for transitions
+ * 
+ * 3. Engagement Features:
+ *    - Gamification elements (points, badges, celebrations)
+ *    - React Confetti for achievement celebrations
+ *    - Interactive pronunciation practice
+ *    - Immediate feedback on interactions
+ * 
+ * 4. Progress Tracking:
+ *    - Auto-save progress to prevent data loss
+ *    - Session statistics and summaries
+ *    - Visual progress bars
+ *    - Completion celebrations
+ * 
+ * 5. Accessibility Support:
+ *    - Text-to-speech with browser and backend TTS
+ *    - Adjustable text size and contrast
+ *    - Clear visual hierarchy
+ *    - Icon-supported navigation
+ * 
+ * 6. Focus-Enhancing Design:
+ *    - Minimal distractions in focus mode
+ *    - Color-coded status indicators
+ *    - Clear call-to-action buttons
+ *    - Reduced animation options
+ * 
+ * Related EPICs:
+ *  - EPIC 1.5: ADHD focus support features
+ *  - EPIC 1.5.1: Session timer and break reminders
+ *  - EPIC 1.5.2: Chunked learning content
+ *  - EPIC 6: Automatic progress saving
+ *  - EPIC 2: Interactive lesson elements
+ * 
+ * @component
+ * @param {Object} props
+ * @param {string|null} props.initialLessonId - Optional lesson ID to load initially
+ * @requires context/AuthContext - User authentication and profile
+ * @requires context/PreferencesContext - User preferences management
+ * @requires services/progressService - Progress tracking and saving
+ * @requires utils/languagePrefs - Multi-language support utilities
+ * @author SE_Team11
+ * @version 2.0.0
+ */
 
 // ADHDView: Main learning interface for users with ADHD support needs.
 // Provides lesson navigation, session timing, feedback, and progress auto-saving.

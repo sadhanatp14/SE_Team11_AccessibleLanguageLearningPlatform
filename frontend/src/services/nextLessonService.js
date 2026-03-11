@@ -1,4 +1,80 @@
 /**
+ * Next Lesson Recommendation Service Module
+ * 
+ * Intelligent lesson recommendation system that determines the optimal next
+ * lesson for learners based on their progress and performance patterns.
+ * 
+ * Architecture Design:
+ * 
+ * 1. Client-Side Recommendations (Dyslexia):
+ *    - Uses hardcoded lesson array with localStorage progress
+ *    - Resolves recommendations entirely client-side
+ *    - Fast, no network latency
+ *    - Works offline
+ * 
+ * 2. Server-Side Recommendations (ADHD/Autism):
+ *    - Backend API endpoint: GET /api/progress/next-lesson
+ *    - Leverages UserProgress model
+ *    - Can incorporate AI/ML algorithms
+ *    - Centralized recommendation logic
+ * 
+ * Core Features:
+ * 
+ * 1. Recommendation Algorithm:
+ *    - Analyzes completed lessons from progress data
+ *    - Identifies highest incomplete lesson number
+ *    - Returns next logical lesson in sequence
+ *    - Handles edge cases (no progress, all complete)
+ * 
+ * 2. Skip Management:
+ *    - Session-scoped skip tracking (sessionStorage)
+ *    - Prevents re-showing skipped recommendations
+ *    - Clears on session end or progress change
+ *    - User-initiated skip action
+ * 
+ * 3. Lesson Order Management:
+ *    - Canonical lesson array (LESSON_ORDER)
+ *    - Synchronized with DyslexiaView lesson data
+ *    - Single source of truth
+ *    - Centralized lesson metadata
+ * 
+ * 4. Edge Case Handling:
+ *    - No completed lessons → Recommend lesson 1
+ *    - All lessons completed → Return null with allCompleted flag
+ *    - Skipped recommendation → Track and suppress
+ *    - Invalid user data → Graceful fallback
+ * 
+ * Recommendation Logic:
+ * 1. Fetch all lesson progress for user
+ * 2. Extract completed lesson IDs
+ * 3. Find highest completed lesson number
+ * 4. Check if recommendation was skipped
+ * 5. Return next incomplete lesson
+ * 
+ * Skip Workflow:
+ * 1. User skips recommendation
+ * 2. Lesson ID stored in sessionStorage
+ * 3. Subsequent checks exclude skipped lesson
+ * 4. Skip cleared on new progress or session end
+ * 
+ * Data Structure:
+ * - LESSON_ORDER: Array of lesson metadata objects
+ * - Each lesson: { id, apiId, title, titleSyllables, description, totalInteractions }
+ * - Progress data: { [lessonId]: { completed, score, timestamp } }
+ * 
+ * Related Features:
+ * - Progress tracking (EPIC 6)
+ * - Difficulty adjustment (EPIC 3)
+ * - Personalized learning paths (EPIC 4)
+ * - Intelligent content sequencing
+ * 
+ * @module services/nextLessonService
+ * @requires services/dyslexiaProgressService
+ * @author SE_Team11
+ * @version 1.0.0
+ */
+
+/**
  * nextLessonService.js
  *
  * Determines the single recommended next lesson for the learner.

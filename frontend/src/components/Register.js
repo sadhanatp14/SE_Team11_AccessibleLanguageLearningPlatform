@@ -1,3 +1,36 @@
+/**
+ * Register Component
+ * 
+ * User registration interface implementing EPIC 1.1.1 (Account Creation).
+ * Provides a comprehensive registration form with:
+ * - Basic account information (name, email, password)
+ * - Learning condition selection for accessibility support
+ * - Age verification and parental consent for minors
+ * - Role selection (learner/admin with admin key validation)
+ * - Client-side validation for immediate user feedback
+ * 
+ * Registration Flow:
+ * 1. User fills out form with validation feedback
+ * 2. Client-side validation checks (password match, length, age requirements)
+ * 3. Backend registration via AuthContext
+ * 4. On success: redirect to AccessibilitySetup for preference configuration
+ * 5. On failure: display localized error message
+ * 
+ * Features:
+ * - Multi-step validation (client + server)
+ * - Learning condition options: none, dyslexia, ADHD, autism
+ * - Minor protection with parental email requirement
+ * - Admin registration with secure admin key
+ * - Internationalization support
+ * - Animated background for visual engagement
+ * 
+ * @component
+ * @requires context/AuthContext - Registration method and state management
+ * @requires utils/i18n - Internationalization utilities
+ * @author SE_Team11
+ * @version 1.0.0
+ */
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -40,6 +73,13 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [enableFingerprint, setEnableFingerprint] = useState(false);
 
+  /**
+   * Handle form input changes
+   * Updates form state for controlled inputs (text, checkbox, select)
+   * and clears any previous validation errors
+   * 
+   * @param {Event} e - Input change event
+   */
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     // Controlled inputs: checkboxes use `checked`, everything else uses `value`.
@@ -51,6 +91,20 @@ const Register = () => {
     setError('');
   };
 
+  /**
+   * Validate registration form before submission
+   * 
+   * Performs client-side validation checks:
+   * - Password confirmation match
+   * - Password minimum length (6 characters)
+   * - Admin key validation for admin registrations
+   * - Age requirement (13+) for learners
+   * - Parent email for minors (under 18)
+   * 
+   * Note: Server performs authoritative validation; this provides immediate UX feedback
+   * 
+   * @returns {boolean} True if form passes validation, false otherwise
+   */
   const validateForm = () => {
     // EPIC 1.1.1: Client-side registration validation for better UX (server still validates)
     const isPattern = formData.authMethod === 'pattern';

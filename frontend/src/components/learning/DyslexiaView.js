@@ -1,4 +1,63 @@
 /**
+ * DyslexiaView Component
+ * 
+ * Specialized learning dashboard for users with dyslexia, implementing evidence-based
+ * reading support strategies and accessibility features.
+ * 
+ * Core Features:
+ * 
+ * 1. Syllable Mode Support (EPIC 1.4.2):
+ *    - Toggleable syllable splitting for easier word decoding
+ *    - Persistent preference saved in localStorage
+ *    - Applied across all text content in the view
+ * 
+ * 2. Lesson Management:
+ *    - Visual lesson cards with progress indicators
+ *    - Status badges (Not Started, In Progress, Completed)
+ *    - Individual lesson progress bars showing completion percentage
+ *    - Difficulty level indicators (easy, medium, hard)
+ * 
+ * 3. Progress Tracking:
+ *    - Reads progress from localStorage via dyslexiaProgressService
+ *    - Displays completion status for each lesson
+ *    - Shows overall learning statistics
+ *    - Persists across sessions
+ * 
+ * 4. Reading Support (EPIC 1.4):
+ *    - Phonological awareness tips
+ *    - Evidence-based reading guides
+ *    - Decoding strategy recommendations
+ *    - Visual spacing and font optimizations
+ * 
+ * 5. Intelligent Recommendations:
+ *    - Next lesson suggestions based on performance
+ *    - Difficulty adjustment integration
+ *    - Skip and retry recommendation options
+ *    - Performance summary display
+ * 
+ * 6. Accessibility Features:
+ *    - Dyslexia-friendly fonts (OpenDyslexic, Comic Sans fallback)
+ *    - High-contrast color schemes
+ *    - Clear visual hierarchy
+ *    - Icon-supported navigation
+ * 
+ * Related EPICs:
+ *  - EPIC 1.4: Dyslexia-friendly reading support
+ *  - EPIC 1.4.2: Reading assistance toggle (syllable mode)
+ *  - EPIC 6: Progress tracking and persistence
+ *  - EPIC 3: Adaptive difficulty adjustment
+ * 
+ * @component
+ * @requires context/AuthContext - User authentication and profile
+ * @requires services/dyslexiaProgressService - Progress persistence
+ * @requires services/difficultyAdjustmentService - Adaptive difficulty
+ * @requires services/nextLessonService - Lesson recommendations
+ * @requires utils/dyslexiaSyllableMode - Syllable mode utilities
+ * @author SE_Team11
+ * @version 2.0.0
+ */
+
+/**
  * DyslexiaView.js
  *
  * Main learning dashboard for users with dyslexia support needs.

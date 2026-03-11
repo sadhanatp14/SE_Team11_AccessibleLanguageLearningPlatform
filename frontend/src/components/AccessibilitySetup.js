@@ -1,3 +1,71 @@
+/**
+ * AccessibilitySetup Component
+ * 
+ * Comprehensive onboarding wizard for configuring accessibility preferences,
+ * implementing EPIC 1.3 (Accessibility Preference Wizard).
+ * 
+ * Core Features:
+ * 
+ * 1. Condition-Aware Wizard (EPIC 1.3.1):
+ *    - Base visual preferences step for all users
+ *    - Additional learning step for ADHD users
+ *    - Additional focus step for Autism users
+ *    - Dyslexia users get visual preferences only
+ * 
+ * 2. Visual Preferences:
+ *    - Font size adjustment (small, medium, large, x-large)
+ *    - Contrast themes (default, high-contrast, dark, light)
+ *    - Font family selection (default, OpenDyslexic, Comic Sans)
+ *    - Letter spacing (normal, wide, wider)
+ *    - Word spacing (normal, wide)
+ *    - Line height (normal, relaxed, loose)
+ *    - Motion preferences (enabled, reduced)
+ * 
+ * 3. ADHD-Specific Preferences:
+ *    - Session timer duration (5, 10, 15, 20, 25 minutes)
+ *    - Break reminder settings
+ *    - Focus mode options
+ *    - Gamification preferences
+ * 
+ * 4. Autism-Specific Preferences:
+ *    - Reduced motion settings
+ *    - Predictable layout options
+ *    - Sensory-friendly themes
+ *    - Clear structure preferences
+ * 
+ * 5. Smart Defaults (EPIC 1.3.3):
+ *    - Dyslexia: OpenDyslexic font, wide letter spacing
+ *    - ADHD: Medium session timer, focus aids enabled
+ *    - Autism: Reduced motion, predictable layout
+ *    - Optimized for each condition's common needs
+ * 
+ * 6. Preference Persistence:
+ *    - Saves via PreferencesContext.updatePreferences()
+ *    - Minimal payload to avoid overwriting unrelated fields
+ *    - Backend storage for cross-device sync
+ *    - Immediate application after saving
+ * 
+ * Wizard Flow:
+ * 1. User navigates through condition-specific steps
+ * 2. Settings stored in local state during configuration
+ * 3. On completion, full preferences saved to backend
+ * 4. User redirected to dashboard with applied settings
+ * 
+ * Related EPICs:
+ * - EPIC 1.3: Accessibility Preference Wizard
+ * - EPIC 1.3.1: Condition-aware preference collection
+ * - EPIC 1.3.2: Visual accessibility options
+ * - EPIC 1.3.3: Smart default preferences
+ * - EPIC 1.7: Preference persistence and application
+ * 
+ * @component
+ * @requires context/AuthContext - User profile and learning condition
+ * @requires context/PreferencesContext - Preference storage and updates
+ * @requires utils/i18n - Localized UI text
+ * @author SE_Team11
+ * @version 1.0.0
+ */
+
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';

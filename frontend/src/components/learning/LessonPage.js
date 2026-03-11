@@ -1,4 +1,52 @@
 /**
+ * LessonPage Component
+ * 
+ * Primary lesson delivery interface responsible for loading and displaying
+ * individual lessons with full accessibility support.
+ * 
+ * Core Responsibilities:
+ * 1. Lesson Data Loading:
+ *    - Fetches lesson from backend API via lessonId parameter
+ *    - Fallback to local sample lessons if backend unavailable
+ *    - Supports both MongoDB ObjectId and local sample ID formats
+ * 
+ * 2. State Management:
+ *    - Loading states with visual feedback (EPIC 6.5.2)
+ *    - Error handling with user-friendly messages (EPIC 6.5.3)
+ *    - Retry mechanism for failed loads (EPIC 6.5.4)
+ *    - Reliable lesson content loading (EPIC 6.5.1)
+ * 
+ * 3. Accessibility Features:
+ *    - Applies user preferences from PreferencesContext
+ *    - Dyslexia support with syllable-split titles
+ *    - Multi-language UI and content support (i18n)
+ *    - Font size, theme, and motion adjustments
+ * 
+ * 4. Lesson Rendering:
+ *    - Delegates to LessonReplay for interactive step-by-step UI
+ *    - Reading time estimation for lesson planning
+ *    - Navigation controls (back to dashboard)
+ * 
+ * Related EPICs:
+ *  - EPIC 6.5.1-6.5.4: Reliable lesson loading with error handling
+ *  - EPIC 2.7.1-2.7.4: Preference-driven lesson layout
+ *  - EPIC 2.2.1-2.2.4, 2.6.1-2.6.4: Step-by-step lesson flow
+ *  - EPIC 5: Multi-language content support
+ * 
+ * Data Sources:
+ *  1. Primary: Backend API (/api/lessons/:id)
+ *  2. Fallback: Local sample lessons (lessonSamples.js)
+ * 
+ * @component
+ * @requires services/lessonService - API calls for lesson data
+ * @requires context/PreferencesContext - User accessibility preferences
+ * @requires context/AuthContext - User authentication state
+ * @requires learning/LessonReplay - Step-by-step lesson UI
+ * @author SE_Team11
+ * @version 2.0.0
+ */
+
+/**
  * LessonPage.js
  *
  * Responsible for loading and displaying a single lesson based on the URL
