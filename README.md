@@ -1,6 +1,6 @@
 # Accessible Language Learning Platform
 
-## Project Title & Tagline
+## LinguaEase- an accessible language learning platform for students with disabilities
 
 **Accessible Language Learning Platform** — an accessible MERN language-learning platform designed to support learners with **dyslexia, ADHD, and autism**.
 
@@ -24,14 +24,19 @@ Many language-learning tools are not designed for neurodiverse learners and can 
 Key capabilities in this repository:
 
 - Condition-specific learning experiences (Dyslexia / ADHD / Autism) in the React UI.
-- JWT-based authentication and protected APIs.
+- JWT-based authentication and protected APIs (password/pattern login, optional fingerprint/WebAuthn).
 - User accessibility preferences persisted in MongoDB and applied on the frontend.
+- Language support: UI language plus bilingual lesson/question text (English–Tamil / English–Hindi).
 - Lesson content with sections and interactive questions.
 - Progress persistence (resume where you left off) + progress summary.
 - Audio support via:
     - File audio URLs when available
-    - Backend Text-to-Speech endpoint (`/api/tts/speak`) with browser fallback
+    - Backend Text-to-Speech endpoint (`/api/tts/speak`) with Python-first generation and a Node fallback when Python is unavailable
 - Optional Gemini-powered quiz generation endpoints with safe fallbacks.
+
+Notes:
+
+- The registration UI is learner-focused.
 
 ## Tech Stack
 
@@ -57,11 +62,10 @@ High-level repository layout:
 Developer docs (architecture, API, schema, standards, deployment, troubleshooting):
 
 - ARCHITECTURE.md
-- API.md
-- DATABASE_SCHEMA.md
-- CODING_STANDARDS.md
-- DEPLOYMENT.md
-- TROUBLESHOOTING.md
+- DOCUMENTATION.md
+- DEVDOCS.md
+
+`DOCUMENTATION.md` replaces `API.md`, `DATABASE_SCHEMA.md`, `CODING_STANDARDS.md`, and `TROUBLESHOOTING.md`.
 
 UML diagrams are available here (UseCase, Sequence, Architecture, ER, Activity, Class):
 
@@ -97,8 +101,8 @@ GEMINI_MODEL=gemini-2.5-flash
 ```
 ### JWT SECRET KEY
 ```bash
-To get a randome JWT SECRET KEY in the env
-use command in the terminal:- openssl rand -hex 64
+To generate a random JWT secret key for `.env`:
+openssl rand -hex 64
 ```
 
 ### Backend setup

@@ -35,6 +35,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../utils/i18n';
+import PatternLockInput from './PatternLockInput';
+import { isWebAuthnSupported } from '../utils/webauthn';
 import './Register.css';
 
 /**
@@ -50,22 +52,26 @@ import './Register.css';
  */
 const Register = () => {
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const { register, setupFingerprint } = useAuth();
   const { t } = useI18n();
+  const fingerprintAvailable = isWebAuthnSupported();
 
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    authMethod: 'password',
     password: '',
     confirmPassword: '',
+    pattern: '',
+    confirmPattern: '',
     learningCondition: 'none',
-    role: 'learner', // added role for admin support
     age: '',
     isMinor: false,
     parentEmail: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [enableFingerprint, setEnableFingerprint] = useState(false);
 
   /**
    * Handle form input changes
@@ -101,23 +107,29 @@ const Register = () => {
    */
   const validateForm = () => {
     // EPIC 1.1.1: Client-side registration validation for better UX (server still validates)
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return false;
-    }
+    const isPattern = formData.authMethod === 'pattern';
+    const patternParts = String(formData.pattern || '').split('-').filter(Boolean);
+    const uniquePatternParts = new Set(patternParts);
 
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
-      return false;
-    }
-
-    // If registering as admin, require admin key and skip other learner fields
-    if (formData.role === 'admin') {
-      if (!formData.adminKey) {
-        setError('Admin key is required');
+    if (isPattern) {
+      if (patternParts.length < 4 || uniquePatternParts.size !== patternParts.length) {
+        setError('Pattern must include at least 4 unique dots');
         return false;
       }
-      return true;
+      if (formData.pattern !== formData.confirmPattern) {
+        setError('Patterns do not match');
+        return false;
+      }
+    } else {
+      if (formData.password !== formData.confirmPassword) {
+        setError('Passwords do not match');
+        return false;
+      }
+
+      if (formData.password.length < 6) {
+        setError('Password must be at least 6 characters long');
+        return false;
+      }
     }
 
     // Age is optional; when provided, enforce a reasonable range.
@@ -151,10 +163,7 @@ const Register = () => {
     setError('');
 
     // Remove fields that the backend doesn't need.
-    const { confirmPassword, ...registrationData } = formData;
-
-    // Ensure role is sent (defaults to learner)
-    registrationData.role = registrationData.role || 'learner';
+    const { confirmPassword, confirmPattern, ...registrationData } = formData;
     // Normalize age to number or omit it entirely.
     registrationData.age = parseInt(registrationData.age) || undefined;
 
@@ -163,17 +172,22 @@ const Register = () => {
       delete registrationData.parentEmail;
     }
 
-    // If admin role, include adminKey and override learningCondition
-    if (registrationData.role === 'admin') {
-      registrationData.learningCondition = 'none';
-      delete registrationData.age;
-      delete registrationData.isMinor;
-      delete registrationData.parentEmail;
+    if (registrationData.authMethod === 'pattern') {
+      delete registrationData.password;
+      registrationData.pattern = registrationData.pattern || '';
+    } else {
+      delete registrationData.pattern;
     }
 
     const result = await register(registrationData);
 
     if (result.success) {
+      if (enableFingerprint && fingerprintAvailable) {
+        const fpResult = await setupFingerprint();
+        if (!fpResult.success) {
+          console.warn('Fingerprint setup skipped:', fpResult.error);
+        }
+      }
       // EPIC 5.1: Let the learner pick a preferred UI language before setup.
       navigate('/language', { state: { next: '/accessibility-setup' } });
     } else {
@@ -240,132 +254,100 @@ const Register = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="password">
-                {t('auth.password')} * <span className="help-text">(Minimum 6 characters)</span>
-              </label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                aria-required="true"
-                minLength={6}
-                autoComplete="new-password"
-                placeholder={t('auth.passwordPlaceholder')}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="confirmPassword">{t('auth.confirmPassword')} *</label>
-              <input
-                type="password"
-                id="confirmPassword"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                required
-                aria-required="true"
-                minLength={6}
-                autoComplete="new-password"
-                placeholder={t('auth.confirmPasswordPlaceholder')}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="role">{t('auth.registerRole')}</label>
+              <label htmlFor="authMethod">Authentication Method *</label>
               <select
-                id="role"
-                name="role"
-                value={formData.role}
+                id="authMethod"
+                name="authMethod"
+                value={formData.authMethod}
                 onChange={handleChange}
+                required
+                aria-required="true"
               >
-                <option value="learner">Learner</option>
-                <option value="admin">Admin</option>
+                <option value="password">Password</option>
+                <option value="pattern">Pattern</option>
               </select>
             </div>
 
-            {formData.role === 'admin' && (
-              <div className="form-group">
-                <label htmlFor="adminKey">{t('auth.adminKey')} *</label>
-                <input
-                  type="password"
-                  id="adminKey"
-                  name="adminKey"
-                  value={formData.adminKey || ''}
-                  onChange={handleChange}
-                  required
-                  aria-required="true"
-                  placeholder="Enter admin registration key"
-                />
-              </div>
-            )}
-
-            {formData.role !== 'admin' && (
+            {formData.authMethod === 'password' ? (
               <>
                 <div className="form-group">
-                  <label htmlFor="learningCondition">{t('auth.learningCondition')} *</label>
-                  <select
-                    id="learningCondition"
-                    name="learningCondition"
-                    value={formData.learningCondition}
+                  <label htmlFor="password">
+                    {t('auth.password')} * <span className="help-text">(Minimum 6 characters)</span>
+                  </label>
+                  <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    value={formData.password}
                     onChange={handleChange}
                     required
                     aria-required="true"
-                  >
-                    <option value="none">None</option>
-                    <option value="dyslexia">Dyslexia</option>
-                    <option value="adhd">ADHD</option>
-                    <option value="autism">Autism</option>
-                  </select>
+                    minLength={6}
+                    autoComplete="new-password"
+                    placeholder={t('auth.passwordPlaceholder')}
+                  />
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="age">{t('auth.ageOptional')}</label>
+                  <label htmlFor="confirmPassword">{t('auth.confirmPassword')} *</label>
                   <input
-                    type="number"
-                    id="age"
-                    name="age"
-                    value={formData.age}
+                    type="password"
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
                     onChange={handleChange}
-                    min={3}
-                    max={100}
-                    placeholder={t('auth.ageOptional')}
+                    required
+                    aria-required="true"
+                    minLength={6}
+                    autoComplete="new-password"
+                    placeholder={t('auth.confirmPasswordPlaceholder')}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="form-group">
+                  <label>Pattern (connect at least 4 dots) *</label>
+                  <PatternLockInput
+                    id="pattern"
+                    value={formData.pattern}
+                    onChange={(pattern) => {
+                      setFormData((prev) => ({ ...prev, pattern }));
+                      setError('');
+                    }}
+                    disabled={loading}
                   />
                 </div>
 
-                <div className="form-group checkbox-group">
-                  <input
-                    type="checkbox"
-                    id="isMinor"
-                    name="isMinor"
-                    checked={formData.isMinor}
-                    onChange={handleChange}
+                <div className="form-group">
+                  <label>Confirm Pattern *</label>
+                  <PatternLockInput
+                    id="confirmPattern"
+                    value={formData.confirmPattern}
+                    onChange={(confirmPattern) => {
+                      setFormData((prev) => ({ ...prev, confirmPattern }));
+                      setError('');
+                    }}
+                    disabled={loading}
                   />
-                  <label htmlFor="isMinor">{t('auth.under13')}</label>
                 </div>
-
-                {formData.isMinor && (
-                  <div className="form-group">
-                    <label htmlFor="parentEmail">{t('auth.parentEmail')}</label>
-                    <input
-                      type="email"
-                      id="parentEmail"
-                      name="parentEmail"
-                      value={formData.parentEmail}
-                      onChange={handleChange}
-                      placeholder={t('auth.parentEmailPlaceholder')}
-                    />
-                  </div>
-                )}
               </>
             )}
 
+            {fingerprintAvailable && (
+              <div className="form-group checkbox-group">
+                <input
+                  type="checkbox"
+                  id="enableFingerprint"
+                  checked={enableFingerprint}
+                  onChange={(e) => setEnableFingerprint(e.target.checked)}
+                />
+                <label htmlFor="enableFingerprint">Set up fingerprint login (optional)</label>
+              </div>
+            )}
+
             <div className="form-group">
-              <label htmlFor="learningCondition">
-                {t('auth.learningCondition')} * <span className="help-text">{t('auth.learningConditionHelp')}</span>
-              </label>
+              <label htmlFor="learningCondition">{t('auth.learningCondition')} *</label>
               <select
                 id="learningCondition"
                 name="learningCondition"
@@ -374,10 +356,10 @@ const Register = () => {
                 required
                 aria-required="true"
               >
-                <option value="none">{t('auth.selectLearningCondition')}</option>
+                <option value="none">None</option>
                 <option value="dyslexia">Dyslexia</option>
                 <option value="adhd">ADHD</option>
-                <option value="autism">Autism Spectrum</option>
+                <option value="autism">Autism</option>
               </select>
             </div>
 
@@ -389,35 +371,32 @@ const Register = () => {
                 name="age"
                 value={formData.age}
                 onChange={handleChange}
-                min="3"
-                max="100"
-                placeholder="Age"
+                min={3}
+                max={100}
+                placeholder={t('auth.ageOptional')}
               />
             </div>
 
             <div className="form-group checkbox-group">
-              <label>
-                <input
-                  type="checkbox"
-                  name="isMinor"
-                  checked={formData.isMinor}
-                  onChange={handleChange}
-                />
-                <span>{t('auth.under13')}</span>
-              </label>
+              <input
+                type="checkbox"
+                id="isMinor"
+                name="isMinor"
+                checked={formData.isMinor}
+                onChange={handleChange}
+              />
+              <label htmlFor="isMinor">{t('auth.under13')}</label>
             </div>
 
             {formData.isMinor && (
               <div className="form-group">
-                <label htmlFor="parentEmail">{t('auth.parentEmail')} *</label>
+                <label htmlFor="parentEmail">{t('auth.parentEmail')}</label>
                 <input
                   type="email"
                   id="parentEmail"
                   name="parentEmail"
                   value={formData.parentEmail}
                   onChange={handleChange}
-                  required={formData.isMinor}
-                  autoComplete="email"
                   placeholder={t('auth.parentEmailPlaceholder')}
                 />
               </div>

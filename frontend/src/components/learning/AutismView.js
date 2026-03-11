@@ -78,47 +78,502 @@ import { useAuth } from '../../context/AuthContext';
 import { usePreferences } from '../../context/PreferencesContext';
 import ProfileSettings from '../ProfileSettings';
 import api from '../../utils/api';
+import { adjustDifficulty, getCurrentDifficulty, getPerformanceSummary, recordLessonScore } from '../../services/difficultyAdjustmentService';
+import { getReviewBasedRecommendation } from '../../services/reviewRecommendationService';
+import NextLessonCard from './NextLessonCard';
 import {
+  bilingualPrimaryLanguageForMode,
   backendTtsLangFor,
+  isBilingualTextMode,
   normalizePreferredLanguage,
   pickByLanguage,
+  resolveBilingualTextModeFromPreferences,
   resolveUiLanguageFromPreferences,
   speechSynthesisLangFor,
 } from '../../utils/languagePrefs';
 import { useI18n } from '../../utils/i18n';
+import BilingualText from './BilingualText';
 // Icon imports for UI elements
 import {
   BookOpen,
   Check,
   ChevronLeft,
+  Gamepad2,
   Hand,
   Hash,
   Info,
   Lightbulb,
+  Award,
+  Menu,
   Mic,
   Pause,
   RotateCcw,
   Settings,
   Star,
   Timer,
+  TrendingUp,
   Volume2,
+  X,
 } from 'lucide-react';
 import PronunciationPractice from './PronunciationPractice';
+import PracticeSuggestion from './PracticeSuggestion';
+import MotivationReward from './MotivationReward';
 // EPIC 4: Personalized Learning Engine Components (Autism Module Only)
-import AutismRecommendationCard from './AutismRecommendationCard';
-import AutismProgressFeedback from './AutismProgressFeedback';
-import AutismLearningPath from './AutismLearningPath';
+// NOTE: These components are imported but not yet created. TODO: Implement these components.
+// import AutismRecommendationCard from './AutismRecommendationCard';
+// import AutismProgressFeedback from './AutismProgressFeedback';
+// import AutismLearningPath from './AutismLearningPath';
 import './AutismView.css';
+
+const AUTISM_DASHBOARD_DUPLICATE_LESSON_TITLES = new Set([
+  'Greetings',
+  'Basic Words',
+  'Numbers',
+  'Family Members',
+  'Common Actions',
+]);
+
+const joinUrl = (base, path) => {
+  const baseStr = String(base || '').replace(/\/+$/, '');
+  const pathStr = String(path || '');
+  const normalizedPath = pathStr.startsWith('/') ? pathStr : `/${pathStr}`;
+  return `${baseStr}${normalizedPath}`;
+};
+
+const labelForLang = (lang) => {
+  const normalized = String(lang || '').trim().toLowerCase();
+  if (normalized === 'tamil') return 'Tamil';
+  if (normalized === 'hindi') return 'Hindi';
+  return 'English';
+};
+
+const inferScriptLanguage = (text) => {
+  const value = String(text || '');
+  if (/[\u0B80-\u0BFF]/.test(value)) return 'tamil';
+  if (/[\u0900-\u097F]/.test(value)) return 'hindi';
+  return 'english';
+};
 
 const AutismView = ({ initialLessonId = null }) => {
   // Auth context
   const { user, logout } = useAuth();
-  const { preferences } = usePreferences();
+  const { preferences, updateAccessibilitySettings } = usePreferences();
   const uiLanguage = resolveUiLanguageFromPreferences(preferences);
+  const bilingualTextMode = resolveBilingualTextModeFromPreferences(preferences);
+  const showBilingualText = isBilingualTextMode(bilingualTextMode);
   const { t } = useI18n();
   const navigate = useNavigate();
+
+  const AUTISM_TEXT_EN_TO_TA = useMemo(
+    () => ({
+      Hello: 'வணக்கம்',
+      Goodbye: 'பிரியாவிடை',
+      'Thank you': 'நன்றி',
+      Sorry: 'மன்னிக்கவும்',
+      Yes: 'ஆம்',
+      No: 'இல்லை',
+      Maybe: 'ஒருவேளை',
+      'How are you?': 'எப்படி இருக்கிறீர்கள்?',
+      'Where are you?': 'நீங்கள் எங்கே இருக்கிறீர்கள்?',
+      'What is your name?': 'உங்கள் பெயர் என்ன?',
+      'Good Morning': 'காலை வணக்கம்',
+      'Good night': 'இனிய இரவு',
+      'Good Night': 'இனிய இரவு',
+      'To greet': 'வணக்கம் சொல்ல',
+      'To thank': 'நன்றி சொல்ல',
+      'To say goodbye': 'பிரியாவிடை சொல்ல',
+      Greeting: 'வணக்கம்',
+      Thanking: 'நன்றி சொல்வது',
+      'Saying goodbye': 'பிரியாவிடை சொல்வது',
+      'In the morning': 'காலையில்',
+      'At night': 'இரவில்',
+      'In the evening': 'மாலையில்',
+      'To say you are fine': 'நீங்கள் நலமாக இருக்கிறேன் என்று சொல்ல',
+      'To say thank you': 'நன்றி சொல்ல',
+      'To agree': 'ஒப்புக்கொள்ள',
+      'To disagree': 'மறுக்க',
+      'To ask a question': 'ஒரு கேள்வி கேட்க',
+      'To be polite': 'மரியாதையாக இருக்க',
+
+      // English lesson options (alphabet)
+      Apple: 'ஆப்பிள்',
+      Ball: 'பந்து',
+      Cat: 'பூனை',
+      Dog: 'நாய்',
+      Elephant: 'யானை',
+      Fish: 'மீன்',
+      Goat: 'ஆடு',
+      Hat: 'தொப்பி',
+      Ice: 'பனி',
+      Jug: 'குடம்',
+      Kite: 'பட்டம்',
+
+      // Actions (used as lesson content)
+      Walk: 'நட',
+      Run: 'ஓடு',
+      Sit: 'உட்கார்',
+      Stand: 'நில்',
+      Eat: 'சாப்பிடு',
+      Drink: 'குடி',
+      Sleep: 'தூங்கு',
+      Jump: 'குதி',
+      Read: 'படி',
+      Write: 'எழுது',
+
+      // Numbers / general
+      One: 'ஒன்று',
+      Two: 'இரண்டு',
+      Three: 'மூன்று',
+      Four: 'நான்கு',
+      Five: 'ஐந்து',
+      Six: 'ஆறு',
+      Seven: 'ஏழு',
+      Eight: 'எட்டு',
+      Nine: 'ஒன்பது',
+      Ten: 'பத்து',
+      Eleven: 'பதினொன்று',
+
+      // Family members options
+      Mother: 'அம்மா',
+      Father: 'அப்பா',
+      Sister: 'சகோதரி',
+      Brother: 'சகோதரன்',
+      Grandfather: 'தாத்தா',
+      Grandmother: 'பாட்டி',
+      Uncle: 'மாமா',
+      Aunt: 'அத்தை',
+      'Elder brother': 'மூத்த சகோதரன்',
+      'Younger brother': 'இளைய சகோதரன்',
+      'Elder sister': 'மூத்த சகோதரி',
+      'Younger sister': 'இளைய சகோதரி',
+
+      // Actions lesson options
+      'Move your feet': 'உங்கள் கால்களை நகர்த்துங்கள்',
+      'Jump high': 'உயரமாக குதிக்க',
+      'Stay still': 'அசையாமல் இருங்கள்',
+      'Same speed': 'அதே வேகம்',
+      'On a chair': 'நாற்காலியில்',
+      'In the air': 'காற்றில்',
+      'On the ceiling': 'மேல்சுவரில்',
+      'Your feet': 'உங்கள் கால்கள்',
+      'Your hands': 'உங்கள் கைகள்',
+      'Your head': 'உங்கள் தலை',
+      'Chew food': 'உணவை மென்று சாப்பிட',
+      Water: 'தண்ணீர்',
+      'A rock': 'ஒரு கல்',
+      'A chair': 'ஒரு நாற்காலி',
+      Chair: 'நாற்காலி',
+      'While walking': 'நடக்கும் போது',
+      'While eating': 'சாப்பிடும் போது',
+      'You go up': 'நீங்கள் மேலே செல்கிறீர்கள்',
+      'You sit down': 'நீங்கள் உட்காருகிறீர்கள்',
+      'You sleep': 'நீங்கள் தூங்குகிறீர்கள்',
+      Books: 'புத்தகங்கள்',
+      Food: 'உணவு',
+      Air: 'காற்று',
+      'A pen': 'ஒரு பேனா',
+      'Your nose': 'உங்கள் மூக்கு',
+    }),
+    []
+  );
+
+  const AUTISM_TEXT_EN_TO_HI = useMemo(
+    () => ({
+      Hello: 'नमस्ते',
+      Goodbye: 'अलविदा',
+      'Thank you': 'धन्यवाद',
+      Sorry: 'माफ़ कीजिए',
+      Yes: 'हाँ',
+      No: 'नहीं',
+      Maybe: 'शायद',
+      'How are you?': 'आप कैसे हैं?',
+      'Where are you?': 'आप कहाँ हैं?',
+      'What is your name?': 'आपका नाम क्या है?',
+      'Good Morning': 'सुप्रभात',
+      'Good night': 'शुभ रात्रि',
+      'Good Night': 'शुभ रात्रि',
+      'To greet': 'अभिवादन करने के लिए',
+      'To thank': 'धन्यवाद कहने के लिए',
+      'To say goodbye': 'अलविदा कहने के लिए',
+      Greeting: 'अभिवादन',
+      Thanking: 'धन्यवाद कहना',
+      'Saying goodbye': 'अलविदा कहना',
+      'In the morning': 'सुबह',
+      'At night': 'रात में',
+      'In the evening': 'शाम',
+      'To say you are fine': 'यह बताने के लिए कि आप ठीक हैं',
+      'To say thank you': 'धन्यवाद कहने के लिए',
+      'To agree': 'सहमत होने के लिए',
+      'To disagree': 'असहमत होने के लिए',
+      'To ask a question': 'प्रश्न पूछने के लिए',
+      'To be polite': 'विनम्र होने के लिए',
+
+      Apple: 'सेब',
+      Ball: 'गेंद',
+      Cat: 'बिल्ली',
+      Dog: 'कुत्ता',
+      Elephant: 'हाथी',
+      Fish: 'मछली',
+      Goat: 'बकरी',
+      Hat: 'टोपी',
+      Ice: 'बर्फ',
+      Jug: 'घड़ा',
+      Kite: 'पतंग',
+
+      // Actions (used as lesson content)
+      Walk: 'चलना',
+      Run: 'दौड़ना',
+      Sit: 'बैठना',
+      Stand: 'खड़ा होना',
+      Eat: 'खाना',
+      Drink: 'पीना',
+      Sleep: 'सोना',
+      Jump: 'कूदना',
+      Read: 'पढ़ना',
+      Write: 'लिखना',
+
+      One: 'एक',
+      Two: 'दो',
+      Three: 'तीन',
+      Four: 'चार',
+      Five: 'पाँच',
+      Six: 'छह',
+      Seven: 'सात',
+      Eight: 'आठ',
+      Nine: 'नौ',
+      Ten: 'दस',
+      Eleven: 'ग्यारह',
+
+      Mother: 'माँ',
+      Father: 'पिता',
+      Sister: 'बहन',
+      Brother: 'भाई',
+      Grandfather: 'दादा',
+      Grandmother: 'दादी',
+      Uncle: 'चाचा',
+      Aunt: 'चाची',
+      'Elder brother': 'बड़ा भाई',
+      'Younger brother': 'छोटा भाई',
+      'Elder sister': 'बड़ी बहन',
+      'Younger sister': 'छोटी बहन',
+
+      'Move your feet': 'अपने पैर हिलाएँ',
+      'Jump high': 'ऊँचा कूदो',
+      'Stay still': 'स्थिर रहो',
+      'Same speed': 'वही गति',
+      'On a chair': 'कुर्सी पर',
+      'In the air': 'हवा में',
+      'On the ceiling': 'छत पर',
+      'Your feet': 'आपके पैर',
+      'Your hands': 'आपके हाथ',
+      'Your head': 'आपका सिर',
+      'Chew food': 'खाना चबाओ',
+      Water: 'पानी',
+      'A rock': 'एक पत्थर',
+      'A chair': 'एक कुर्सी',
+      Chair: 'कुर्सी',
+      'While walking': 'चलते समय',
+      'While eating': 'खाते समय',
+      'You go up': 'आप ऊपर जाते हैं',
+      'You sit down': 'आप बैठते हैं',
+      'You sleep': 'आप सोते हैं',
+      Books: 'किताबें',
+      Food: 'खाना',
+      Air: 'हवा',
+      'A pen': 'एक पेन',
+      'Your nose': 'आपकी नाक',
+    }),
+    []
+  );
+
+  const AUTISM_CONTENT_TO_EN = useMemo(
+    () => ({
+      'வணக்கம் (Vanakkam)': 'Hello',
+      'நன்றி (Nandri)': 'Thank you',
+      'எப்படி இருக்கிறீர்கள்? (Eppadi Irukkireergal?)': 'How are you?',
+      'மன்னிக்கவும் (Mannikkavum)': 'Sorry',
+      'இல்லை (Illai)': 'No',
+      'பிரியாவிடை (Piriyavidai)': 'Goodbye',
+      'காலை வணக்கம் (Kaalai Vanakkam)': 'Good Morning',
+      'நான் நலமாக இருக்கிறேன் (Naan Nalamaaga Irukkiren)': 'I am fine',
+      'ஆம் (Aam)': 'Yes',
+      'தயவு செய்து (Thayavu Seidhu)': 'Please',
+
+      'एक (Ek)': 'One',
+      'दो (Do)': 'Two',
+      'तीन (Teen)': 'Three',
+      'चार (Chaar)': 'Four',
+      'पाँच (Paanch)': 'Five',
+      'छह (Chhah)': 'Six',
+      'सात (Saat)': 'Seven',
+      'आठ (Aath)': 'Eight',
+      'नौ (Nau)': 'Nine',
+      'दस (Das)': 'Ten',
+
+      'அம்மா (Amma)': 'Mother',
+      'அப்பா (Appa)': 'Father',
+      'அண்ணா (Anna)': 'Elder brother',
+      'அக்கா (Akka)': 'Elder sister',
+      'தம்பி (Thambi)': 'Younger brother',
+      'தங்கை (Thangai)': 'Younger sister',
+      'தாத்தா (Thaathaa)': 'Grandfather',
+      'பாட்டி (Paatti)': 'Grandmother',
+      'மாமா (Maama)': 'Uncle',
+      'அத்தை (Atthai)': 'Aunt',
+
+      Walk: 'Walk',
+      Run: 'Run',
+      Sit: 'Sit',
+      Stand: 'Stand',
+      Eat: 'Eat',
+      Drink: 'Drink',
+      Sleep: 'Sleep',
+      Jump: 'Jump',
+      Read: 'Read',
+      Write: 'Write',
+    }),
+    []
+  );
+
+  const translateAutismEnglishText = useCallback(
+    (text, lang) => {
+      const key = String(text || '').trim();
+      if (!key) return '';
+      const normalized = String(lang || '').trim().toLowerCase();
+      if (normalized === 'tamil') return AUTISM_TEXT_EN_TO_TA[key] || '';
+      if (normalized === 'hindi') return AUTISM_TEXT_EN_TO_HI[key] || '';
+      return '';
+    },
+    [AUTISM_TEXT_EN_TO_HI, AUTISM_TEXT_EN_TO_TA]
+  );
+
+  const translateAutismQuestion = useCallback(
+    (question, lang) => {
+      const q = String(question || '').trim();
+      if (!q) return '';
+      const normalized = String(lang || '').trim().toLowerCase();
+
+      // Pattern-based translations cover the full question set in this module.
+      let m = q.match(/^What does\s+(.+?)\s+mean\?$/i);
+      if (m) {
+        const term = m[1];
+        return normalized === 'tamil' ? `${term} என்றால் என்ன?` : `${term} का मतलब क्या है?`;
+      }
+
+      m = q.match(/^When do you say\s+(.+?)\?$/i);
+      if (m) {
+        const phrase = m[1];
+        return normalized === 'tamil' ? `நீங்கள் ${phrase} எப்போது சொல்வீர்கள்?` : `आप ${phrase} कब कहते हैं?`;
+      }
+
+      m = q.match(/^What is\s+(.+?)\s+used for\?$/i);
+      if (m) {
+        const phrase = m[1];
+        return normalized === 'tamil' ? `${phrase} எதற்குப் பயன்படுத்தப்படுகிறது?` : `${phrase} किस लिए उपयोग होता है?`;
+      }
+
+      m = q.match(/^Why do we use\s+(.+?)\?$/i);
+      if (m) {
+        const phrase = m[1];
+        return normalized === 'tamil' ? `நாம் ${phrase} என்பதை ஏன் பயன்படுத்துகிறோம்?` : `हम ${phrase} का उपयोग क्यों करते हैं?`;
+      }
+
+      m = q.match(/^Which word starts with\s+(.+?)\?$/i);
+      if (m) {
+        const letter = m[1];
+        return normalized === 'tamil' ? `எந்த வார்த்தை ${letter}-ஆல் தொடங்குகிறது?` : `कौन सा शब्द ${letter} से शुरू होता है?`;
+      }
+
+      m = q.match(/^What number is\s+(.+?)\?$/i);
+      if (m) {
+        const token = m[1];
+        return normalized === 'tamil' ? `${token} எந்த எண்?` : `${token} कौन सी संख्या है?`;
+      }
+
+      // Explicit translations for the remaining fixed questions.
+      const TA = {
+        'What do you do when you walk?': 'நீங்கள் நடக்கும்போது என்ன செய்வீர்கள்?',
+        'Is running faster than walking?': 'ஓடுவது நடப்பதைவிட வேகமாக உள்ளதா?',
+        'Where can you sit?': 'நீங்கள் எங்கே உட்காரலாம்?',
+        'What do you use to stand?': 'நீங்கள் நின்றிருக்க எதை பயன்படுத்துகிறீர்கள்?',
+        'What do you do when you eat?': 'நீங்கள் சாப்பிடும் போது என்ன செய்வீர்கள்?',
+        'What can you drink?': 'நீங்கள் என்ன குடிக்கலாம்?',
+        'When do you usually sleep?': 'நீங்கள் பொதுவாக எப்போது தூங்குவீர்கள்?',
+        'What happens when you jump?': 'நீங்கள் குதிக்கும்போது என்ன நடக்கும்?',
+        'What do you read?': 'நீங்கள் என்ன படிப்பீர்கள்?',
+        'What do you use to write?': 'நீங்கள் எழுத எதை பயன்படுத்துகிறீர்கள்?',
+      };
+
+      const HI = {
+        'What do you do when you walk?': 'जब आप चलते हैं तो आप क्या करते हैं?',
+        'Is running faster than walking?': 'क्या दौड़ना चलने से तेज़ है?',
+        'Where can you sit?': 'आप कहाँ बैठ सकते हैं?',
+        'What do you use to stand?': 'खड़े होने के लिए आप क्या इस्तेमाल करते हैं?',
+        'What do you do when you eat?': 'जब आप खाते हैं तो आप क्या करते हैं?',
+        'What can you drink?': 'आप क्या पी सकते हैं?',
+        'When do you usually sleep?': 'आप आमतौर पर कब सोते हैं?',
+        'What happens when you jump?': 'जब आप कूदते हैं तो क्या होता है?',
+        'What do you read?': 'आप क्या पढ़ते हैं?',
+        'What do you use to write?': 'लिखने के लिए आप क्या इस्तेमाल करते हैं?',
+      };
+
+      if (normalized === 'tamil') return TA[q] || '';
+      if (normalized === 'hindi') return HI[q] || '';
+      return '';
+    },
+    []
+  );
+
+  const renderContentWithActiveWord = useCallback(
+    (text, highlightPhrase, currentActiveWord) => {
+      const rawText = String(text || '');
+      if (!rawText) return null;
+
+      const phrase = String(highlightPhrase || '').trim();
+      const highlightIndex = phrase ? rawText.indexOf(phrase) : -1;
+
+      const renderWords = (segment, keyPrefix, isHighlighted) =>
+        segment
+          .split(' ')
+          .filter((w) => w.length > 0)
+          .map((word, idx) => {
+            const cleanWord = word.replace(/[.,!?;:() "]/g, '');
+            const isActive =
+              currentActiveWord && cleanWord.toLowerCase() === currentActiveWord.toLowerCase();
+            return (
+              <span
+                key={`${keyPrefix}-${idx}`}
+                className={
+                  isActive ? 'highlight active-word' :
+                  isHighlighted ? 'highlight keyword-highlight' : ''
+                }
+              >
+                {word}{' '}
+              </span>
+            );
+          });
+
+      if (highlightIndex === -1) {
+        return renderWords(rawText, 'w', false);
+      }
+
+      const before = rawText.slice(0, highlightIndex);
+      const match = rawText.slice(highlightIndex, highlightIndex + phrase.length);
+      const after = rawText.slice(highlightIndex + phrase.length);
+
+      return (
+        <>
+          {renderWords(before, 'before', false)}
+          {renderWords(match, 'match', true)}
+          {renderWords(after, 'after', false)}
+        </>
+      );
+    },
+    []
+  );
   // UI state for settings panel
   const [showSettings, setShowSettings] = useState(false);
+  const [showSideMenu, setShowSideMenu] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
 
   // EPIC 1.6: Autism support is delivered via predictable UI and reduced motion/distraction-free styling.
@@ -147,10 +602,19 @@ const AutismView = ({ initialLessonId = null }) => {
 
   // EPIC 4: Personalized Learning Engine State (Autism Module Only)
   const [nextRecommendation, setNextRecommendation] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [practiceSuggestion, setPracticeSuggestion] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [motivation, setMotivation] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [learningPath, setLearningPath] = useState(null);
   const [showRecommendation, setShowRecommendation] = useState(true);
+  const [showPracticeSuggestion, setShowPracticeSuggestion] = useState(false);
+  
+  // FEATURE: Adaptive Difficulty for Autism
+  const [currentDifficulty, setCurrentDifficulty] = useState('Beginner');
+  const [performanceSummary, setPerformanceSummary] = useState(null);
+  
   const [lessonPerformanceData, setLessonPerformanceData] = useState({
     correctAnswers: 0,
     wrongAnswers: 0,
@@ -180,35 +644,16 @@ const AutismView = ({ initialLessonId = null }) => {
     fetchCompletedLessons();
   }, []);
 
-  // EPIC 4: Load personalized learning data (Autism Module Only)
+  // EPIC 4: Load adaptive difficulty data (Autism Module Only)
   useEffect(() => {
-    const fetchPersonalizedData = async () => {
-      try {
-        // Fetch next recommendation
-        const recResponse = await api.get('/autism/recommendations/next');
-        if (recResponse.data.success) {
-          setNextRecommendation(recResponse.data.recommendation);
-        }
+    // FEATURE: Load adaptive difficulty level
+    const difficulty = getCurrentDifficulty(user);
+    setCurrentDifficulty(difficulty);
 
-        // Fetch learning path
-        const pathResponse = await api.get('/autism/recommendations/learning-path');
-        if (pathResponse.data.success) {
-          setLearningPath(pathResponse.data);
-        }
-
-        // Fetch motivational feedback
-        const motivationResponse = await api.get('/autism/recommendations/motivation');
-        if (motivationResponse.data.success) {
-          setMotivation(motivationResponse.data);
-        }
-      } catch (error) {
-        console.error('Error fetching personalized learning data:', error);
-        // Non-blocking error - continue with basic functionality
-      }
-    };
-
-    fetchPersonalizedData();
-  }, [completedLessons]); // Refetch when lessons are completed
+    // Load performance summary
+    const summary = getPerformanceSummary(user);
+    setPerformanceSummary(summary);
+  }, [user]);
 
   // Define lessons with multi-format content (text, audio, visuals, etc.)
   // Each lesson contains steps/questions for the user
@@ -1061,12 +1506,39 @@ const AutismView = ({ initialLessonId = null }) => {
 
   // Autism lessons have a fixed teaching language per lesson (Tamil/English/Hindi).
   // UI language should not hide lessons; it only controls scaffolding/chrome text.
+  const dashboardLessons = useMemo(() => {
+    return lessons.filter((lesson) => !AUTISM_DASHBOARD_DUPLICATE_LESSON_TITLES.has(lesson.title));
+  }, [lessons]);
+
   const displayedLessons = lessons;
+
+  // EPIC 4.7.1-4.7.4: Recommend one follow-up lesson from review + trend data.
+  useEffect(() => {
+    const recommendation = getReviewBasedRecommendation({
+      user,
+      module: 'autism',
+      lessons,
+      completedLessonIds: completedLessons,
+    });
+
+    if (!recommendation) {
+      setNextRecommendation(null);
+      return;
+    }
+
+    setNextRecommendation(recommendation);
+    setShowRecommendation(true);
+  }, [completedLessons, lessons, user]);
 
   // Get current step data
   const currentLesson = displayedLessons.find(l => l.id === selectedLesson) || lessons.find(l => l.id === selectedLesson);
   const currentStep = currentLesson?.steps[currentStepIndex];
   const totalSteps = currentLesson?.steps.length || 0;
+  const currentPathLessonId =
+    selectedLesson ||
+    nextRecommendation?.lesson?.id ||
+    lessons.find((lesson) => !completedLessons.includes(lesson.id))?.id ||
+    null;
 
   const teachingLanguage = useMemo(() => {
     return normalizePreferredLanguage(currentLesson?.language || 'english');
@@ -1181,6 +1653,19 @@ const AutismView = ({ initialLessonId = null }) => {
       const score = totalQuestions > 0 
         ? Math.round((correctAnswers / totalQuestions) * 100)
         : 0;
+
+      // EPIC 4.1.1-4.1.4: Record score and adjust difficulty one level at a time.
+      recordLessonScore(user, lessonKey, score, {
+        module: 'autism',
+        totalQuestions,
+        correctAnswers,
+        wrongAnswers,
+        hintsUsed: lessonPerformanceData.hintsUsed,
+        timeSpent,
+      });
+      const adjustment = adjustDifficulty(user);
+      setCurrentDifficulty(adjustment.newDifficulty || adjustment.currentDifficulty || 'Beginner');
+      setPerformanceSummary(getPerformanceSummary(user));
 
       try {
         const perfResponse = await api.post('/autism/performance', {
@@ -1535,7 +2020,8 @@ const AutismView = ({ initialLessonId = null }) => {
 
     try {
       // Try Backend TTS
-      const response = await fetch('/api/tts/speak', {
+      const ttsUrl = joinUrl(api?.defaults?.baseURL || '/api', '/tts/speak');
+      const response = await fetch(ttsUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, speed: playbackSpeed, lang: backendTtsLangFor(preferredLanguage) })
@@ -1722,65 +2208,6 @@ const AutismView = ({ initialLessonId = null }) => {
     if (questionAnswered) stopAnswerListening();
   }, [questionAnswered, stopAnswerListening, currentStepIndex, selectedLesson]);
 
-  // EPIC 2.3.1-2.3.4: Interactive engagement with immediate feedback
-  function handleInteraction(optionIndex) {
-    if (currentStep?.interaction && !questionAnswered) {
-      setQuestionAnswered(true);
-      setTimerActive(false);
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-      }
-
-      const stepKey = `${selectedLesson}-${currentStepIndex}`;
-      if (optionIndex === currentStep.interaction.correct) {
-        setFeedback('Good job! That\'s correct!');
-        // Mark this step as answered correctly
-        setStepAnsweredCorrectly(prev => ({
-          ...prev,
-          [stepKey]: true
-        }));
-        // Reset wrong answer count on correct answer
-        setWrongAnswerCount(prev => ({
-          ...prev,
-          [stepKey]: 0
-        }));
-        
-        // EPIC 4: Track correct answer
-        setLessonPerformanceData(prev => ({
-          ...prev,
-          correctAnswers: prev.correctAnswers + 1,
-        }));
-
-        // Auto-progress to next step after 2 seconds
-        autoProgressTimerRef.current = setTimeout(() => {
-          handleNext();
-        }, 2000);
-      } else {
-        // Increment wrong answer count
-        const currentWrongCount = wrongAnswerCount[stepKey] || 0;
-        const newWrongCount = currentWrongCount + 1;
-
-        setWrongAnswerCount(prev => ({
-          ...prev,
-          [stepKey]: newWrongCount
-        }));
-
-        // EPIC 4: Track wrong answer
-        setLessonPerformanceData(prev => ({
-          ...prev,
-          wrongAnswers: prev.wrongAnswers + 1,
-        }));
-
-        if (newWrongCount >= 2) {
-          setFeedback('Try again. Use the hint if you need help, then press Retry to attempt again.');
-          setShowHint(true);
-        } else {
-          setFeedback('Try again! Press Retry to attempt again, or view the hint.');
-        }
-      }
-    }
-  }
-
   const renderDifficultyLabel = (difficulty) => {
     const normalized = difficulty || 'medium';
     const count = normalized === 'easy' ? 1 : normalized === 'medium' ? 2 : 3;
@@ -1920,6 +2347,11 @@ const AutismView = ({ initialLessonId = null }) => {
 
     // Show completion screen after finishing all steps
     if (showCompletionScreen) {
+      // Calculate normalized score (0-100) using lesson performance data
+      const correctCount = lessonPerformanceData?.correctAnswers || 0;
+      const totalCount = currentStepIndex + 1;
+      const normalizedScore = Math.round((correctCount / Math.max(1, totalCount)) * 100);
+      
       return (
         <div className="autism-view completion-screen">
           <div className="completion-container">
@@ -1927,43 +2359,53 @@ const AutismView = ({ initialLessonId = null }) => {
               <div className="completion-icon">🎉</div>
               <h1 className="completion-title">Great Job!</h1>
               <p className="completion-message">You completed "{currentLesson.title}" lesson!</p>
+              <p style={{ fontSize: '14px', color: '#556270', marginTop: '8px' }}>
+                Score: {normalizedScore}%
+              </p>
 
-              {/* EPIC 4.4 & 4.5: Practice Suggestion and Motivation */}
-              {(practiceSuggestion || motivation) && (
-                <AutismProgressFeedback
-                  motivation={motivation}
-                  practiceSuggestion={practiceSuggestion}
-                  onPractice={() => {
-                    // Restart the same lesson for practice
-                    handleStartLesson(selectedLesson);
-                  }}
-                  onContinue={() => {
-                    // Continue to next lesson or back to lessons
-                    if (selectedLesson < lessons.length) {
-                      handleNextLesson();
-                    } else {
-                      handleBackToLessons();
-                    }
-                  }}
-                />
+              {/* EPIC 4.5: Motivation Through Reinforcement */}
+              {normalizedScore >= 20 && (
+                <div style={{ maxWidth: '500px', margin: '20px auto' }}>
+                  <MotivationReward
+                    score={normalizedScore}
+                    maxScore={100}
+                    lesson={currentLesson}
+                    condition="autism"
+                    totalLessonsCompleted={1}
+                  />
+                </div>
               )}
 
-              <div className="completion-actions">
-                {selectedLesson < lessons.length && (
-                  <button onClick={handleNextLesson} className="btn-completion btn-next-lesson">
-                    <span className="btn-icon">➡️</span>
-                    Go to Next Lesson
+              {!showPracticeSuggestion && normalizedScore >= 20 && normalizedScore < 60 && (
+                <div style={{ maxWidth: '500px', margin: '20px auto' }}>
+                  <PracticeSuggestion
+                    lesson={currentLesson}
+                    score={normalizedScore}
+                    condition="autism"
+                    onSkip={() => handleBackToLessons()}
+                    onStartPractice={() => setShowPracticeSuggestion(true)}
+                  />
+                </div>
+              )}
+
+              {!showPracticeSuggestion && (
+                <div className="completion-actions">
+                  {selectedLesson < lessons.length && (
+                    <button onClick={handleNextLesson} className="btn-completion btn-next-lesson">
+                      <span className="btn-icon">➡️</span>
+                      Go to Next Lesson
+                    </button>
+                  )}
+                  <button onClick={handleBackToLessons} className="btn-completion btn-back-lessons">
+                    <span className="btn-icon">📚</span>
+                    Back to Lessons
                   </button>
-                )}
-                <button onClick={handleBackToLessons} className="btn-completion btn-back-lessons">
-                  <span className="btn-icon">📚</span>
-                  Back to Lessons
-                </button>
-                <button onClick={handleGoToProgress} className="btn-completion btn-progress">
-                  <span className="btn-icon">📊</span>
-                  View Progress
-                </button>
-              </div>
+                  <button onClick={handleGoToProgress} className="btn-completion btn-progress">
+                    <span className="btn-icon">📊</span>
+                    View Progress
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -2026,7 +2468,24 @@ const AutismView = ({ initialLessonId = null }) => {
                 {/* Question below image */}
                 {currentStep.interaction && (
                   <div className="step-interaction-left">
-                    <p className="interaction-question">{currentStep.interaction.question}</p>
+                    <p className="interaction-question">
+                      {showBilingualText ? (
+                        <BilingualText
+                          bilingualTextMode={bilingualTextMode}
+                          contentLanguage="english"
+                          baseText={currentStep.interaction.question}
+                          i18n={{
+                            english: currentStep.interaction.question,
+                            tamil: translateAutismQuestion(currentStep.interaction.question, 'tamil'),
+                            hindi: translateAutismQuestion(currentStep.interaction.question, 'hindi'),
+                          }}
+                          showLabels={false}
+                          compact
+                        />
+                      ) : (
+                        currentStep.interaction.question
+                      )}
+                    </p>
 
                     <div className="interaction-voice-answer">
                       <button
@@ -2065,7 +2524,20 @@ const AutismView = ({ initialLessonId = null }) => {
                         disabled={questionAnswered}
                       >
                         <span className="option-letter">{String.fromCharCode(65 + index)}</span>
-                        <span className="option-text">{option}</span>
+                        <span className="option-text">
+                          <BilingualText
+                            bilingualTextMode={bilingualTextMode}
+                            contentLanguage="english"
+                            baseText={option}
+                            i18n={{
+                              english: option,
+                              tamil: translateAutismEnglishText(option, 'tamil'),
+                              hindi: translateAutismEnglishText(option, 'hindi'),
+                            }}
+                            showLabels={false}
+                            compact
+                          />
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -2076,62 +2548,45 @@ const AutismView = ({ initialLessonId = null }) => {
                 {/* EPIC 2.5.1: Highlighted main content with multi-word phrase support */}
                 <div className="step-text">
                   <p className="content-main">
-                    {/* Dynamic highlighting with multi-word phrase support */}
-                    {(() => {
-                      const text = currentStep.content;
-                      const highlightPhrase = currentStep.highlight || '';
+                    {showBilingualText ? (
+                      (() => {
+                        const rawContent = String(currentStep.content || '');
+                        const highlightPhrase = currentStep.highlight || '';
+                        const contentLang = inferScriptLanguage(rawContent);
 
-                      // Find the highlight phrase position in the content
-                      const highlightIndex = highlightPhrase ? text.indexOf(highlightPhrase) : -1;
+                        // If the content is English, show primary as user's preferred local language.
+                        const primaryLang = bilingualPrimaryLanguageForMode(bilingualTextMode);
+                        const primaryLabel = contentLang === 'english' ? labelForLang(primaryLang) : labelForLang(contentLang);
 
-                      if (highlightIndex === -1) {
-                        // No phrase match — render word-by-word with TTS active-word only
-                        return text.split(' ').map((word, idx) => {
-                          const cleanWord = word.replace(/[.,!?;:()"]/g, '');
-                          const isActive = activeWord && cleanWord.toLowerCase() === activeWord.toLowerCase();
-                          return (
-                            <span
-                              key={idx}
-                              className={isActive ? 'highlight active-word' : ''}
-                            >
-                              {word}{' '}
+                        const primaryText =
+                          contentLang === 'english'
+                            ? translateAutismEnglishText(rawContent, primaryLang) || rawContent
+                            : rawContent;
+
+                        const englishMeaning = AUTISM_CONTENT_TO_EN[rawContent] || '';
+                        const secondaryText = contentLang === 'english' ? rawContent : (englishMeaning || rawContent);
+
+                        return (
+                          <span className="bilingual-text">
+                            <span className="bilingual-line bilingual-primary">
+                              <span className="bilingual-label">{primaryLabel}</span>
+                              <span className="bilingual-value">{renderContentWithActiveWord(primaryText, highlightPhrase, activeWord)}</span>
                             </span>
-                          );
-                        });
-                      }
-
-                      // Split content into: before highlight, highlight phrase, after highlight
-                      const before = text.slice(0, highlightIndex);
-                      const match = text.slice(highlightIndex, highlightIndex + highlightPhrase.length);
-                      const after = text.slice(highlightIndex + highlightPhrase.length);
-
-                      const renderWords = (segment, keyPrefix, isHighlighted) =>
-                        segment.split(' ').filter(w => w.length > 0).map((word, idx) => {
-                          const cleanWord = word.replace(/[.,!?;:()"]/g, '');
-                          const isActive = activeWord && cleanWord.toLowerCase() === activeWord.toLowerCase();
-                          return (
-                            <span
-                              key={`${keyPrefix}-${idx}`}
-                              className={
-                                isActive ? 'highlight active-word' :
-                                isHighlighted ? 'highlight keyword-highlight' : ''
-                              }
-                            >
-                              {word}{' '}
+                            <span className="bilingual-break" aria-hidden="true" />
+                            <span className="bilingual-line bilingual-secondary">
+                              <span className="bilingual-label">English</span>
+                              <span className="bilingual-value">{renderContentWithActiveWord(secondaryText, highlightPhrase, activeWord)}</span>
                             </span>
-                          );
-                        });
-
-                      return (
-                        <>
-                          {renderWords(before, 'before', false)}
-                          {renderWords(match, 'match', true)}
-                          {renderWords(after, 'after', false)}
-                        </>
-                      );
-                    })()}
+                          </span>
+                        );
+                      })()
+                    ) : (
+                      renderContentWithActiveWord(currentStep.content, currentStep.highlight, activeWord)
+                    )}
                   </p>
-                  <p className="content-translation">{currentStep.translation}</p>
+                    {showBilingualText && currentStep.translation ? (
+                      <p className="content-translation">{currentStep.translation}</p>
+                    ) : null}
                 </div>
 
                 {/* EPIC 2.1.2: Audio controls */}
@@ -2238,14 +2693,16 @@ const AutismView = ({ initialLessonId = null }) => {
                 {/* EPIC 2.3.3: Immediate feedback */}
                 {feedback && <div className="feedback-message">{feedback}</div>}
 
-                {/* EPIC 2.4.1-2.4.4: Hint/explanation/encouragement section */}
-                <div className="hint-section">
-                  <button onClick={handleShowHint} className="btn-hint">
-                    <Lightbulb size={18} aria-hidden="true" />
-                    <span>{showHint ? 'Hide Hint' : 'Show Hint'}</span>
-                  </button>
-                  {showHint && <div className="hint-content">{currentStep.hint}</div>}
-                </div>
+                {/* EPIC 2.4.1-2.4.4: Hint/explanation/encouragement section - hide in simplified mode */}
+                {!preferences?.simplifiedLayout && (
+                  <div className="hint-section">
+                    <button onClick={handleShowHint} className="btn-hint">
+                      <Lightbulb size={18} aria-hidden="true" />
+                      <span>{showHint ? 'Hide Hint' : 'Show Hint'}</span>
+                    </button>
+                    {showHint && <div className="hint-content">{currentStep.hint}</div>}
+                  </div>
+                )}
               </div>
 
             </div>
@@ -2362,20 +2819,145 @@ const AutismView = ({ initialLessonId = null }) => {
         <div className="header-actions">
           <button
             type="button"
-            onClick={() => navigate('/progress')}
+            onClick={() => navigate('/dashboard')}
             className="btn-settings"
-            title={t('learning.common.progress')}
+            title={t('learning.common.home')}
+            aria-label={t('learning.common.home')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
-            {t('learning.common.progress')}
+            <BookOpen size={18} aria-hidden="true" />
+            <span>{t('learning.common.home')}</span>
           </button>
-          <button onClick={() => setShowSettings(true)} className="btn-settings" title={t('learning.common.settings')}>
-            <Settings size={18} aria-hidden="true" />
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="btn-settings"
+            title={t('learning.common.back')}
+            aria-label={t('learning.common.back')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <ChevronLeft size={18} aria-hidden="true" />
+            <span>{t('learning.common.back')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/games')}
+            className="btn-settings"
+            title={t('learning.common.games')}
+            aria-label={t('learning.common.games')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <Gamepad2 size={18} aria-hidden="true" />
+            <span>{t('learning.common.games')}</span>
           </button>
           <button onClick={logout} className="btn-exit">
             {t('learning.common.logout')}
           </button>
+          <button
+            type="button"
+            onClick={() => setShowSideMenu((prev) => !prev)}
+            className="btn-settings"
+            title={t('learning.common.menu')}
+            aria-label={t('learning.common.menu')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            {showSideMenu ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
+            <span>{t('learning.common.menu')}</span>
+          </button>
         </div>
       </header>
+
+      {showSideMenu && (
+        <>
+          <div
+            onClick={() => setShowSideMenu(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.35)',
+              zIndex: 190,
+            }}
+          />
+          <aside
+            aria-label="Autism side menu"
+            style={{
+              position: 'fixed',
+              top: 0,
+              right: 0,
+              width: '300px',
+              maxWidth: '88vw',
+              height: '100vh',
+              background: '#ffffff',
+              borderLeft: '1px solid #e5e7eb',
+              boxShadow: '-8px 0 24px rgba(15, 23, 42, 0.15)',
+              padding: '18px',
+              zIndex: 200,
+              overflowY: 'auto',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px' }}>{t('learning.common.quickControls')}</h3>
+              <button type="button" className="btn-settings" onClick={() => setShowSideMenu(false)}>
+                <X size={16} aria-hidden="true" />
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  navigate('/progress');
+                  setShowSideMenu(false);
+                }}
+                className="btn-settings"
+                style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: 8 }}
+              >
+                <Hash size={18} aria-hidden="true" />
+                <span>{t('learning.common.progress')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  navigate('/badges');
+                  setShowSideMenu(false);
+                }}
+                className="btn-settings"
+                style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: 8 }}
+              >
+                <Award size={18} aria-hidden="true" />
+                <span>{t('learning.common.badges')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  const newValue = !preferences?.simplifiedLayout;
+                  await updateAccessibilitySettings({ simplifiedLayout: newValue });
+                }}
+                className="btn-settings"
+                style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center' }}
+              >
+                <span>{t('learning.common.simple')}</span>
+                <span>{preferences?.simplifiedLayout ? t('learning.common.on') : t('learning.common.off')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSettings(true);
+                  setShowSideMenu(false);
+                }}
+                className="btn-settings"
+                style={{ justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: 8 }}
+              >
+                <Settings size={18} aria-hidden="true" />
+                <span>{t('learning.common.settings')}</span>
+              </button>
+            </div>
+          </aside>
+        </>
+      )}
 
       {showSettings && (
         <ProfileSettings onClose={() => setShowSettings(false)} />
@@ -2392,15 +2974,135 @@ const AutismView = ({ initialLessonId = null }) => {
           <p>{t('learning.autism.selectLessonToBegin')}</p>
         </div>
 
+        {/* FEATURE: Display current difficulty level */}
+        {currentDifficulty && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '12px',
+            padding: '12px 16px',
+            marginTop: '20px',
+            background: 'linear-gradient(135deg, #e8f5e9, #c8e6c9)',
+            borderRadius: '8px',
+            marginBottom: '20px',
+            fontSize: '14px',
+            fontWeight: '600',
+            color: '#2e7d32'
+          }}>
+            <TrendingUp size={18} aria-hidden="true" />
+            <span>{t('learning.common.currentLevelLabel')} {currentDifficulty}</span>
+              {performanceSummary?.recentAverage > 0 && (
+                <span style={{ marginLeft: '8px', opacity: 0.8 }}>
+                  ({performanceSummary.recentAverage.toFixed(0)}% {t('learning.common.avgAbbrev')})
+                </span>
+              )}
+          </div>
+        )}
+
+        {/* Lessons Grid - Predictable Layout */}
+        <div className="lessons-simple-grid" aria-label="Available lessons">
+          {dashboardLessons.length === 0 ? (
+            <div className="autism-dashboard-recommendation" style={{ gridColumn: '1 / -1' }}>
+              {nextRecommendation ? (
+                nextRecommendation.allCompleted ? (
+                  <NextLessonCard
+                    variant="autism"
+                    allCompleted
+                    completionMsg={nextRecommendation.reason}
+                    totalLessons={nextRecommendation.totalLessons}
+                  />
+                ) : (
+                  showRecommendation &&
+                  nextRecommendation.lesson && (
+                    <NextLessonCard
+                      variant="autism"
+                      recommendation={{
+                        ...nextRecommendation.lesson,
+                        position: nextRecommendation.position,
+                      }}
+                      reason={nextRecommendation.reason}
+                      completedCount={nextRecommendation.completedCount}
+                      totalLessons={nextRecommendation.totalLessons}
+                      onAccept={(rec) => handleStartLesson(rec.id)}
+                      onSkip={() => setShowRecommendation(false)}
+                    />
+                  )
+                )
+              ) : (
+                <button
+                  type="button"
+                  className="btn-lesson-start"
+                  onClick={() => navigate('/lesson-library')}
+                >
+                  {t('learning.common.openAllLessons')}
+                </button>
+              )}
+            </div>
+          ) : (
+            dashboardLessons.map((lesson, index) => {
+            const isCompleted = completedLessons.includes(lesson.id);
+            const palette = [
+              { accent: '#2563eb', soft: '#dbeafe', hover: '#1d4ed8' },
+              { accent: '#7c3aed', soft: '#ede9fe', hover: '#6d28d9' },
+              { accent: '#059669', soft: '#d1fae5', hover: '#047857' },
+              { accent: '#d97706', soft: '#fef3c7', hover: '#b45309' },
+            ];
+            const colors = palette[index % palette.length];
+            const LessonIcon = lesson.Icon || BookOpen;
+
+            return (
+              <div
+                key={`autism-lesson-card-${lesson.id}`}
+                className={`lesson-simple-card${isCompleted ? ' completed' : ''}`}
+                style={{
+                  '--accent-color': colors.accent,
+                  '--accent-color-soft': colors.soft,
+                  '--accent-color-hover': colors.hover,
+                }}
+              >
+                <div className="lesson-top">
+                  <div className="lesson-large-icon" aria-hidden="true">
+                    <LessonIcon size={28} />
+                  </div>
+                  {isCompleted && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span className="completion-checkmark" aria-label={t('learning.common.statusCompleted')}>
+                        <Check size={18} aria-hidden="true" />
+                      </span>
+                      <span className="completion-badge">{t('learning.common.statusCompleted')}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="lesson-body">
+                  <h4>{lesson.title}</h4>
+                  <p>{lesson.description}</p>
+                </div>
+                <button
+                  type="button"
+                  className="btn-lesson-start"
+                  onClick={() => handleStartLesson(lesson.id)}
+                >
+                  {isCompleted ? t('learning.common.reviewLesson') : t('learning.common.startLesson')}
+                </button>
+              </div>
+            );
+          })
+          )}
+        </div>
+
         {/* EPIC 4.5: Motivational Feedback */}
+        {/* NOTE: AutismProgressFeedback component not yet created
         {motivation && (
           <AutismProgressFeedback
             motivation={motivation}
-            onContinue={() => {/* Continue to lessons */}}
+            onContinue={() => {/* Continue to lessons *//* }}
           />
         )}
+        */}
 
         {/* EPIC 4.2: Next Lesson Recommendation */}
+        {/* NOTE: AutismRecommendationCard component not yet created
         {showRecommendation && nextRecommendation && (
           <AutismRecommendationCard
             recommendation={nextRecommendation}
@@ -2411,8 +3113,10 @@ const AutismView = ({ initialLessonId = null }) => {
             onSkip={() => setShowRecommendation(false)}
           />
         )}
+        */}
 
         {/* EPIC 4.3: Learning Path Overview */}
+        {/* NOTE: AutismLearningPath component not yet created
         {learningPath && (
           <AutismLearningPath
             learningPath={learningPath.learningPath}
@@ -2420,38 +3124,82 @@ const AutismView = ({ initialLessonId = null }) => {
             onSelectLesson={(lessonId) => handleStartLesson(lessonId)}
           />
         )}
+        */}
 
-        {/* Lessons - Simple Grid */}
-        <div className="lessons-container">
-          <div className="lessons-simple-grid">
-            {displayedLessons.map((lesson) => (
-              <div key={lesson.id} className={`lesson-simple-card ${completedLessons.includes(lesson.id) ? 'completed' : ''}`}>
-                <div className="lesson-top">
-                  <span className="lesson-large-icon" aria-hidden="true"><lesson.Icon size={40} /></span>
-                  {completedLessons.includes(lesson.id) && (
-                    <span className="completion-checkmark" aria-hidden="true"><Check size={18} /></span>
-                  )}
-                </div>
-                <div className="lesson-body">
-                  <h4>{lesson.title}</h4>
-                  <p>{lesson.description}</p>
-                  <div className="lesson-meta">
-                    <span className="lesson-steps-count">{t('learning.common.stepsCount', { count: lesson.steps.length })}</span>
-                    {completedLessons.includes(lesson.id) && (
-                      <span className="completion-badge"><Check size={14} aria-hidden="true" /> <span>{t('learning.common.statusCompleted')}</span></span>
-                    )}
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleStartLesson(lesson.id)}
-                  className="btn-lesson-start"
+        {/* EPIC 4.3: Personalized Learning Path (linear, clear, low-overload) */}
+        <section
+          aria-label="Autism learning path"
+          style={{
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '12px',
+            padding: '14px 16px',
+            marginBottom: '20px'
+          }}
+        >
+          <h3 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>{t('learning.common.learningPathTitle')}</h3>
+          <div style={{ display: 'grid', gap: '8px' }}>
+            {lessons.map((lesson, index) => {
+              const isCompleted = completedLessons.includes(lesson.id);
+              const isCurrent = currentPathLessonId === lesson.id && !isCompleted;
+              return (
+                <div
+                  key={`autism-path-${lesson.id}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: isCurrent ? '1px solid #3b82f6' : '1px solid #e5e7eb',
+                    background: isCurrent ? '#eff6ff' : '#ffffff'
+                  }}
                 >
-                  {completedLessons.includes(lesson.id) ? t('learning.common.reviewLesson') : t('learning.common.startLesson')}
-                </button>
-              </div>
-            ))}
+                  <span style={{ fontWeight: isCurrent ? 700 : 500 }}>{index + 1}. {lesson.title}</span>
+                  <span style={{ fontSize: '12px', color: isCompleted ? '#166534' : isCurrent ? '#1d4ed8' : '#6b7280' }}>
+                    {isCompleted ? `✓ ${t('learning.common.statusCompleted')}` : isCurrent ? t('learning.common.statusCurrent') : t('learning.common.statusUpcoming')}
+                  </span>
+                </div>
+              );
+            })}
           </div>
-        </div>
+        </section>
+
+        <section
+          aria-label="Open all lessons page"
+          style={{
+            background: 'linear-gradient(135deg, #e7edf5, #c9d8e8)',
+            border: '1px solid #9fb6cc',
+            borderRadius: '12px',
+            padding: '14px 16px',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px'
+          }}
+        >
+          <div>
+            <p style={{ margin: 0, fontWeight: 700, color: '#1f3f57' }}>{t('learning.common.lessonsAvailableInLibrary')}</p>
+            <p style={{ margin: '4px 0 0 0', color: '#334155', fontSize: '14px' }}>{t('learning.common.useOpenAllLessons')}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/lesson-library')}
+            style={{
+              border: 'none',
+              borderRadius: '10px',
+              background: '#27465f',
+              color: '#ffffff',
+              padding: '10px 14px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {t('learning.common.openAllLessons')}
+          </button>
+        </section>
 
         {/* Simple Help Section */}
         <div className="help-section">

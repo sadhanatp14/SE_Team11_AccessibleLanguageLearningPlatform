@@ -54,7 +54,7 @@
 
 import React from 'react';
 import { useI18n } from '../../utils/i18n';
-import BilingualText from './BilingualText';
+import { pickI18nString } from '../../utils/lessonI18n';
 import './GuidedSupport.css';
 
 const GuidedSupport = ({
@@ -86,18 +86,7 @@ const GuidedSupport = ({
       </button>
       {message && (
         <div className={`guided-message ${tone || ''}`} role="status">
-          {messageI18n ? (
-            <BilingualText
-              bilingualTextMode={bilingualTextMode}
-              contentLanguage={uiLanguage}
-              baseText={baseText}
-              i18n={messageI18n}
-              showLabels={true}
-              compact={false}
-            />
-          ) : (
-            message
-          )}
+          {messageI18n ? pickI18nString(uiLanguage, baseText, messageI18n) : message}
         </div>
       )}
     </div>

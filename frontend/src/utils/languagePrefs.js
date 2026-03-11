@@ -174,3 +174,43 @@ export const speechSynthesisLangFor = (preferredLanguage) => {
   if (lang === 'hindi') return 'hi-IN';
   return 'en-US';
 };
+
+// SpeechRecognition language (Web Speech API)
+export const speechRecognitionLangFor = (preferredLanguage) => {
+  const lang = normalizePreferredLanguage(preferredLanguage);
+  if (lang === 'tamil') return 'ta-IN';
+  if (lang === 'hindi') return 'hi-IN';
+  return 'en-US';
+};
+
+// Infer a language key for TTS based on script in the text.
+// Useful when the UI is English but the lesson content includes Tamil/Hindi words.
+// We only switch away from the fallback when a meaningful portion of the text
+// is in the target script to avoid reading mostly-English paragraphs with a
+// Tamil/Hindi voice.
+export const inferTtsLanguageKeyFromText = (text, fallbackLanguage = 'english') => {
+  const fallback = normalizePreferredLanguage(fallbackLanguage);
+  const raw = String(text || '');
+  if (!raw.trim()) return fallback;
+
+  // Remove whitespace + common punctuation so ratios are based on letters.
+  const sample = raw
+    .replace(/[\s\d]/g, '')
+    .replace(/[.,!?;:()"'{}<>/-]/g, '')
+    .replace(/\[/g, '')
+    .replace(/\]/g, '')
+    .replace(/\\/g, '');
+
+  if (!sample) return fallback;
+
+  const total = sample.length;
+  const tamilCount = (sample.match(/[\u0B80-\u0BFF]/g) || []).length;
+  const hindiCount = (sample.match(/[\u0900-\u097F]/g) || []).length;
+
+  // Threshold tuned to catch short word/phrase prompts without flipping for
+  // long English explanations that contain a single translated word.
+  const THRESHOLD = 0.22;
+  if (tamilCount / total >= THRESHOLD) return 'tamil';
+  if (hindiCount / total >= THRESHOLD) return 'hindi';
+  return fallback;
+};

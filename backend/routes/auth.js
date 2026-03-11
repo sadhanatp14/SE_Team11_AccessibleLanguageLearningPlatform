@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../models/User');
 const Preferences = require('../models/Preferences');
 const { protect } = require('../middleware/auth');
@@ -14,6 +15,54 @@ const generateToken = (id) => {
   });
 };
 
+const normalizePattern = (raw) => String(raw || '').trim();
+
+const isValidPattern = (raw) => {
+  const parts = normalizePattern(raw).split('-').filter(Boolean);
+  if (parts.length < 4) return false;
+  const unique = new Set(parts);
+  if (unique.size !== parts.length) return false;
+  return parts.every((p) => /^[0-8]$/.test(p));
+};
+
+const toBase64Url = (buffer) => Buffer.from(buffer)
+  .toString('base64')
+  .replace(/\+/g, '-')
+  .replace(/\//g, '_')
+  .replace(/=+$/g, '');
+
+const fromBase64Url = (value) => {
+  const normalized = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
+  const pad = normalized.length % 4;
+  const padded = pad ? normalized + '='.repeat(4 - pad) : normalized;
+  return Buffer.from(padded, 'base64');
+};
+
+const createChallenge = () => toBase64Url(crypto.randomBytes(32));
+const challengeStore = new Map();
+const CHALLENGE_TTL_MS = 5 * 60 * 1000;
+
+const storeChallenge = ({ requestId, challenge, type, email, userId }) => {
+  challengeStore.set(requestId, {
+    challenge,
+    type,
+    email,
+    userId,
+    expiresAt: Date.now() + CHALLENGE_TTL_MS,
+  });
+};
+
+const consumeChallenge = ({ requestId, type, email, userId }) => {
+  const item = challengeStore.get(requestId);
+  challengeStore.delete(requestId);
+  if (!item) return { ok: false, reason: 'Missing challenge state' };
+  if (item.type !== type) return { ok: false, reason: 'Challenge type mismatch' };
+  if (Date.now() > item.expiresAt) return { ok: false, reason: 'Challenge expired' };
+  if (email && item.email !== email) return { ok: false, reason: 'Challenge email mismatch' };
+  if (userId && item.userId !== String(userId)) return { ok: false, reason: 'Challenge user mismatch' };
+  return { ok: true, challenge: item.challenge };
+};
+
 // @route   POST /api/auth/register
 // @desc    Register a new user (1.1)
 // @access  Public
@@ -23,9 +72,28 @@ router.post(
     // EPIC 1.1.2: Backend validation for registration inputs
     body('name').trim().notEmpty().withMessage('Name is required'),
     body('email').isEmail().withMessage('Please provide a valid email'),
+    body('authMethod')
+      .optional()
+      .isIn(['password', 'pattern'])
+      .withMessage('Invalid authentication method'),
     body('password')
-      .isLength({ min: 6 })
-      .withMessage('Password must be at least 6 characters'),
+      .custom((val, { req }) => {
+        const method = req.body.authMethod || 'password';
+        if (method === 'password') {
+          if (!val || String(val).length < 6) {
+            throw new Error('Password must be at least 6 characters');
+          }
+        }
+        return true;
+      }),
+    body('pattern')
+      .custom((val, { req }) => {
+        const method = req.body.authMethod || 'password';
+        if (method === 'pattern' && !isValidPattern(val)) {
+          throw new Error('Pattern must connect at least 4 unique dots (0-8 grid)');
+        }
+        return true;
+      }),
     body('learningCondition')
       .isIn(['dyslexia', 'adhd', 'autism', 'none'])
       .withMessage('Invalid learning condition'),
@@ -81,6 +149,8 @@ router.post(
       name,
       email,
       password,
+      authMethod: incomingAuthMethod,
+      pattern,
       learningCondition: lc,
       age,
       parentEmail,
@@ -88,6 +158,8 @@ router.post(
       role,
       adminKey,
     } = req.body;
+
+    const authMethod = incomingAuthMethod || 'password';
 
     // Admin registration requires a secret key
     if (role === 'admin') {
@@ -127,7 +199,9 @@ router.post(
       const user = await User.create({
         name,
         email,
-        password,
+        authMethod,
+        password: authMethod === 'password' ? password : undefined,
+        patternHash: authMethod === 'pattern' ? normalizePattern(pattern) : undefined,
         learningCondition,
         age: role === 'admin' ? undefined : age,
         parentEmail: role === 'admin' ? undefined : parentEmail,
@@ -171,6 +245,8 @@ router.post(
           id: user._id,
           name: user.name,
           email: user.email,
+          authMethod: user.authMethod,
+          fingerprintEnabled: user.fingerprintEnabled,
           learningCondition: user.learningCondition,
           requiresParentalApproval: user.requiresParentalApproval,
           role: user.role,
@@ -199,7 +275,26 @@ router.post(
   [
     // EPIC 1.2.2: Backend credential validation for login
     body('email').isEmail().withMessage('Please provide a valid email'),
-    body('password').notEmpty().withMessage('Password is required'),
+    body('authMethod')
+      .optional()
+      .isIn(['password', 'pattern'])
+      .withMessage('Invalid authentication method'),
+    body('password')
+      .custom((val, { req }) => {
+        const method = req.body.authMethod || 'password';
+        if (method === 'password' && !val) {
+          throw new Error('Password is required');
+        }
+        return true;
+      }),
+    body('pattern')
+      .custom((val, { req }) => {
+        const method = req.body.authMethod || 'password';
+        if (method === 'pattern' && !isValidPattern(val)) {
+          throw new Error('Valid pattern is required');
+        }
+        return true;
+      }),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -210,12 +305,12 @@ router.post(
       });
     }
 
-    const { email, password } = req.body;
+    const { email, password, pattern, authMethod: incomingAuthMethod } = req.body;
 
     try {
       // Find user and include password
       const user = await User.findOne({ email })
-        .select('+password')
+        .select('+password +patternHash')
         .populate('preferences');
 
       if (!user) {
@@ -225,9 +320,24 @@ router.post(
         });
       }
 
-      // Check password
-      // EPIC 1.2.2: Compare entered password to stored bcrypt hash
-      const isMatch = await user.matchPassword(password);
+      const loginMethod = incomingAuthMethod || 'password';
+      const accountMethod = user.authMethod || 'password';
+
+      if (loginMethod !== accountMethod) {
+        return res.status(400).json({
+          success: false,
+          message: `This account uses ${accountMethod} login`,
+        });
+      }
+
+      // Check credential using selected method
+      let isMatch = false;
+      if (accountMethod === 'pattern') {
+        isMatch = await user.matchPattern(normalizePattern(pattern));
+      } else {
+        isMatch = await user.matchPassword(password);
+      }
+
       if (!isMatch) {
         return res.status(401).json({
           success: false,
@@ -258,6 +368,8 @@ router.post(
           id: user._id,
           name: user.name,
           email: user.email,
+          authMethod: user.authMethod || 'password',
+          fingerprintEnabled: user.fingerprintEnabled,
           learningCondition: user.learningCondition,
           requiresParentalApproval: user.requiresParentalApproval,
           preferences: user.preferences,
@@ -275,6 +387,231 @@ router.post(
   }
 );
 
+// @route   POST /api/auth/fingerprint/register/options
+// @desc    Get WebAuthn registration options for authenticated user
+// @access  Private
+router.post('/fingerprint/register/options', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('name email webAuthnCredentials');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const requestId = crypto.randomUUID();
+    const challenge = createChallenge();
+    storeChallenge({
+      requestId,
+      challenge,
+      type: 'register-fingerprint',
+      userId: String(user._id),
+      email: user.email,
+    });
+
+    const existingCredentials = Array.isArray(user.webAuthnCredentials) ? user.webAuthnCredentials : [];
+
+    return res.json({
+      success: true,
+      requestId,
+      publicKey: {
+        challenge,
+        rp: {
+          name: 'Accessible Language Learning Platform',
+        },
+        user: {
+          id: toBase64Url(Buffer.from(String(user._id))),
+          name: user.email,
+          displayName: user.name,
+        },
+        pubKeyCredParams: [
+          { type: 'public-key', alg: -7 },
+          { type: 'public-key', alg: -257 },
+        ],
+        timeout: 60000,
+        authenticatorSelection: {
+          authenticatorAttachment: 'platform',
+          userVerification: 'preferred',
+          residentKey: 'preferred',
+        },
+        attestation: 'none',
+        excludeCredentials: existingCredentials.map((cred) => ({
+          type: 'public-key',
+          id: cred.credentialId,
+          transports: cred.transports || [],
+        })),
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Unable to prepare fingerprint setup', error: error.message });
+  }
+});
+
+// @route   POST /api/auth/fingerprint/register/verify
+// @desc    Verify WebAuthn registration response and store fingerprint credential
+// @access  Private
+router.post('/fingerprint/register/verify', protect, async (req, res) => {
+  try {
+    const { requestId, credential } = req.body;
+    if (!requestId || !credential?.id || !credential?.response?.clientDataJSON) {
+      return res.status(400).json({ success: false, message: 'Invalid registration payload' });
+    }
+
+    const challengeResult = consumeChallenge({
+      requestId,
+      type: 'register-fingerprint',
+      userId: String(req.user.id),
+    });
+
+    if (!challengeResult.ok) {
+      return res.status(400).json({ success: false, message: challengeResult.reason || 'Invalid challenge state' });
+    }
+
+    const clientData = JSON.parse(fromBase64Url(credential.response.clientDataJSON).toString('utf8'));
+    if (clientData.type !== 'webauthn.create') {
+      return res.status(400).json({ success: false, message: 'Invalid attestation type' });
+    }
+    if (clientData.challenge !== challengeResult.challenge) {
+      return res.status(400).json({ success: false, message: 'Challenge verification failed' });
+    }
+
+    const user = await User.findById(req.user.id).select('webAuthnCredentials fingerprintEnabled');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const credentialId = String(credential.id);
+    const exists = (user.webAuthnCredentials || []).some((item) => item.credentialId === credentialId);
+    if (!exists) {
+      user.webAuthnCredentials.push({
+        credentialId,
+        transports: Array.isArray(credential.response.transports) ? credential.response.transports : [],
+      });
+    }
+    user.fingerprintEnabled = user.webAuthnCredentials.length > 0;
+    await user.save();
+
+    return res.json({ success: true, message: 'Fingerprint registered successfully' });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Unable to verify fingerprint registration', error: error.message });
+  }
+});
+
+// @route   POST /api/auth/fingerprint/login/options
+// @desc    Get WebAuthn login options by email
+// @access  Public
+router.post('/fingerprint/login/options', async (req, res) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const user = await User.findOne({ email }).select('email webAuthnCredentials');
+    if (!user || !Array.isArray(user.webAuthnCredentials) || user.webAuthnCredentials.length === 0) {
+      return res.status(404).json({ success: false, message: 'No fingerprint is configured for this account' });
+    }
+
+    const requestId = crypto.randomUUID();
+    const challenge = createChallenge();
+    storeChallenge({
+      requestId,
+      challenge,
+      type: 'login-fingerprint',
+      userId: String(user._id),
+      email: user.email,
+    });
+
+    return res.json({
+      success: true,
+      requestId,
+      publicKey: {
+        challenge,
+        timeout: 60000,
+        userVerification: 'preferred',
+        allowCredentials: user.webAuthnCredentials.map((cred) => ({
+          type: 'public-key',
+          id: cred.credentialId,
+          transports: cred.transports || [],
+        })),
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Unable to prepare fingerprint login', error: error.message });
+  }
+});
+
+// @route   POST /api/auth/fingerprint/login/verify
+// @desc    Verify fingerprint login assertion and issue JWT session
+// @access  Public
+router.post('/fingerprint/login/verify', async (req, res) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const { requestId, credential } = req.body;
+
+    if (!email || !requestId || !credential?.id || !credential?.response?.clientDataJSON) {
+      return res.status(400).json({ success: false, message: 'Invalid fingerprint login payload' });
+    }
+
+    const user = await User.findOne({ email }).populate('preferences');
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid account' });
+    }
+
+    const challengeResult = consumeChallenge({
+      requestId,
+      type: 'login-fingerprint',
+      userId: String(user._id),
+      email,
+    });
+
+    if (!challengeResult.ok) {
+      return res.status(400).json({ success: false, message: challengeResult.reason || 'Invalid challenge state' });
+    }
+
+    const clientData = JSON.parse(fromBase64Url(credential.response.clientDataJSON).toString('utf8'));
+    if (clientData.type !== 'webauthn.get') {
+      return res.status(400).json({ success: false, message: 'Invalid assertion type' });
+    }
+    if (clientData.challenge !== challengeResult.challenge) {
+      return res.status(400).json({ success: false, message: 'Challenge verification failed' });
+    }
+
+    const credentialId = String(credential.id);
+    const hasCredential = Array.isArray(user.webAuthnCredentials)
+      && user.webAuthnCredentials.some((item) => item.credentialId === credentialId);
+
+    if (!hasCredential) {
+      return res.status(401).json({ success: false, message: 'Fingerprint is not recognized for this account' });
+    }
+
+    if (!user.isActive) {
+      return res.status(403).json({ success: false, message: 'Account has been deactivated' });
+    }
+
+    user.lastLogin = Date.now();
+    await user.save();
+
+    const token = generateToken(user._id);
+    return res.json({
+      success: true,
+      message: 'Login successful',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        authMethod: user.authMethod || 'password',
+        fingerprintEnabled: user.fingerprintEnabled,
+        learningCondition: user.learningCondition,
+        requiresParentalApproval: user.requiresParentalApproval,
+        preferences: user.preferences,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Unable to verify fingerprint login', error: error.message });
+  }
+});
+
 // @route   GET /api/auth/me
 // @desc    Get current logged in user
 // @access  Private
@@ -289,6 +626,8 @@ router.get('/me', protect, async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        authMethod: user.authMethod || 'password',
+        fingerprintEnabled: user.fingerprintEnabled,
         learningCondition: user.learningCondition,
         age: user.age,
         isMinor: user.isMinor,

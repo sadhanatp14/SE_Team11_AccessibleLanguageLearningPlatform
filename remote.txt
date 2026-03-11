@@ -1,2 +1,0 @@
-origin	https://github.com/sadhanatp14/SE_Team11_AccessibleLanguageLearningPlatform.git (fetch)
-origin	https://github.com/sadhanatp14/SE_Team11_AccessibleLanguageLearningPlatform.git (push)

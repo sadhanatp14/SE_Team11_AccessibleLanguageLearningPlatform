@@ -29,7 +29,10 @@ import LanguageSelection from './components/LanguageSelection'; // Language sele
 import Dashboard from './components/Dashboard'; // Main dashboard after login
 import ProtectedRoute from './components/ProtectedRoute'; // Wrapper for protected routes
 import LessonPage from './components/learning/LessonPage'; // Individual lesson view
+import LessonLibraryPage from './components/learning/LessonLibraryPage'; // Dedicated page to browse all lessons
 import ProgressPage from './components/ProgressPage'; // Progress tracking page
+import BadgesPage from './components/BadgesPage';
+import GamesPage from './components/learning/GamesPage';
 import AdminUsersList from './components/admin/AdminUsersList';
 import AdminUserDetail from './components/admin/AdminUserDetail';
 import { useI18n } from './utils/i18n';
@@ -201,12 +204,37 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/badges"
+              element={
+                <ProtectedRoute>
+                  <BadgesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/games"
+              element={
+                <ProtectedRoute>
+                  <GamesPage />
+                </ProtectedRoute>
+              }
+            />
             {/* Individual lesson page (EPIC 1.4) */}
             <Route
               path="/lessons/:lessonId"
               element={
                 <ProtectedRoute>
                   <LessonPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* Dedicated all-lessons page */}
+            <Route
+              path="/lesson-library"
+              element={
+                <ProtectedRoute>
+                  <LessonLibraryPage />
                 </ProtectedRoute>
               }
             />

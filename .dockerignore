@@ -1,0 +1,22 @@
+# Ignore git metadata
+.git
+
+# Node artifacts
+**/node_modules
+**/npm-debug.log
+**/yarn-error.log
+**/pnpm-debug.log
+
+# Frontend build artifacts
+frontend/build
+frontend/.cache
+
+# Tests/coverage
+**/coverage
+
+# OS junk
+.DS_Store
+
+# Env files
+**/.env
+**/.env.*

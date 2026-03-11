@@ -96,6 +96,8 @@
  */
 
 import { getAllLessonProgress, normalizeUserId } from './dyslexiaProgressService';
+import { getLessonHistory } from './difficultyAdjustmentService';
+import { getSimplePerformanceTrend } from './reviewRecommendationService';
 
 // Session-scoped storage key for tracking skips
 const SKIP_KEY = 'nextLessonSkipped';
@@ -132,6 +134,24 @@ export const LESSON_ORDER = [
     description: 'Count, match, and order numbers',
     descriptionSyllables: 'Count, match, and or-der num-bers',
     totalInteractions: 11,
+  },
+  {
+    id: 4,
+    apiId: 'lesson-tamil-essentials',
+    title: 'Tamil Foundations: Everyday Greetings',
+    titleSyllables: 'Ta-mil Foun-da-tions: Eve-ry-day Greet-ings',
+    description: 'Practice greetings and polite words in Tamil',
+    descriptionSyllables: 'Prac-tice greet-ings and po-lite words in Ta-mil',
+    totalInteractions: 6,
+  },
+  {
+    id: 5,
+    apiId: 'lesson-hindi-essentials',
+    title: 'Hindi Foundations: Everyday Greetings',
+    titleSyllables: 'Hin-di Foun-da-tions: Eve-ry-day Greet-ings',
+    description: 'Practice greetings and polite words in Hindi',
+    descriptionSyllables: 'Prac-tice greet-ings and po-lite words in Hin-di',
+    totalInteractions: 6,
   },
 ];
 
@@ -190,21 +210,40 @@ export const getNextLessonRecommendation = (user) => {
     };
   }
 
-  // Build recommendation
-  const position = LESSON_ORDER.findIndex((l) => l.apiId === nextLesson.apiId) + 1;
+  // 4.7.2 Identify simple trend from past dyslexia performance.
+  const history = getLessonHistory(user, 12).filter((entry) => {
+    if (!entry) return false;
+    if (entry.module) return entry.module === 'dyslexia';
+    return String(entry.lessonId || '').startsWith('lesson-') || String(entry.lessonId || '').startsWith('sample-');
+  });
+  const trendInfo = getSimplePerformanceTrend(history);
+
+  // 4.7.3 Generate one follow-up recommendation.
+  let recommended = nextLesson;
+  let reason = lastCompleted
+    ? `You finished "${lastCompleted.title}". Up next:`
+    : 'Start your learning journey:';
+
+  if (trendInfo.trend === 'struggling' && lastCompleted) {
+    recommended = lastCompleted;
+    reason = `Let's quickly review "${lastCompleted.title}" before moving ahead.`;
+  } else if (trendInfo.trend === 'improving') {
+    reason = `Great progress (${Math.round(trendInfo.recentAverage)}% recent avg). Continue with:`;
+  }
+
+  const position = LESSON_ORDER.findIndex((l) => l.apiId === recommended.apiId) + 1;
 
   return {
     recommendation: {
-      ...nextLesson,
+      ...recommended,
       position,
     },
     lastCompleted,
     allCompleted: false,
     completedCount,
     totalLessons: LESSON_ORDER.length,
-    reason: lastCompleted
-      ? `You finished "${lastCompleted.title}". Up next:`
-      : 'Start your learning journey:',
+    reason,
+    trend: trendInfo.trend,
   };
 };
 

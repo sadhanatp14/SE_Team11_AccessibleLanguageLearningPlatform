@@ -141,6 +141,11 @@ export const PreferencesProvider = ({ children }) => {
     if (prefs.reduceAnimations && prefs.distractionFreeMode && supportsDistractionFree) {
       container.classList.add('reduce-animations');
     }
+
+    // Apply simplified layout mode (Epic 5.5)
+    if (prefs.simplifiedLayout) {
+      container.classList.add('simplified-layout');
+    }
   };
 
   const updatePreferences = async (updates) => {
@@ -211,6 +216,18 @@ export const PreferencesProvider = ({ children }) => {
     }
   };
 
+  // EPIC 5.7: Reset language preferences to default
+  const resetLanguage = async () => {
+    try {
+      const response = await api.delete('/preferences/language');
+      setPreferences(response.data.preferences);
+      applyPreferences(response.data.preferences);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.response?.data?.message };
+    }
+  };
+
   const value = {
     preferences,
     loading,
@@ -220,6 +237,7 @@ export const PreferencesProvider = ({ children }) => {
     updateADHDSettings,
     updateAutismSettings,
     resetPreferences,
+    resetLanguage,
     applyPreferences,
   };
 

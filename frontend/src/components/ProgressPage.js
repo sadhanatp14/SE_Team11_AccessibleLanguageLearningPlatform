@@ -73,11 +73,13 @@ import { useAuth } from '../context/AuthContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { getSummary } from '../services/progressService';
 import './learning/DyslexiaView.css';
+import './learning/AutismView.css';
 import { getAllLessonProgress, normalizeUserId } from '../services/dyslexiaProgressService';
 import api from '../utils/api';
-import { BookOpen } from 'lucide-react';
+import { Award, BookOpen } from 'lucide-react';
 import { getDyslexiaLessonTitle, useDyslexiaSyllableMode } from '../utils/dyslexiaSyllableMode';
 import { useI18n } from '../utils/i18n';
+import SyllableModeToggle from './common/SyllableModeToggle';
 
 /**
  * ProgressPage
@@ -105,6 +107,7 @@ const ProgressPage = () => {
   const [summaryError, setSummaryError] = useState('');
   const [localProgress, setLocalProgress] = useState({});
   const [completedLessonKeys, setCompletedLessonKeys] = useState([]);
+  const [lessonFilter, setLessonFilter] = useState(null); // null | 'completed' | 'partial' | 'notStarted'
 
   const refreshLocalProgress = React.useCallback(() => {
     // Dyslexia uses a localStorage key derived from the current user.
@@ -148,7 +151,11 @@ const ProgressPage = () => {
   );
 
   const statusLabelFor = React.useCallback(
-    (status) => (status === 'Completed' ? t('progress.statusCompleted') : t('progress.statusNotStarted')),
+    (status) => {
+      if (status === 'Completed') return t('progress.statusCompleted');
+      if (status === 'In Progress') return t('progress.statusInProgress');
+      return t('progress.statusNotStarted');
+    },
     [t]
   );
   const remoteLessonPrefix = condition === 'autism'
@@ -157,7 +164,7 @@ const ProgressPage = () => {
       ? 'adhd-lesson-'
       : '';
 
-  const showLearningHistory = condition === 'dyslexia';
+  const showLearningHistory = false;
 
   const remoteCompletedCount = React.useMemo(() => {
     if (!remoteLessonPrefix) return 0;
@@ -171,32 +178,59 @@ const ProgressPage = () => {
         { id: 'lesson-greetings', title: applyDyslexiaSyllables ? getDyslexiaLessonTitle('lesson-greetings', 'Greetings') : 'Greetings', route: '/lessons/lesson-greetings' },
         { id: 'lesson-vocabulary', title: applyDyslexiaSyllables ? getDyslexiaLessonTitle('lesson-vocabulary', 'Basic Words') : 'Basic Words', route: '/lessons/lesson-vocabulary' },
         { id: 'lesson-numbers', title: applyDyslexiaSyllables ? getDyslexiaLessonTitle('lesson-numbers', 'Numbers') : 'Numbers', route: '/lessons/lesson-numbers' },
+        { id: 'lesson-tamil-essentials', title: applyDyslexiaSyllables ? getDyslexiaLessonTitle('lesson-tamil-essentials', 'Tamil Foundations: Everyday Greetings') : 'Tamil Foundations: Everyday Greetings', route: '/lessons/lesson-tamil-essentials' },
+        { id: 'lesson-hindi-essentials', title: applyDyslexiaSyllables ? getDyslexiaLessonTitle('lesson-hindi-essentials', 'Hindi Foundations: Everyday Greetings') : 'Hindi Foundations: Everyday Greetings', route: '/lessons/lesson-hindi-essentials' },
       ];
 
       return lessonDefs.map((l) => {
         const entry = localProgress?.[l.id] || { status: 'Not Started', correctCount: 0 };
         const correctCount = Number(entry.correctCount || 0);
         const percent = Math.min(100, Math.round((correctCount / 5) * 100));
-        const completed = (entry.status === 'Completed');
+        const completed = (entry.status === 'Completed') || percent >= 100;
+        const derivedStatus = completed
+          ? 'Completed'
+          : percent > 0
+            ? 'In Progress'
+            : 'Not Started';
+        const notStarted = derivedStatus === 'Not Started' || percent <= 0;
         return {
           id: l.id,
           title: l.title,
-          status: entry.status || 'Not Started',
-          statusLabel: statusLabelFor(entry.status || 'Not Started'),
+          status: derivedStatus,
+          statusLabel: statusLabelFor(derivedStatus),
           percent,
           onOpen: () => navigate(l.route),
-          openLabel: completed ? t('progress.reviewLesson') : t('progress.continue'),
+          openLabel: completed
+            ? t('progress.reviewLesson')
+            : notStarted
+              ? t('progress.startLesson')
+              : t('progress.continue'),
         };
       });
     }
 
     // ADHD/Autism lessons are inside their respective learning centers.
-    const ids = [1, 2, 3];
-    const titles = {
-      1: 'Greetings',
-      2: 'Basic Words',
-      3: 'Numbers',
-    };
+    const ids = condition === 'adhd'
+      ? [1, 2, 3, 4, 5, 6]
+      : condition === 'autism'
+        ? [1, 2, 3, 4, 5]
+        : [1, 2, 3];
+    const titles = condition === 'adhd'
+      ? {
+          1: 'Greetings',
+          2: 'Basic Words',
+          3: 'Numbers',
+          4: 'Audio Stories',
+          5: 'Tamil Foundations: Everyday Greetings',
+          6: 'Hindi Foundations: Everyday Greetings',
+        }
+      : {
+          1: 'Greetings',
+          2: 'Basic Words',
+          3: 'Numbers',
+          4: 'Family Members',
+          5: 'Common Actions',
+        };
 
     return ids.map((lessonId) => {
       const key = `${remoteLessonPrefix}${lessonId}`;
@@ -208,10 +242,26 @@ const ProgressPage = () => {
         statusLabel: completed ? t('progress.statusCompleted') : t('progress.statusNotStarted'),
         percent: completed ? 100 : 0,
         onOpen: () => navigate('/dashboard', { state: { openLessonId: lessonId, openCondition: condition } }),
-        openLabel: completed ? t('progress.reviewInCenter') : t('progress.startInCenter'),
+        openLabel: completed ? t('progress.reviewLesson') : t('progress.startLesson'),
       };
     });
   }, [applyDyslexiaSyllables, completedLessonKeys, condition, localProgress, navigate, remoteLessonPrefix, statusLabelFor, t]);
+
+  const lessonCategoryFor = React.useCallback((lesson) => {
+    const rawPercent = Number(lesson?.percent ?? 0);
+    const percent = Number.isFinite(rawPercent) ? rawPercent : 0;
+    const status = String(lesson?.status || '');
+
+    if (status === 'Completed' || percent >= 100) return 'completed';
+    if (/in\s*progress/i.test(status)) return 'partial';
+    if (percent > 0 && percent < 100) return 'partial';
+    return 'notStarted';
+  }, []);
+
+  const filteredLessonCards = React.useMemo(() => {
+    if (!lessonFilter) return lessonCards;
+    return lessonCards.filter((l) => lessonCategoryFor(l) === lessonFilter);
+  }, [lessonCards, lessonCategoryFor, lessonFilter]);
 
   useEffect(() => {
     let mounted = true;
@@ -268,7 +318,12 @@ const ProgressPage = () => {
     // EPIC 1.7.3: Apply stored preferences consistently outside the dashboard view
     const container = containerRef.current;
 
-    container.className = 'dyslexia-view progress-page motion-enabled';
+    // Apply appropriate view class based on learning condition
+    if (user?.learningCondition === 'autism') {
+      container.className = 'autism-view progress-page motion-enabled';
+    } else {
+      container.className = 'dyslexia-view progress-page motion-enabled';
+    }
 
     if (preferences.contrastTheme && preferences.contrastTheme !== 'default') {
       container.classList.add(`theme-${preferences.contrastTheme}`);
@@ -304,13 +359,17 @@ const ProgressPage = () => {
   }, [preferences, user?.learningCondition]);
 
   const displayCompletedCount = summary?.completedCount ?? 0;
-  const displayTotalLessons = summary?.totalLessons ?? 3;
+
+  // Prefer condition-specific totals derived from the visible lesson catalog.
+  // The backend summary currently reflects DB lessons and can be lower than the UI catalog.
+  const computedTotalLessons = Array.isArray(lessonCards) ? lessonCards.length : 0;
+  const displayTotalLessons = Math.max(summary?.totalLessons ?? 0, computedTotalLessons, 3);
   const mergedCompletedCount = Math.max(
     displayCompletedCount,
     condition === 'dyslexia' || !remoteLessonPrefix ? localDyslexiaCompleted : remoteCompletedCount
   );
   const mergedPercentage = displayTotalLessons
-    ? Math.round((mergedCompletedCount / displayTotalLessons) * 100)
+    ? Math.min(100, Math.round((mergedCompletedCount / displayTotalLessons) * 100))
     : 0;
 
   // EPIC 6.1.2: Progress UI is derived from completed/total to show a percentage.
@@ -318,27 +377,28 @@ const ProgressPage = () => {
   return (
     <div
       ref={containerRef}
-      className="dyslexia-view"
+      className={user?.learningCondition === 'autism' ? 'autism-view' : 'dyslexia-view'}
       id="learning-container"
       data-user-condition={user?.learningCondition || ''}
     >
-      <nav className="navbar">
-        <div className="nav-brand">
+      <nav className={user?.learningCondition === 'autism' ? 'simple-header' : 'navbar'}>
+        <div className={user?.learningCondition === 'autism' ? 'header-left' : 'nav-brand'}>
           <h1 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <BookOpen size={22} aria-hidden="true" />
             <span>{t('progress.brand')}</span>
           </h1>
         </div>
-        <div className="nav-menu">
+        <div className={user?.learningCondition === 'autism' ? 'header-actions' : 'nav-menu'}>
           <span className="user-name">{t('progress.hello', { name: user?.name || '' })}</span>
-          <button type="button" onClick={() => navigate('/dashboard')} className="btn-settings" title={t('progress.backToLearning')}>
+          {condition === 'dyslexia' ? <SyllableModeToggle /> : null}
+          <button type="button" onClick={() => navigate('/dashboard')} className={user?.learningCondition === 'autism' ? 'btn-settings' : 'btn-settings'} title={t('progress.backToLearning')}>
             {t('app.back')}
           </button>
         </div>
       </nav>
 
-      <main className="main-content">
-        <div className="welcome-section">
+      <main className={user?.learningCondition === 'autism' ? 'main-layout' : 'main-content'}>
+        <div className={user?.learningCondition === 'autism' ? 'welcome-card' : 'welcome-section'}>
           <h2>{uiText('progress.yourProgress', 'Your Learn-ing Pro-gress')}</h2>
           <p className="subtitle">
             {uiText(
@@ -348,7 +408,7 @@ const ProgressPage = () => {
           </p>
         </div>
 
-        <div className="progress-card">
+        <div className={user?.learningCondition === 'autism' ? 'lesson-simple-card progress-section-card' : 'progress-card'}>
           <div className="card-header">
             <h3>{t('progress.cardTitle')}</h3>
           </div>
@@ -407,20 +467,60 @@ const ProgressPage = () => {
           </div>
         </div>
 
-        <div className="progress-card">
+        <div 
+          className={user?.learningCondition === 'autism' ? 'lesson-simple-card progress-section-card' : 'progress-card'}
+          style={user?.learningCondition === 'autism' ? { marginTop: '40px' } : {}}
+        >
           <div className="card-header">
             <h3>{uiText('progress.lessonStatus', 'Les-son sta-tus')}</h3>
           </div>
           <div className="card-body">
-            <div className="lessons-grid">
-              {lessonCards.map((l) => {
+            <div className="progress-filter-bar" role="toolbar" aria-label={t('progress.filterAria')}>
+              <button
+                type="button"
+                className={`progress-filter-btn ${lessonFilter === 'completed' ? 'is-active' : ''}`}
+                aria-pressed={lessonFilter === 'completed'}
+                onClick={() => setLessonFilter((prev) => (prev === 'completed' ? null : 'completed'))}
+              >
+                {t('progress.filterCompleted')}
+              </button>
+              <button
+                type="button"
+                className={`progress-filter-btn ${lessonFilter === 'partial' ? 'is-active' : ''}`}
+                aria-pressed={lessonFilter === 'partial'}
+                onClick={() => setLessonFilter((prev) => (prev === 'partial' ? null : 'partial'))}
+              >
+                {t('progress.filterPartial')}
+              </button>
+              <button
+                type="button"
+                className={`progress-filter-btn ${lessonFilter === 'notStarted' ? 'is-active' : ''}`}
+                aria-pressed={lessonFilter === 'notStarted'}
+                onClick={() => setLessonFilter((prev) => (prev === 'notStarted' ? null : 'notStarted'))}
+              >
+                {t('progress.filterNotStarted')}
+              </button>
+            </div>
+            <div className={user?.learningCondition === 'autism' ? 'lessons-simple-grid' : 'lessons-grid'}>
+              {filteredLessonCards.map((l) => {
                 const statusClass = (l.status || 'Not Started').replace(/\s+/g, '-').toLowerCase();
+                const isCompleted = l.status === 'Completed' || Number(l.percent || 0) >= 100;
                 return (
-                  <div key={l.id} className="lesson-card">
+                  <div key={l.id} className={user?.learningCondition === 'autism' ? 'lesson-simple-card' : 'lesson-card'}>
                     <div className="lesson-icon" aria-hidden="true"><BookOpen size={22} /></div>
                     <h4>{l.title}</h4>
                     <div className="lesson-meta">
                       <span className={`status-pill status-${statusClass}`}>{l.statusLabel}</span>
+                      {isCompleted ? (
+                        <span
+                          className="status-pill"
+                          style={{ background: 'rgba(34, 197, 94, 0.12)', color: '#166534', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                          aria-label={t('badges.completed')}
+                        >
+                          <Award size={14} aria-hidden="true" />
+                          {t('badges.completed')}
+                        </span>
+                      ) : null}
                     </div>
                     <div className="lesson-progress">
                       <div className="progress-bar-container">

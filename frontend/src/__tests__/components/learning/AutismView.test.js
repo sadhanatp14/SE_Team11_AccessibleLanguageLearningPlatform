@@ -107,6 +107,8 @@ const renderWithAuth = (component, userValue = { name: 'Test User', id: '123' })
   );
 };
 
+const renderAutismLesson = (lessonId = 1) => renderWithAuth(<AutismView initialLessonId={lessonId} />);
+
 const completePronunciationPracticeIfPresent = () => {
   if (!screen.queryByText('Pronunciation Practice')) return;
   const proceedButton = screen.getByText('Proceed');
@@ -168,6 +170,12 @@ describe('AutismView Component - Autism Learning Features', () => {
     api.get.mockResolvedValue({ data: { success: true, completedLessons: [] } });
     api.post.mockResolvedValue({ data: { success: true } });
 
+    try {
+      window.localStorage.clear();
+    } catch {
+      // non-blocking
+    }
+
     mockPreferences = {
       preferredLanguage: 'english',
     };
@@ -181,49 +189,43 @@ describe('AutismView Component - Autism Learning Features', () => {
   // Testing text, audio, and visual content loading
   // ===================================================================
   describe('1. Multi-format Lesson Display', () => {
-    test('should display lesson selection screen with all three lessons', async () => {
+    test('should not display duplicate lessons on the dashboard (use Open All Lessons instead)', async () => {
       renderWithAuth(<AutismView />);
       
       await waitFor(() => {
-        // Check all three lessons are displayed
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-        expect(screen.getByText('Basic Words')).toBeInTheDocument();
-        expect(screen.getByText('Numbers')).toBeInTheDocument();
+        // Lessons are not duplicated as dashboard lesson cards.
+        expect(document.querySelectorAll('.lesson-simple-card').length).toBe(0);
       });
+
+      // The Open All Lessons CTA is present.
+      expect(screen.getByText(/These lessons are available in Open All Lessons\./i)).toBeInTheDocument();
+
+      // A prominent next-lesson recommendation card is shown instead.
+      expect(await screen.findByLabelText('Recommended next lesson')).toBeInTheDocument();
+
+      // Learning path is visible (titles may appear there).
+      expect(screen.getByText('Learning Path')).toBeInTheDocument();
+
+      // Verify Open All Lessons entry point exists
+      expect(screen.getAllByRole('button', { name: /open all lessons/i }).length).toBeGreaterThan(0);
       
-      // Verify lesson icons are present
-      const lessonIcons = document.querySelectorAll('.lesson-large-icon svg');
-      expect(lessonIcons.length).toBe(3);
+      // Lessons grid still renders (it may show an empty state)
+      const lessonsGrid = document.querySelector('.lessons-simple-grid');
+      expect(lessonsGrid).toBeInTheDocument();
     });
 
     test('should display text content when lesson is started', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      // Start a lesson
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       await waitFor(() => {
         // Verify lesson content is displayed
         const tamilTexts = screen.getAllByText(/வணக்கம்/);
         expect(tamilTexts.length).toBeGreaterThan(0);
-        expect(screen.getByText(/A common word used when meeting someone/)).toBeInTheDocument();
       });
     });
 
     test('should display visual image for current step', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       await waitFor(() => {
         // Check if image element exists with correct src
@@ -234,14 +236,7 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should have audio playback controls available', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       await waitFor(() => {
         // Verify audio button is present
@@ -251,14 +246,11 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should display translation text alongside main content', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      mockPreferences = {
+        ...mockPreferences,
+        bilingualTextMode: 'english_tamil',
+      };
+      renderAutismLesson(1);
       
       await waitFor(() => {
         // Check both Tamil content and English translation are shown
@@ -275,14 +267,7 @@ describe('AutismView Component - Autism Learning Features', () => {
   // ===================================================================
   describe('2. Step-by-Step Lesson Flow', () => {
     test('should start at step 1 when lesson begins', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       await waitFor(() => {
         // Verify we're on step 1
@@ -291,14 +276,7 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should advance to next step when Next button is clicked', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       await waitFor(() => {
         expect(screen.getByText('Step 1 of 10')).toBeInTheDocument();
@@ -316,14 +294,7 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should go back to previous step when Previous button is clicked', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       await waitFor(() => {
         expect(screen.getByText('Step 1 of 10')).toBeInTheDocument();
@@ -352,14 +323,7 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should disable Previous button on first step', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       await waitFor(() => {
         const prevButton = getPrevNavButton();
@@ -369,14 +333,7 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should show completion screen after last step', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       // Navigate to last step (step 10)
       await advanceLessonSteps(10);
@@ -391,14 +348,7 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should display progress dots for all steps', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       await waitFor(() => {
         // Check progress dots container exists
@@ -418,14 +368,7 @@ describe('AutismView Component - Autism Learning Features', () => {
   // ===================================================================
   describe('3. Interactive Lesson Engagement', () => {
     test('should display multiple choice question with options', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       await waitFor(() => {
         // Check question is displayed
@@ -439,14 +382,7 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should show positive feedback when correct answer is selected', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       await waitFor(() => {
         expect(screen.getByText('Hello')).toBeInTheDocument();
@@ -463,14 +399,7 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should show retry option after one wrong answer', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       await waitFor(() => {
         expect(screen.getByText('Goodbye')).toBeInTheDocument();
@@ -487,14 +416,7 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should prevent progression without answering question', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       await waitFor(() => {
         expect(screen.getByText('Step 1 of 10')).toBeInTheDocument();
@@ -548,14 +470,7 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should disable option buttons after answer is selected', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       await waitFor(() => {
         expect(screen.getByText('Hello')).toBeInTheDocument();
@@ -580,14 +495,7 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should reset question state when retry button is clicked', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       await waitFor(() => {
         expect(screen.getByText('Goodbye')).toBeInTheDocument();
@@ -619,14 +527,7 @@ describe('AutismView Component - Autism Learning Features', () => {
   // ===================================================================
   describe('4. Guided Learning Support', () => {
     test('should display hint button for each step', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       await waitFor(() => {
         // Hint button should be present
@@ -635,14 +536,7 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should show hint content when hint button is clicked', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       await waitFor(() => {
         expect(screen.getByText('Show Hint')).toBeInTheDocument();
@@ -659,14 +553,7 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should toggle hint button text when clicked', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       await waitFor(() => {
         expect(screen.getByText('Show Hint')).toBeInTheDocument();
@@ -690,14 +577,7 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should hide hint when moving to next step', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       await waitFor(() => {
         expect(screen.getByText('Show Hint')).toBeInTheDocument();
@@ -720,14 +600,7 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should display appropriate hint for each step', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       // Step 1 hint
       await waitFor(() => {
@@ -758,14 +631,7 @@ describe('AutismView Component - Autism Learning Features', () => {
   // ===================================================================
   describe('5. Visual Learning Aids', () => {
     test('should highlight key Tamil words in content', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+        renderAutismLesson(1);
       
       await waitFor(() => {
         // Check if highlighted content exists
@@ -775,14 +641,7 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should load appropriate image for each step', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       await waitFor(() => {
         // Step 1 image
@@ -806,20 +665,15 @@ describe('AutismView Component - Autism Learning Features', () => {
       renderWithAuth(<AutismView />);
       
       await waitFor(() => {
-        const lessonIcons = document.querySelectorAll('.lesson-large-icon svg');
-        expect(lessonIcons.length).toBe(3);
+        // Dashboard has no lesson cards now; still should show an entry point to the lesson library.
+        expect(screen.getAllByRole('button', { name: /open all lessons/i }).length).toBeGreaterThan(0);
+        // And the UI still uses icons in the header.
+        expect(document.querySelectorAll('svg.lucide').length).toBeGreaterThan(0);
       });
     });
 
     test('should show visual feedback icons in completion screen', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       // Complete all steps
       await advanceLessonSteps(10);
@@ -839,14 +693,7 @@ describe('AutismView Component - Autism Learning Features', () => {
   // ===================================================================
   describe('6. Lesson Replay and Revision', () => {
     test('should mark lesson as completed after finishing', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+        renderAutismLesson(1);
       
       // Complete all steps
       await advanceLessonSteps(10);
@@ -870,9 +717,10 @@ describe('AutismView Component - Autism Learning Features', () => {
       renderWithAuth(<AutismView />);
       
       await waitFor(() => {
-        const badge = document.querySelector('.completion-badge');
-        expect(badge).toBeInTheDocument();
-        expect((badge?.textContent || '')).toMatch(/Completed/i);
+        // Dashboard no longer lists lesson cards; completion state should still load without crashing.
+        expect(api.get).toHaveBeenCalledWith('/users/completed-lessons');
+        expect(document.querySelectorAll('.lesson-simple-card').length).toBe(0);
+        expect(screen.getAllByRole('button', { name: /open all lessons/i }).length).toBeGreaterThan(0);
       });
     });
 
@@ -882,15 +730,7 @@ describe('AutismView Component - Autism Learning Features', () => {
         data: { success: true, completedLessons: ['autism-lesson-1'] }
       });
       
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        // Button should say "Review Lesson" instead of "Start Lesson"
-        expect(screen.getByText('Review Lesson')).toBeInTheDocument();
-      });
-      
-      // Click review button
-      fireEvent.click(screen.getByText('Review Lesson'));
+      renderWithAuth(<AutismView initialLessonId={1} />);
       
       await waitFor(() => {
         // Should start the lesson
@@ -930,14 +770,7 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should navigate to next lesson from completion screen', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       // Complete all steps
       await advanceLessonSteps(10);
@@ -959,14 +792,7 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should return to lesson list from completion screen', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       // Complete all steps
       await advanceLessonSteps(10);
@@ -993,14 +819,7 @@ describe('AutismView Component - Autism Learning Features', () => {
   // ===================================================================
   describe('7. Consistent Layout Behavior', () => {
     test('should display header with lesson title during lesson', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       await waitFor(() => {
         // Check header elements
@@ -1010,14 +829,7 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should always show navigation buttons in fixed position', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       await waitFor(() => {
         // Check navigation buttons exist
@@ -1036,14 +848,7 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should return to lesson list when Back to Lessons is clicked', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
-      });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
+      renderAutismLesson(1);
       
       await waitFor(() => {
         expect(screen.getByText('← Back to Lessons')).toBeInTheDocument();
@@ -1058,32 +863,23 @@ describe('AutismView Component - Autism Learning Features', () => {
       });
     });
 
-    test('should show consistent lesson card layout in selection view', async () => {
+    test('should not duplicate core lessons as dashboard cards', async () => {
       renderWithAuth(<AutismView />);
       
       await waitFor(() => {
-        // Check all three lessons have consistent structure
         const lessonCards = document.querySelectorAll('.lesson-simple-card');
-        expect(lessonCards.length).toBe(3);
-        
-        // Each should have title, description, and button
-        lessonCards.forEach(card => {
-          expect(card.querySelector('h4')).toBeInTheDocument();
-          expect(card.querySelector('p')).toBeInTheDocument();
-          expect(card.querySelector('.btn-lesson-start')).toBeInTheDocument();
-        });
+        expect(lessonCards.length).toBe(0);
       });
+
+      expect(screen.getAllByRole('button', { name: /open all lessons/i }).length).toBeGreaterThan(0);
     });
 
     test('should maintain lesson state when navigating back and forth', async () => {
-      renderWithAuth(<AutismView />);
-      
+      renderAutismLesson(1);
+
       await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
+        expect(screen.getByText('Step 1 of 10')).toBeInTheDocument();
       });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
       
       // Move to step 3
       await advanceLessonSteps(2);
@@ -1111,14 +907,11 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should change Next button text to Complete Lesson on last step', async () => {
-      renderWithAuth(<AutismView />);
-      
+      renderAutismLesson(1);
+
       await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
+        expect(screen.getByText('Step 1 of 10')).toBeInTheDocument();
       });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
       
       // Navigate to step 9 (second to last)
       await advanceLessonSteps(8);
@@ -1137,14 +930,11 @@ describe('AutismView Component - Autism Learning Features', () => {
     });
 
     test('should show step counter on every step', async () => {
-      renderWithAuth(<AutismView />);
-      
+      renderAutismLesson(1);
+
       await waitFor(() => {
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
+        expect(screen.getByText('Step 1 of 10')).toBeInTheDocument();
       });
-      
-      const startButton = screen.getAllByText('Start Lesson')[0];
-      fireEvent.click(startButton);
       
       // Check each step has counter
       for (let i = 1; i <= 5; i++) {
@@ -1180,7 +970,7 @@ describe('AutismView Component - Autism Learning Features', () => {
       
       await waitFor(() => {
         // Component should still render even if API fails
-        expect(screen.getByText('Greetings')).toBeInTheDocument();
+        expect(screen.getAllByRole('button', { name: /open all lessons/i }).length).toBeGreaterThan(0);
       });
     });
 
@@ -1217,18 +1007,15 @@ describe('AutismView Component - Autism Learning Features', () => {
         // Should show lesson selection
         expect(screen.getByText('Choose your lesson')).toBeInTheDocument();
       });
+
+      // Dashboard shows recommendation + learning path, but no duplicated lesson cards.
+      expect(document.querySelectorAll('.lesson-simple-card').length).toBe(0);
+      expect(await screen.findByLabelText('Recommended next lesson')).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: /open all lessons/i }).length).toBeGreaterThan(0);
     });
 
     test('should not show next lesson button on last lesson completion', async () => {
-      renderWithAuth(<AutismView />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Numbers')).toBeInTheDocument();
-      });
-      
-      // Start last lesson (lesson 3)
-      const startButtons = screen.getAllByText('Start Lesson');
-      fireEvent.click(startButtons[2]);
+      renderAutismLesson(5);
       
       // Complete all steps
       await advanceLessonSteps(10);
@@ -1241,7 +1028,7 @@ describe('AutismView Component - Autism Learning Features', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Great Job!')).toBeInTheDocument();
-        expect(screen.getByText(/You completed "Numbers" lesson!/)).toBeInTheDocument();
+        expect(screen.getByText(/You completed ".+" lesson!/)).toBeInTheDocument();
       });
       
       await waitFor(() => {

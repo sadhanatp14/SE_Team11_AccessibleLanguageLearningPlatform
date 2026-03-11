@@ -61,6 +61,36 @@
   display: none;
 }
 
+/* ===== Autism variant (darker, calmer tone) ===== */
+.next-lesson-card--autism {
+  background: linear-gradient(135deg, #d2deec 0%, #b4c7db 50%, #94afc9 100%);
+  border-color: #6e98bb;
+  box-shadow: 0 10px 34px rgba(15, 23, 42, 0.18);
+}
+
+.next-lesson-card--autism .nlc-icon {
+  background: linear-gradient(135deg, #355c7d, #27465f);
+  box-shadow: 0 4px 14px rgba(39, 70, 95, 0.32);
+}
+
+.next-lesson-card--autism .nlc-reason {
+  color: #27465f;
+}
+
+.next-lesson-card--autism .nlc-progress-pill {
+  background: rgba(39, 70, 95, 0.14);
+  color: #1f3f57;
+}
+
+.next-lesson-card--autism .nlc-btn--accept {
+  background: linear-gradient(135deg, #355c7d, #27465f);
+  box-shadow: 0 4px 14px rgba(39, 70, 95, 0.32);
+}
+
+.next-lesson-card--autism .nlc-btn--accept:hover {
+  box-shadow: 0 6px 20px rgba(39, 70, 95, 0.4);
+}
+
 /* ===== Icon circle ===== */
 .nlc-icon {
   flex-shrink: 0;

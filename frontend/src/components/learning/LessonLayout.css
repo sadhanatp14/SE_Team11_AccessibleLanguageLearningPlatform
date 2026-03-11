@@ -42,6 +42,14 @@
   flex-wrap: wrap;
 }
 
+.lesson-layout__header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .lesson-layout__back {
   border: 1px solid var(--theme-border, var(--border-color));
   background: var(--theme-surface, var(--bg-secondary));

@@ -233,4 +233,184 @@ router.post('/story-quiz', async (req, res) => {
     }
 });
 
+// ADHD Personalization Endpoints
+
+// GET /adhd/recommendations/next - Next lesson recommendation
+router.get('/adhd/recommendations/next', async (req, res) => {
+    try {
+        const { user } = req;
+        
+        // Mock data for next lesson recommendation
+        const nextLessons = ['Greetings', 'Numbers 1-10', 'Common Objects', 'Food Words', 'Family Members'];
+        const randomLesson = nextLessons[Math.floor(Math.random() * nextLessons.length)];
+        
+        res.json({
+            success: true,
+            recommendation: {
+                lessonTitle: randomLesson,
+                message: `Let's learn about "${randomLesson}"! This lesson will help you build your vocabulary.`,
+                difficulty: 'Beginner'
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching next recommendation:', error.message);
+        res.json({
+            success: false,
+            message: 'Could not fetch recommendation'
+        });
+    }
+});
+
+// GET /adhd/recommendations/learning-path - Personalized learning path
+router.get('/adhd/recommendations/learning-path', async (req, res) => {
+    try {
+        const { user } = req;
+        
+        // Mock learning path data
+        const learningPath = [
+            'Start with Greetings',
+            'Learn Basic Numbers',
+            'Practice Common Objects',
+            'Explore Food Vocabulary',
+            'Master Family Words'
+        ];
+        
+        res.json({
+            success: true,
+            learningPath: learningPath,
+            progress: {
+                completed: 2,
+                total: 5,
+                percentage: 40
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching learning path:', error.message);
+        res.json({
+            success: false,
+            message: 'Could not fetch learning path'
+        });
+    }
+});
+
+// GET /adhd/recommendations/motivation - Motivational feedback
+router.get('/adhd/recommendations/motivation', async (req, res) => {
+    try {
+        const { user } = req;
+        
+        // Mock motivational messages
+        const messages = [
+            'Great job! You\'re making excellent progress! 🌟',
+            'Keep up the amazing work! Every lesson brings you closer to fluency. 💪',
+            'You\'re doing fantastic! Your dedication will pay off! 🎉',
+            'Fantastic effort! You\'re learning faster than expected! 🚀',
+            'Wonderful progress! Stay focused and keep learning! 📚'
+        ];
+        
+        const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+        
+        res.json({
+            success: true,
+            message: randomMessage,
+            type: 'encouragement'
+        });
+    } catch (error) {
+        console.error('Error fetching motivation:', error.message);
+        res.json({
+            success: false,
+            message: 'Could not fetch motivation'
+        });
+    }
+});
+
+// Autism Personalization Endpoints
+
+// GET /autism/recommendations/next - Next lesson recommendation for Autism
+router.get('/autism/recommendations/next', async (req, res) => {
+    try {
+        const { user } = req;
+        
+        // Mock data for next lesson recommendation
+        const nextLessons = ['Greetings', 'Numbers 1-10', 'Common Objects', 'Food Words', 'Family Members'];
+        const randomLesson = nextLessons[Math.floor(Math.random() * nextLessons.length)];
+        
+        res.json({
+            success: true,
+            recommendation: {
+                lessonTitle: randomLesson,
+                message: `Explore "${randomLesson}" next. Take your time to learn at your own pace.`,
+                difficulty: 'Beginner'
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching autism next recommendation:', error.message);
+        res.json({
+            success: false,
+            message: 'Could not fetch recommendation'
+        });
+    }
+});
+
+// GET /autism/recommendations/learning-path - Personalized learning path for Autism
+router.get('/autism/recommendations/learning-path', async (req, res) => {
+    try {
+        const { user } = req;
+        
+        // Mock learning path data
+        const learningPath = [
+            'Start with Greetings',
+            'Learn Basic Numbers',
+            'Practice Common Objects',
+            'Explore Food Vocabulary',
+            'Master Family Words'
+        ];
+        
+        res.json({
+            success: true,
+            learningPath: learningPath,
+            progress: {
+                completed: 2,
+                total: 5,
+                percentage: 40
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching autism learning path:', error.message);
+        res.json({
+            success: false,
+            message: 'Could not fetch learning path'
+        });
+    }
+});
+
+// GET /autism/recommendations/motivation - Motivational feedback for Autism
+router.get('/autism/recommendations/motivation', async (req, res) => {
+    try {
+        const { user } = req;
+        
+        // Mock motivational messages tailored for autism learners
+        const messages = [
+            'You\'re doing great! Take breaks when you need them. 🌟',
+            'Every step counts. Learn at your own comfortable pace. 💙',
+            'You\'re learning well! Keep exploring new words. 📚',
+            'Great focus! You\'re building strong language skills. 🎯',
+            'Wonderful work! Your progress is meaningful. ✨'
+        ];
+        
+        const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+        
+        res.json({
+            success: true,
+            message: randomMessage,
+            type: 'encouragement'
+        });
+    } catch (error) {
+        console.error('Error fetching autism motivation:', error.message);
+        res.json({
+            success: false,
+            message: 'Could not fetch motivation'
+        });
+    }
+});
+
 module.exports = router;

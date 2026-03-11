@@ -22,20 +22,20 @@ import '@testing-library/jest-dom';
 // Mocks – isolate the component from external dependencies
 // ---------------------------------------------------------------------------
 
-// React-Router
-const mockNavigate = jest.fn();
+// React-Router mocks for navigation and URL parameters
+const mockNavigate = jest.fn(); // Mock function to track programmatic navigation
 jest.mock('react-router-dom', () => ({
-  ...jest.requireActual('react-router-dom'),
-  useNavigate: () => mockNavigate,
-  useParams: () => ({ lessonId: 'lesson-greetings' }),
-  BrowserRouter: ({ children }) => <div>{children}</div>,
+  ...jest.requireActual('react-router-dom'), // Retain other actual router implementations
+  useNavigate: () => mockNavigate, // Mock hook returning the tracked navigation function
+  useParams: () => ({ lessonId: 'lesson-greetings' }), // Mock hook providing a static lesson parameter
+  BrowserRouter: ({ children }) => <div>{children}</div>, // Mock router wrapper to allow rendering without a real DOM router
 }));
 
-// AuthContext
-const mockUser = { id: 'u1', name: 'TestUser', learningCondition: 'dyslexia' };
-const mockLogout = jest.fn();
+// AuthContext mock to simulate a logged-in user with dyslexia
+const mockUser = { id: 'u1', name: 'TestUser', learningCondition: 'dyslexia' }; // Simulated user profile
+const mockLogout = jest.fn(); // Mock function to track logout interactions
 jest.mock('../../src/context/AuthContext', () => ({
-  useAuth: () => ({ user: mockUser, logout: mockLogout }),
+  useAuth: () => ({ user: mockUser, logout: mockLogout }), // Mock hook providing the standard user state
 }));
 
 // PreferencesContext (not directly used in DyslexiaView but imported transitively)
@@ -116,9 +116,9 @@ describe('1.4 – Dyslexia-Friendly Reading Support', () => {
        * .dyslexia-view container. We verify that the root container class is
        * present so the CSS rules take effect.
        */
-      const { container } = render(<DyslexiaView />);
-      const root = container.querySelector('.dyslexia-view');
-      expect(root).toBeInTheDocument();
+      const { container } = render(<DyslexiaView />); // Render the component
+      const root = container.querySelector('.dyslexia-view'); // Find the main container
+      expect(root).toBeInTheDocument(); // Assert container exists in DOM
     });
 
     test('Lesson card text renders inside the dyslexia-view container', () => {

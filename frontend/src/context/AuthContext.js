@@ -32,6 +32,13 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import api from '../utils/api';
+import {
+  isWebAuthnSupported,
+  prepareCreationOptions,
+  prepareRequestOptions,
+  serializeLoginCredential,
+  serializeRegistrationCredential,
+} from '../utils/webauthn';
 
 const AuthContext = createContext(null);
 
@@ -102,6 +109,39 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const setupFingerprint = async () => {
+    try {
+      if (!isWebAuthnSupported()) {
+        return { success: false, error: 'Fingerprint authentication is not supported on this device' };
+      }
+
+      const optionsResponse = await api.post('/auth/fingerprint/register/options');
+      const { requestId, publicKey } = optionsResponse.data;
+      const credential = await navigator.credentials.create({
+        publicKey: prepareCreationOptions(publicKey),
+      });
+
+      if (!credential) {
+        return { success: false, error: 'Fingerprint setup was cancelled' };
+      }
+
+      await api.post('/auth/fingerprint/register/verify', {
+        requestId,
+        credential: serializeRegistrationCredential(credential),
+      });
+
+      const me = await api.get('/auth/me');
+      const refreshedUser = me.data.user;
+      setUser(refreshedUser);
+      localStorage.setItem('user', JSON.stringify(refreshedUser));
+
+      return { success: true };
+    } catch (err) {
+      const message = err.response?.data?.message || 'Fingerprint setup failed';
+      return { success: false, error: message };
+    }
+  };
+
   const login = async (credentials) => {
     try {
       setError(null);
@@ -116,6 +156,41 @@ export const AuthProvider = ({ children }) => {
       return { success: true, user };
     } catch (err) {
       const message = err.response?.data?.message || 'Login failed';
+      setError(message);
+      return { success: false, error: message };
+    }
+  };
+
+  const loginWithFingerprint = async (email) => {
+    try {
+      if (!isWebAuthnSupported()) {
+        return { success: false, error: 'Fingerprint authentication is not supported on this device' };
+      }
+
+      const optionsResponse = await api.post('/auth/fingerprint/login/options', { email });
+      const { requestId, publicKey } = optionsResponse.data;
+      const credential = await navigator.credentials.get({
+        publicKey: prepareRequestOptions(publicKey),
+      });
+
+      if (!credential) {
+        return { success: false, error: 'Fingerprint login was cancelled' };
+      }
+
+      const verifyResponse = await api.post('/auth/fingerprint/login/verify', {
+        email,
+        requestId,
+        credential: serializeLoginCredential(credential),
+      });
+
+      const { token, user: authenticatedUser } = verifyResponse.data;
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(authenticatedUser));
+      setUser(authenticatedUser);
+
+      return { success: true, user: authenticatedUser };
+    } catch (err) {
+      const message = err.response?.data?.message || 'Fingerprint login failed';
       setError(message);
       return { success: false, error: message };
     }
@@ -146,7 +221,9 @@ export const AuthProvider = ({ children }) => {
     loading,
     error,
     register,
+    setupFingerprint,
     login,
+    loginWithFingerprint,
     logout,
     updateUser,
     isAuthenticated: !!user,

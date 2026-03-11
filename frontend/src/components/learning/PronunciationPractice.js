@@ -87,31 +87,16 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Mic, RotateCcw, Volume2 } from 'lucide-react';
+import api from '../../utils/api';
+import { inferSpeechLanguageKeyFromText, normalizeLanguageKeyFromLocale, speechTextsMatch } from '../../utils/speechCompare';
+import { backendTtsLangFor, speechRecognitionLangFor, speechSynthesisLangFor } from '../../utils/languagePrefs';
 import './PronunciationPractice.css';
 
-/**
- * Normalize pronunciation text for comparison
- * Removes punctuation, diacritics, and normalizes whitespace
- * 
- * @param {string} value - Raw text input
- * @returns {string} Normalized text for comparison
- */
-const normalizePronunciationText = (value) => {
-  const raw = String(value ?? '').trim().toLowerCase();
-  if (!raw) return '';
-
-  // Remove most punctuation, normalize whitespace, and strip latin diacritics.
-  const noPunct = raw.replace(/[[\].,!?;:()"'{}<>\\/|@#$%^&*_+=~`]/g, ' ');
-  const collapsed = noPunct.replace(/\s+/g, ' ').trim();
-
-  try {
-    return collapsed
-      .normalize('NFD')
-      .replace(/\p{Diacritic}/gu, '')
-      .trim();
-  } catch {
-    return collapsed;
-  }
+const joinUrl = (base, path) => {
+  const baseStr = String(base || '').replace(/\/+$/, '');
+  const pathStr = String(path || '');
+  const normalizedPath = pathStr.startsWith('/') ? pathStr : `/${pathStr}`;
+  return `${baseStr}${normalizedPath}`;
 };
 
 const initSpeechRecognition = (lang) => {
@@ -123,6 +108,16 @@ const initSpeechRecognition = (lang) => {
   recognition.interimResults = false;
   recognition.maxAlternatives = 1;
   return recognition;
+};
+
+const toBackendTtsLang = (langOrKey) => {
+  const key = normalizeLanguageKeyFromLocale(langOrKey);
+  return backendTtsLangFor(key);
+};
+
+const toSpeechSynthesisLang = (langOrKey) => {
+  const key = normalizeLanguageKeyFromLocale(langOrKey);
+  return speechSynthesisLangFor(key);
 };
 
 const speakViaBackendOrBrowser = async ({ text, speed, lang, audioRef, setIsPlaying }) => {
@@ -147,13 +142,23 @@ const speakViaBackendOrBrowser = async ({ text, speed, lang, audioRef, setIsPlay
 
   // Backend TTS first (consistent across OS)
   try {
-    const response = await fetch('/api/tts/speak', {
+    const ttsUrl = joinUrl(api?.defaults?.baseURL || '/api', '/tts/speak');
+    const response = await fetch(ttsUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, speed: speed ?? 0.85, lang: lang || 'en' }),
+      body: JSON.stringify({ text, speed: speed ?? 0.85, lang: toBackendTtsLang(lang || 'english') }),
     });
 
-    if (!response.ok) throw new Error('Backend TTS failed');
+    if (!response.ok) {
+      let details = '';
+      try {
+        details = await response.text();
+      } catch {
+        // ignore
+      }
+      const suffix = details ? `: ${details.slice(0, 500)}` : '';
+      throw new Error(`Backend TTS failed (${response.status})${suffix}`);
+    }
 
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);
@@ -178,7 +183,7 @@ const speakViaBackendOrBrowser = async ({ text, speed, lang, audioRef, setIsPlay
       if (typeof window !== 'undefined' && window.speechSynthesis) {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = speed ?? 0.85;
-        utterance.lang = lang || 'en-US';
+        utterance.lang = toSpeechSynthesisLang(lang || 'english');
         utterance.onend = () => setIsPlaying(false);
         window.speechSynthesis.speak(utterance);
         return;
@@ -294,16 +299,24 @@ const PronunciationPractice = ({
     return unique;
   }, []);
 
+  const inferItemLanguageKey = useCallback(
+    (item) => {
+      const expected = getExpectedForms(item);
+      const combined = [item?.label, item?.speakText, ...expected].filter(Boolean).join(' ');
+      const fallbackKey = normalizeLanguageKeyFromLocale(recognitionLang);
+      return inferSpeechLanguageKeyFromText(combined, fallbackKey);
+    },
+    [getExpectedForms, recognitionLang]
+  );
+
   const isTranscriptAcceptable = useCallback(
     (item, transcript) => {
-      const normalizedHeard = normalizePronunciationText(transcript);
-      if (!normalizedHeard) return false;
+      if (!String(transcript || '').trim()) return false;
 
-      const expected = getExpectedForms(item)
-        .map(normalizePronunciationText)
-        .filter(Boolean);
+      const expected = getExpectedForms(item);
+      if (!expected.length) return false;
 
-      return expected.some((candidate) => candidate === normalizedHeard);
+      return expected.some((candidate) => speechTextsMatch(transcript, candidate));
     },
     [getExpectedForms]
   );
@@ -312,15 +325,19 @@ const PronunciationPractice = ({
     async (item) => {
       setVoiceError('');
       const text = item.speakText || item.label;
+
+      // Use the best language for this item (important when UI is English
+      // but the practiced word is Tamil/Hindi).
+      const itemLangKey = inferItemLanguageKey(item);
       await speakViaBackendOrBrowser({
         text,
         speed: playbackRate,
-        lang: ttsLang,
+        lang: itemLangKey || ttsLang,
         audioRef,
         setIsPlaying,
       });
     },
-    [playbackRate, ttsLang]
+    [inferItemLanguageKey, playbackRate, ttsLang]
   );
 
   const handleRetry = useCallback(
@@ -351,7 +368,10 @@ const PronunciationPractice = ({
     (item) => {
       setVoiceError('');
 
-      const recognition = initSpeechRecognition(recognitionLang);
+      // Override recognition language when the prompt is clearly Tamil/Hindi.
+      const itemLangKey = inferItemLanguageKey(item);
+      const effectiveRecognitionLang = speechRecognitionLangFor(itemLangKey) || recognitionLang;
+      const recognition = initSpeechRecognition(effectiveRecognitionLang);
       if (!recognition) {
         setVoiceError('Voice input is not available in this browser. Try Chrome.');
         return;
@@ -402,7 +422,7 @@ const PronunciationPractice = ({
         setListeningItemId(null);
       }
     },
-    [recognitionLang, isTranscriptAcceptable]
+    [inferItemLanguageKey, recognitionLang, isTranscriptAcceptable]
   );
 
   const handleProceed = useCallback(() => {
