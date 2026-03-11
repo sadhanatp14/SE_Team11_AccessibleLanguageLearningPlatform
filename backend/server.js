@@ -39,6 +39,7 @@ app.use('/api/progress', require('./routes/progress')); // Progress tracking
 app.use('/api/ai', require('./routes/ai')); // AI features
 app.use('/api/tts', require('./routes/tts')); // Text-to-speech
 app.use('/api/admin', require('./routes/admin')); // Admin-specific management endpoints
+app.use('/api/autism', require('./routes/autism')); // Autism personalized learning (EPIC 4)
 
 // Enable dev-only routes if not in production
 if (process.env.NODE_ENV !== 'production') {
