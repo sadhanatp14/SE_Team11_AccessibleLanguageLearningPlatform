@@ -1,5 +1,74 @@
+/**
+ * Lesson i18n Utility Module
+ * 
+ * Provides internationalization utilities specifically for lesson content,
+ * enabling multi-language lesson delivery and content localization.
+ * 
+ * Core Features:
+ * 
+ * 1. i18n String Resolution:
+ *    - Picks appropriate language string from i18n objects
+ *    - Language normalization (tamil, hindi, english)
+ *    - Fallback chain: target language → English → base text
+ *    - Handles missing translations gracefully
+ * 
+ * 2. Token Replacement:
+ *    - Replaces language-specific tokens in text
+ *    - Supports option text localization
+ *    - Preserves original text structure
+ *    - Safe string splitting (no regex)
+ * 
+ * 3. Option Localization:
+ *    - Localizes multiple-choice options
+ *    - Builds token replacement mappings
+ *    - Handles UI vs content language differences
+ *    - Preserves option order and structure
+ * 
+ * 4. Lesson Payload Localization:
+ *    - Localizes complete lesson objects
+ *    - Applies language to titles, descriptions, content
+ *    - Processes interaction text
+ *    - Maintains data structure integrity
+ * 
+ * 5. Section Localization:
+ *    - Localizes lesson section content
+ *    - Processes section titles and text
+ *    - Handles interaction localization within sections
+ *    - Batch processing for efficiency
+ * 
+ * Language Normalization:
+ * - 'ta', 'tam', 'tamil' → 'tamil'
+ * - 'hi', 'hin', 'hindi' → 'hindi'
+ * - 'en', 'eng', 'english' → 'english'
+ * - anything else → 'english'
+ * 
+ * i18n Object Structure:
+ * ```json
+ * {
+ *   "english": "Hello",
+ *   "tamil": "வணக்கம்",
+ *   "hindi": "नमस्ते"
+ * }
+ * ```
+ * 
+ * Related EPICs:
+ * - EPIC 5: Multi-language Support
+ * - EPIC 5.2: Content localization
+ * - EPIC 5.3: Bilingual content display
+ * 
+ * @module utils/lessonI18n
+ * @requires utils/languagePrefs
+ * @author SE_Team11
+ * @version 1.0.0
+ */
+
 import { resolveUiLanguageFromPreferences } from './languagePrefs';
 
+/**
+ * Normalize a UI language string to one of the supported values
+ * @param {string} value - Raw language input
+ * @returns {string} Normalized language key (english, tamil, hindi)
+ */
 const normalizeUiLanguage = (value) => {
   const raw = String(value || '').trim().toLowerCase();
   if (raw.startsWith('ta')) return 'tamil';
