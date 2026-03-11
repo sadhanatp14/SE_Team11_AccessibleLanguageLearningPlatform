@@ -1,3 +1,72 @@
+/**
+ * ProgressPage Component
+ * 
+ * Unified progress tracking and review interface for all learning conditions,
+ * implementing EPIC 6 (Progress Tracking and Persistence).
+ * 
+ * Core Features:
+ * 
+ * 1. Multi-Source Progress Data (EPIC 6.1):
+ *    - Dyslexia: localStorage via dyslexiaProgressService
+ *    - ADHD/Autism: Backend API via /users/completed-lessons
+ *    - Summary: Backend-computed statistics via progressService.getSummary()
+ *    - Unified display across all conditions
+ * 
+ * 2. Progress Summary Card (EPIC 6.1.2):
+ *    - Overall completion percentage
+ *    - Completed lesson count
+ *    - In-progress lesson count
+ *    - Remaining lesson count
+ *    - Visual progress indicators
+ * 
+ * 3. Lesson History Display (EPIC 6.2):
+ *    - List of all attempted lessons
+ *    - Completion status for each lesson
+ *    - Individual progress percentages
+ *    - Last accessed timestamps
+ *    - Quick navigation to lessons
+ * 
+ * 4. Real-Time Updates:
+ *    - Custom 'progress:updated' browser event listener
+ *    - Immediate refresh after lesson completion
+ *    - No full page reload required
+ *    - Seamless data synchronization
+ * 
+ * 5. Accessibility Features:
+ *    - Syllable mode support for dyslexia
+ *    - Applied user preferences (fonts, themes)
+ *    - Clear visual progress indicators
+ *    - Keyboard navigation support
+ * 
+ * 6. Performance Insights:
+ *    - Visual charts and graphs
+ *    - Trend analysis over time
+ *    - Achievement highlights
+ *    - Motivational feedback
+ * 
+ * Data Flow:
+ * 1. Component mounts → fetch progress from appropriate source
+ * 2. Display summary and lesson list
+ * 3. Listen for progress updates via custom events
+ * 4. Auto-refresh when updates detected
+ * 5. Apply user preferences to container
+ * 
+ * Related EPICs:
+ * - EPIC 6: Progress Tracking and Persistence
+ * - EPIC 6.1: Progress summary display
+ * - EPIC 6.1.2: Overall completion percentage
+ * - EPIC 6.2: Learning history visualization
+ * - EPIC 6.6: Remaining lesson counts
+ * 
+ * @component
+ * @requires context/AuthContext - User profile and condition
+ * @requires context/PreferencesContext - User accessibility preferences
+ * @requires services/progressService - Backend progress API
+ * @requires services/dyslexiaProgressService - localStorage progress for dyslexia
+ * @author SE_Team11
+ * @version 1.0.0
+ */
+
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
