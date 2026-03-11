@@ -1,3 +1,27 @@
+/**
+ * VisualLesson Component
+ * 
+ * Renders visual vocabulary aids and highlighted text segments within lessons.
+ * Provides color-coded highlights and visual representations for key words.
+ * 
+ * Core Features:
+ * - Text highlighting with configurable colors
+ * - Paragraph-level highlight matching (position-based and text-based)
+ * - Visual aids overlay for vocabulary items
+ * - Readable text color computation for contrast
+ * - Responsive visual layout
+ * 
+ * Related EPICs:
+ * - EPIC 1.4: Dyslexia-friendly visual aids
+ * - EPIC 2: Interactive lesson content rendering
+ * - EPIC 4: Visual learning support for autism
+ * 
+ * @component
+ * @requires utils/highlightText - Text segment highlighting
+ * @requires utils/theme - Color contrast utilities
+ * @author SE_Team11
+ */
+
 import React from 'react';
 import { buildHighlightedSegments } from '../../utils/highlightText';
 import { getReadableTextColor } from '../../utils/theme';
