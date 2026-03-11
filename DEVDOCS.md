@@ -122,8 +122,6 @@ Recommended:
 - `FRONTEND_URL` (used by CORS allowlist in `backend/server.js`)
 
 Optional:
-
-- `ADMIN_REG_SECRET` (enables API-controlled admin registration; not exposed in UI)
 - `GEMINI_API_KEY` / `GEMINI_MODEL`
 - `PYTHON_EXECUTABLE` (if you want to force a specific Python)
 - `TTS_DEBUG=true` (more verbose TTS health/errors)

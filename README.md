@@ -36,7 +36,7 @@ Key capabilities in this repository:
 
 Notes:
 
-- The registration UI is learner-focused (no admin self-register option). Admin creation is API-controlled via `ADMIN_REG_SECRET`.
+- The registration UI is learner-focused.
 
 ## Tech Stack
 

@@ -115,6 +115,13 @@ Localization support:
 - Additional completion store:
   - `User.completedLessons` and `User.completedLessonsMeta` provide a lightweight completion history and support non-database lesson keys.
 
+## Games hub
+
+The frontend includes a unified Games page (`/games`) that conditionally renders game cards and mini-games based on the learner’s `learningCondition` (Dyslexia / ADHD / Autism).
+
+- Games are primarily client-side and reuse shared preferences and i18n helpers.
+- Some games can use the existing audio/TTS pipeline (backend TTS endpoint with browser speech fallback).
+
 ## Audio and TTS design
 
 The platform supports audio in two ways:
@@ -149,11 +156,6 @@ sequenceDiagram
 - Backend endpoint group: `/api/ai/*`
 - Implementation uses Gemini when `GEMINI_API_KEY` is configured (and `GEMINI_MODEL` may override the default model).
 - When the key is missing or the call fails, the backend returns a mock quiz payload so the UI remains usable.
-
-## Admin and roles
-
-- Backend supports role-based authorization via `authorize('admin')`.
-- Admin user creation is supported by the API (guarded by `ADMIN_REG_SECRET`), but the frontend registration UI is learner-focused and does not expose admin registration.
 
 ## Dev-only utilities
 

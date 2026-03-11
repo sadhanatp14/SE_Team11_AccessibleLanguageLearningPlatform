@@ -1,13 +1,6 @@
 # Project Documentation
 
-This document consolidates and updates the following legacy docs into a single source of truth:
-
-- API reference (previously `API.md`)
-- Coding standards (previously `CODING_STANDARDS.md`)
-- Database schema (previously `DATABASE_SCHEMA.md`)
-- Troubleshooting (previously `TROUBLESHOOTING.md`)
-
-If you’re looking for system design details, see `ARCHITECTURE.md`.
+This is the main technical reference for running and extending the platform: local development, environment variables, API endpoints, database/schema notes, coding standards, and troubleshooting.
 
 ---
 
@@ -91,12 +84,6 @@ Backend reads environment variables from `backend/.env` (loaded by `dotenv`).
 - `PORT_RETRIES` — number of incremental port retries if `PORT` is taken (default: `10`)
 - `FRONTEND_URL` — allowed CORS origin in addition to localhost
 
-### Admin registration (API-only)
-
-The frontend registration UI does **not** expose admin registration. The backend still supports it for controlled setups.
-
-- `ADMIN_REG_SECRET` — if set, allows `POST /api/auth/register` with `role: "admin"` + `adminKey`
-
 ### AI (Gemini)
 
 - `GEMINI_API_KEY` — enables Gemini-backed responses. If missing/invalid, the API returns mock/fallback data.
@@ -142,8 +129,7 @@ Protected routes use `protect` middleware in `backend/middleware/auth.js`.
 
 - `POST /register` — create account
   - Supports `authMethod: "password" | "pattern"` (default password)
-  - Optional `role: "learner" | "parent" | "admin"` (default learner)
-  - Admin creation requires `ADMIN_REG_SECRET` and `adminKey` (API-only)
+  - Optional `role: "learner" | "parent"` (default learner)
 - `POST /login` — login via password or pattern (must match the account’s `authMethod`)
 - `GET /me` — current user (protected)
 - `POST /logout` — no server-side JWT invalidation; returns a success response (protected)
@@ -225,13 +211,6 @@ These endpoints are designed to work with Gemini when configured, but return moc
 - `GET /autism/recommendations/learning-path`
 - `GET /autism/recommendations/motivation`
 
-### Admin (`/api/admin`) (protected + admin only)
-
-Requires `authorize('admin')`.
-
-- `GET /users` — list users
-- `GET /users/:id` — user detail
-
 ### Dev-only (`/api/dev`) (non-production only)
 
 Mounted only when `NODE_ENV !== 'production'`.
@@ -279,7 +258,7 @@ Key fields:
   - `authMethod`: `password | pattern`
   - `password` (bcrypt hash, `select:false`)
   - `patternHash` (bcrypt hash, `select:false`)
-- Roles: `role`: `learner | parent | admin`
+- Roles: `role`: `learner | parent`
 - WebAuthn:
   - `fingerprintEnabled`: boolean
   - `webAuthnCredentials`: array of `{ credentialId, transports, createdAt }`
@@ -402,7 +381,7 @@ Avoid large “format-only” diffs.
 ### Auth and authorization
 
 - Use `protect` for JWT-protected routes.
-- Use `authorize('admin')` for admin-only access.
+- Use `authorize(...)` for role-based access where needed.
 - Do not log sensitive data (passwords, JWTs, secrets).
 
 ### Frontend API access
