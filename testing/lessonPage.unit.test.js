@@ -25,27 +25,31 @@ import '@testing-library/jest-dom';
 // MOCKS
 // ---------------------------------------------------------------------------
 
-const mockNavigate = jest.fn();
-const mockParams = { lessonId: 'lesson-greetings' };
+// React-Router mock to track navigation and url parameters
+const mockNavigate = jest.fn(); // Mock function to track programmatic navigation
+const mockParams = { lessonId: 'lesson-greetings' }; // Mock the currently viewed lesson
 jest.mock('react-router-dom', () => ({
-  ...jest.requireActual('react-router-dom'),
-  useNavigate: () => mockNavigate,
-  useParams: () => mockParams,
-  BrowserRouter: ({ children }) => <div>{children}</div>,
+  ...jest.requireActual('react-router-dom'), // Keep other router features intact
+  useNavigate: () => mockNavigate, // Replace useNavigate with our tracked function
+  useParams: () => mockParams, // Replace useParams with our static test parameters
+  BrowserRouter: ({ children }) => <div>{children}</div>, // Dummy wrapper for router components
 }));
 
+// AuthContext mock to simulate an authenticated user with a learning profile
 const mockUser = { id: 'u1', name: 'TestUser', learningCondition: 'dyslexia' };
 jest.mock('../../src/context/AuthContext', () => ({
-  useAuth: () => ({ user: mockUser, logout: jest.fn(), isAuthenticated: true }),
+  useAuth: () => ({ user: mockUser, logout: jest.fn(), isAuthenticated: true }), // Simulated auth hook
 }));
 
+// PreferencesContext mock
 jest.mock('../../src/context/PreferencesContext', () => ({
   usePreferences: () => ({
     preferences: null,
-    applyPreferences: jest.fn(),
+    applyPreferences: jest.fn(), // Track parameter applications
   }),
 }));
 
+// ThemeContext mock to define standardized theme variables for testing ui features
 jest.mock('../../src/context/ThemeContext', () => ({
   useTheme: () => ({
     theme: {},
@@ -65,31 +69,32 @@ jest.mock('../../src/context/ThemeContext', () => ({
       optionSelectedBg: '#D0E8FF',
       optionSelectedText: '#000000',
     },
-    setTheme: jest.fn(),
+    setTheme: jest.fn(), // Track theme updates
   }),
-  ThemeProvider: ({ children }) => <div>{children}</div>,
+  ThemeProvider: ({ children }) => <div>{children}</div>, // Dummy wrapper for theme components
 }));
 
+// Data service mocks
 jest.mock('../../src/services/lessonService', () => ({
-  getLessonById: jest.fn(() => Promise.reject(new Error('mocked'))),
+  getLessonById: jest.fn(() => Promise.reject(new Error('mocked'))), // Mock API failure response
 }));
 
 jest.mock('../../src/services/lessonSectionService', () => ({
-  getLessonSections: jest.fn(() => Promise.resolve([])),
+  getLessonSections: jest.fn(() => Promise.resolve([])), // Mock empty sections structure
 }));
 
 jest.mock('../../src/services/progressService', () => ({
-  getProgress: jest.fn(() => Promise.resolve({ currentSectionId: '', completedSections: [] })),
-  updateProgress: jest.fn(() => Promise.resolve({ currentSectionId: '', completedSections: [] })),
-  getSummary: jest.fn(() => Promise.resolve({})),
+  getProgress: jest.fn(() => Promise.resolve({ currentSectionId: '', completedSections: [] })), // Mock progress state retrieval
+  updateProgress: jest.fn(() => Promise.resolve({ currentSectionId: '', completedSections: [] })), // Mock recording progress updates
+  getSummary: jest.fn(() => Promise.resolve({})), // Mock progress summaries
 }));
 
 jest.mock('../../src/services/interactionService', () => ({
   submitInteraction: jest.fn(() =>
-    Promise.resolve({ isCorrect: true, feedback: 'Good job!' })
+    Promise.resolve({ isCorrect: true, feedback: 'Good job!' }) // Mock interactive submission with correct state
   ),
   requestInteractionHelp: jest.fn(() =>
-    Promise.resolve({ hint: 'Try harder.', encouragement: 'Keep going!' })
+    Promise.resolve({ hint: 'Try harder.', encouragement: 'Keep going!' }) // Mock getting a hint to questions
   ),
 }));
 
